@@ -1,0 +1,205 @@
+import { motion } from 'motion/react';
+import {
+  TrendingUp, CalendarDays, Stethoscope, DollarSign
+} from 'lucide-react';
+import {
+  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer
+} from 'recharts';
+import {
+  mockAppointments, revenueByMonth, revenueByWeek,
+  formatCurrency, getStatusColor, getStatusLabel
+} from './data';
+
+const todayBookings = mockAppointments.filter(a => a.date === '2026-03-10');
+const completedBookings = mockAppointments.filter(a => a.status === 'completed');
+const totalRevenue = completedBookings.reduce((s, b) => s + b.servicePrice, 0);
+
+const serviceStats = [
+  { name: 'Khám tổng quát', count: 12, fill: '#4d7a3f' },
+  { name: 'Tắm & Spa', count: 18, fill: '#2e73c2' },
+  { name: 'Cắt tỉa lông', count: 8, fill: '#b55e38' },
+  { name: 'Tiêm phòng', count: 15, fill: '#b8850a' },
+];
+
+export function ManagerDashboardPage() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl text-[#2d2a26]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            Tổng quan
+          </h1>
+          <p className="text-sm text-[#7a756e]">Hôm nay, 10 tháng 3, 2026</p>
+        </div>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {[
+          {
+            icon: DollarSign,
+            label: 'Doanh thu tuần này',
+            value: formatCurrency(totalRevenue),
+            change: '+12.5%',
+            color: '#6b8f5e',
+          },
+          {
+            icon: CalendarDays,
+            label: 'Lịch hẹn hôm nay',
+            value: todayBookings.length.toString(),
+            change: `${todayBookings.filter(b => b.status === 'pending').length} chờ duyệt`,
+            color: '#c67d5b',
+          },
+          {
+            icon: Stethoscope,
+            label: 'Dịch vụ phổ biến nhất',
+            value: 'Tắm & Spa',
+            change: '18 lượt/tuần',
+            color: '#4a90d9',
+          },
+        ].map((kpi, i) => (
+          <motion.div
+            key={kpi.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+            className="bg-white border border-[#2d2a26] rounded-2xl p-5"
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: kpi.color + '15' }}>
+                <kpi.icon className="w-5 h-5" style={{ color: kpi.color }} />
+              </div>
+              <span className="text-xs text-[#6b8f5e] flex items-center gap-1">
+                <TrendingUp className="w-3 h-3" />
+                {kpi.change}
+              </span>
+            </div>
+            <p className="text-xs text-[#7a756e] mb-1">{kpi.label}</p>
+            <p className="text-xl text-[#2d2a26]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+              {kpi.value}
+            </p>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Charts */}
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* Revenue by Month */}
+        <div className="bg-white border border-[#2d2a26] rounded-2xl p-5">
+          <h3 className="text-sm mb-4" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
+            Doanh thu theo tháng
+          </h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={revenueByMonth}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e8e4de" />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} tickFormatter={v => `${(v / 1000000).toFixed(0)}M`} />
+                <Tooltip
+                  formatter={(value: number) => formatCurrency(value)}
+                  contentStyle={{ border: '1px solid #2d2a26', borderRadius: '12px', fontSize: 12 }}
+                />
+                <Bar dataKey="revenue" fill="#4d7a3f" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Revenue by Week */}
+        <div className="bg-white border border-[#2d2a26] rounded-2xl p-5">
+          <h3 className="text-sm mb-4" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
+            Doanh thu theo ngày trong tuần
+          </h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={revenueByWeek}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e8e4de" />
+                <XAxis dataKey="week" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} tickFormatter={v => `${(v / 1000000).toFixed(1)}M`} />
+                <Tooltip
+                  formatter={(value: number) => formatCurrency(value)}
+                  contentStyle={{ border: '1px solid #2d2a26', borderRadius: '12px', fontSize: 12 }}
+                />
+                <Line type="monotone" dataKey="revenue" stroke="#b55e38" strokeWidth={2} dot={{ fill: '#b55e38', r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Service Stats + Today's Bookings */}
+      <div className="grid md:grid-cols-3 gap-6">
+        {/* Service Stats */}
+        <div className="bg-white border border-[#2d2a26] rounded-2xl p-5">
+          <h3 className="text-sm mb-4" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
+            Dịch vụ được sử dụng nhiều
+          </h3>
+          <div className="space-y-3">
+            {serviceStats.map(s => {
+              const maxCount = Math.max(...serviceStats.map(ss => ss.count));
+              const pct = (s.count / maxCount) * 100;
+              return (
+                <div key={s.name} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.fill }} />
+                      <span>{s.name}</span>
+                    </div>
+                    <span style={{ fontWeight: 600 }}>{s.count} lượt</span>
+                  </div>
+                  <div className="h-2 bg-[#f0ede8] rounded-full overflow-hidden">
+                    <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: s.fill }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Today Bookings Table */}
+        <div className="md:col-span-2 bg-white border border-[#2d2a26] rounded-2xl p-5">
+          <h3 className="text-sm mb-4" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
+            Lịch hẹn hôm nay
+          </h3>
+
+          {todayBookings.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[#2d2a26]">
+                    <th className="text-left py-2 px-2 text-xs text-[#7a756e]">Giờ</th>
+                    <th className="text-left py-2 px-2 text-xs text-[#7a756e]">Khách hàng</th>
+                    <th className="text-left py-2 px-2 text-xs text-[#7a756e]">Thú cưng</th>
+                    <th className="text-left py-2 px-2 text-xs text-[#7a756e]">Dịch vụ</th>
+                    <th className="text-left py-2 px-2 text-xs text-[#7a756e]">Trạng thái</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {todayBookings.map(b => (
+                    <tr key={b.id} className="border-b border-[#2d2a26]/10">
+                      <td className="py-3 px-2" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>{b.time}</td>
+                      <td className="py-3 px-2">{b.userName}</td>
+                      <td className="py-3 px-2">{b.petName}</td>
+                      <td className="py-3 px-2">{b.serviceName}</td>
+                      <td className="py-3 px-2">
+                        <span className={`inline-block text-xs px-3 py-1 rounded-lg border whitespace-nowrap ${getStatusColor(b.status)}`}>
+                          {getStatusLabel(b.status)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-12 text-[#7a756e]">
+              <CalendarDays className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              <p>Không còn lịch hẹn hôm nay!</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

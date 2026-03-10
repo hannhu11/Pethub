@@ -1,0 +1,311 @@
+import { Link } from 'react-router';
+import { motion } from 'motion/react';
+import {
+  PawPrint, Stethoscope, Scissors, Droplets, Shield,
+  CalendarCheck, QrCode, BarChart3, ArrowRight, Star, Check
+} from 'lucide-react';
+import { ImageWithFallback } from './figma/ImageWithFallback';
+
+const features = [
+  { icon: CalendarCheck, title: 'Đặt lịch thông minh', desc: 'Khách hàng đặt lịch online 24/7, tự động phân slot 30 phút, không lo trùng lịch.' },
+  { icon: QrCode, title: 'Digital Pet Card', desc: 'Thẻ định danh kỹ thuật số tích hợp QR, truy xuất lịch sử chăm sóc tức thì.' },
+  { icon: BarChart3, title: 'Báo cáo doanh thu', desc: 'Thống kê doanh thu theo tuần, tháng, dịch vụ. Ra quyết định dựa trên dữ liệu.' },
+  { icon: Shield, title: 'CRM tự động', desc: 'Nhắc lịch tiêm phòng, tái khám tự động qua email, tăng tỷ lệ giữ chân khách hàng.' },
+];
+
+const services = [
+  { icon: Stethoscope, name: 'Khám tổng quát', color: '#6b8f5e' },
+  { icon: Droplets, name: 'Tắm & Spa', color: '#4a90d9' },
+  { icon: Scissors, name: 'Cắt tỉa lông', color: '#c67d5b' },
+  { icon: Shield, name: 'Tiêm phòng', color: '#d4940a' },
+];
+
+const testimonials = [
+  { name: 'Chị Lan', role: 'Chủ cửa hàng Soul Pet', text: 'PetHub giúp tôi quản lý hơn 200 khách hàng mỗi tháng mà không cần sổ sách. Nhân viên mới cũng dùng được ngay!', rating: 5 },
+  { name: 'Anh Minh', role: 'Bác sĩ thú y', text: 'Tính năng Digital Pet Card và nhắc lịch tự động giúp phòng khám chuyên nghiệp hơn rất nhiều.', rating: 5 },
+  { name: 'Chị Hương', role: 'Quản lý phòng khám', text: 'Báo cáo doanh thu chi tiết giúp tôi nắm bắt tình hình kinh doanh mọi lúc.', rating: 5 },
+];
+
+export function HomePage() {
+  return (
+    <div>
+      {/* Hero Section */}
+      <section className="relative overflow-hidden py-16 md:py-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#6b8f5e] text-[#6b8f5e] text-sm mb-6">
+                <PawPrint className="w-4 h-4" />
+                Nền tảng SaaS #1 cho ngành thú cưng Việt Nam
+              </div>
+              <h1 className="text-4xl md:text-5xl mb-6 text-[#2d2a26]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, lineHeight: 1.2 }}>
+                Quản lý phòng khám thú y
+                <span className="text-[#6b8f5e]"> thông minh</span> &
+                <span className="text-[#c67d5b]"> nhân văn</span>
+              </h1>
+              <p className="text-lg text-[#7a756e] mb-8 max-w-lg">
+                PetHub số hóa toàn bộ vòng đời dịch vụ — từ đặt lịch, hồ sơ y tế, đến CRM tự động.
+                Được thiết kế dành riêng cho ngành chăm sóc thú cưng.
+              </p>
+              <div className="flex flex-wrap gap-4">
+                <Link
+                  to="/services"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#6b8f5e] text-white hover:-translate-y-1 transition-all border border-[#2d2a26]"
+                >
+                  Khám phá dịch vụ
+                  <ArrowRight className="w-5 h-5" />
+                </Link>
+                <Link
+                  to="/manager"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white text-[#2d2a26] hover:-translate-y-1 transition-all border border-[#2d2a26]"
+                >
+                  Dùng thử miễn phí
+                </Link>
+              </div>
+
+              {/* Stats */}
+              <div className="flex gap-8 mt-10">
+                {[
+                  { num: '12M+', label: 'Thú cưng VN' },
+                  { num: '3,100+', label: 'Cửa hàng' },
+                  { num: '95M$', label: 'Quy mô TT' },
+                ].map(s => (
+                  <div key={s.label}>
+                    <p className="text-2xl text-[#6b8f5e]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>{s.num}</p>
+                    <p className="text-xs text-[#7a756e]">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="relative"
+            >
+              <div className="relative rounded-3xl overflow-hidden border border-[#2d2a26] aspect-[4/3]">
+                <ImageWithFallback
+                  src="https://images.unsplash.com/photo-1770836037793-95bdbf190f71?w=800"
+                  alt="PetHub Veterinary Care"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#2d2a26]/30 to-transparent" />
+              </div>
+              {/* Floating card */}
+              <div className="absolute -bottom-4 -left-4 bg-white border border-[#2d2a26] rounded-2xl p-4 shadow-none">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <Check className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-[#2d2a26]" style={{ fontWeight: 600 }}>Lịch hẹn mới!</p>
+                    <p className="text-xs text-[#7a756e]">Lucky - Khám tổng quát</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Wavy Divider */}
+      <div className="relative h-12">
+        <svg viewBox="0 0 1440 48" className="absolute w-full" preserveAspectRatio="none">
+          <path d="M0,24 C360,48 720,0 1080,24 C1260,36 1380,12 1440,24 L1440,48 L0,48 Z" fill="#f0ede8" />
+        </svg>
+      </div>
+
+      {/* Services Preview */}
+      <section id="services-section" className="bg-[#f0ede8] py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl text-[#2d2a26] mb-3" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+              Dịch vụ của chúng tôi
+            </h2>
+            <p className="text-[#7a756e] max-w-lg mx-auto">
+              Chăm sóc toàn diện cho thú cưng yêu quý của bạn với đội ngũ chuyên gia giàu kinh nghiệm.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {services.map((s, i) => (
+              <motion.div
+                key={s.name}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className="bg-white border border-[#2d2a26] rounded-2xl p-6 text-center hover:-translate-y-1 transition-all cursor-pointer group"
+              >
+                <div className="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center mb-4 transition-colors" style={{ backgroundColor: s.color + '20' }}>
+                  <s.icon className="w-7 h-7" style={{ color: s.color }} />
+                </div>
+                <p className="text-sm text-[#2d2a26]" style={{ fontWeight: 500 }}>{s.name}</p>
+              </motion.div>
+            ))}
+          </div>
+          <div className="text-center mt-8">
+            <Link
+              to="/services"
+              className="inline-flex items-center gap-2 text-[#6b8f5e] hover:underline"
+            >
+              Xem tất cả dịch vụ <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section id="about-section" className="py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl text-[#2d2a26] mb-3" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+              Tại sao chọn PetHub?
+            </h2>
+            <p className="text-[#7a756e] max-w-lg mx-auto">
+              Giải pháp Vertical SaaS chuyên biệt, thiết kế riêng cho ngành chăm sóc thú cưng Việt Nam.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 gap-6">
+            {features.map((f, i) => (
+              <motion.div
+                key={f.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className="bg-white border border-[#2d2a26] rounded-2xl p-6 hover:-translate-y-1 transition-all"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-[#6b8f5e]/10 flex-shrink-0 flex items-center justify-center">
+                    <f.icon className="w-6 h-6 text-[#6b8f5e]" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg text-[#2d2a26] mb-2" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>{f.title}</h3>
+                    <p className="text-sm text-[#7a756e]">{f.desc}</p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section id="pricing-section" className="bg-[#f0ede8] py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl text-[#2d2a26] mb-3" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+              Bảng giá minh bạch
+            </h2>
+            <p className="text-[#7a756e]">Bắt đầu miễn phí, nâng cấp khi sẵn sàng.</p>
+          </div>
+          <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+            {/* Free */}
+            <div className="bg-white border border-[#2d2a26] rounded-2xl p-8">
+              <h3 className="text-lg mb-1" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>Cơ bản</h3>
+              <p className="text-3xl text-[#2d2a26] mb-4" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                0 <span className="text-sm text-[#7a756e]" style={{ fontWeight: 400 }}>VND/tháng</span>
+              </p>
+              <div className="space-y-3 mb-6">
+                {['Giới hạn 50 hồ sơ', 'Tạo booking thủ công', 'Lưu lịch sử dịch vụ', '1 tài khoản admin'].map(f => (
+                  <div key={f} className="flex items-center gap-2 text-sm">
+                    <Check className="w-4 h-4 text-[#6b8f5e]" />
+                    {f}
+                  </div>
+                ))}
+              </div>
+              <Link to="/register" className="block w-full text-center py-3 rounded-xl border border-[#2d2a26] hover:-translate-y-0.5 transition-all">
+                Bắt đầu miễn phí
+              </Link>
+            </div>
+            {/* Premium */}
+            <div className="bg-[#6b8f5e] text-white border border-[#2d2a26] rounded-2xl p-8 relative">
+              <div className="absolute -top-3 right-6 px-3 py-1 bg-[#c67d5b] text-white text-xs rounded-full border border-[#2d2a26]">
+                Phổ biến nhất
+              </div>
+              <h3 className="text-lg mb-1" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>Premium</h3>
+              <p className="text-3xl mb-4" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                249.000 <span className="text-sm opacity-80" style={{ fontWeight: 400 }}>VND/tháng</span>
+              </p>
+              <div className="space-y-3 mb-6">
+                {['Không giới hạn hồ sơ', 'Báo cáo doanh thu chi tiết', 'Đăng nhập Google OAuth', 'Nhắc lịch CRM tự động', 'Digital Pet Card & QR', 'Phân tích khách quay lại'].map(f => (
+                  <div key={f} className="flex items-center gap-2 text-sm">
+                    <Check className="w-4 h-4" />
+                    {f}
+                  </div>
+                ))}
+              </div>
+              <Link to="/register" className="block w-full text-center py-3 rounded-xl bg-white text-[#6b8f5e] hover:-translate-y-0.5 transition-all border border-[#2d2a26]" style={{ fontWeight: 600 }}>
+                Dùng thử 14 ngày
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section id="testimonials-section" className="py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl text-[#2d2a26] mb-3" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+              Khách hàng nói gì?
+            </h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {testimonials.map((t, i) => (
+              <motion.div
+                key={t.name}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className="bg-white border border-[#2d2a26] rounded-2xl p-6"
+              >
+                <div className="flex gap-1 mb-4">
+                  {Array(t.rating).fill(0).map((_, j) => (
+                    <Star key={j} className="w-4 h-4 fill-[#d4940a] text-[#d4940a]" />
+                  ))}
+                </div>
+                <p className="text-sm text-[#2d2a26] mb-4 italic">"{t.text}"</p>
+                <div>
+                  <p className="text-sm" style={{ fontWeight: 600 }}>{t.name}</p>
+                  <p className="text-xs text-[#7a756e]">{t.role}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section id="contact-section" className="py-16">
+        <div className="max-w-4xl mx-auto px-4 text-center">
+          <div className="bg-[#6b8f5e] rounded-3xl p-12 border border-[#2d2a26] relative overflow-hidden">
+            <div className="absolute top-4 right-4 opacity-10">
+              <PawPrint className="w-32 h-32 text-white" />
+            </div>
+            <h2 className="text-3xl text-white mb-4" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+              Sẵn sàng nâng cấp phòng khám?
+            </h2>
+            <p className="text-white/80 mb-8 max-w-lg mx-auto">
+              Tham gia cùng hàng trăm cơ sở thú y đang sử dụng PetHub để tối ưu vận hành.
+            </p>
+            <Link
+              to="/register"
+              className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white text-[#6b8f5e] hover:-translate-y-1 transition-all border border-[#2d2a26]"
+              style={{ fontWeight: 600 }}
+            >
+              Đăng ký ngay — Miễn phí
+              <ArrowRight className="w-5 h-5" />
+            </Link>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
