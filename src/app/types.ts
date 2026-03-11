@@ -49,6 +49,7 @@ export interface PetProfileDraft {
   bloodType: BloodType;
   neutered: NeuteredStatus;
   microchipId: string;
+  specialNotes: string;
   imageFile?: File | null;
   imagePreview?: string;
 }
@@ -63,4 +64,31 @@ export interface ProductRevenueDatum {
   productName: string;
   revenue: number;
   quantity: number;
+}
+
+export interface InvoiceLineItem {
+  name: string;
+  type: 'service' | 'product';
+  qty: number;
+  unitPrice: number;
+  total: number;
+}
+
+export interface InvoiceRecord {
+  id: string;
+  appointmentId?: string;
+  customerId: string;
+  petId?: string;
+  items: InvoiceLineItem[];
+  subtotal: number;
+  tax: number;
+  grandTotal: number;
+  paymentMethod: 'cash' | 'transfer' | 'card';
+  createdAt: string;
+}
+
+export interface AppointmentCheckoutState {
+  appointmentId: string;
+  paid: boolean;
+  invoiceId?: string;
 }
