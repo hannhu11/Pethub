@@ -1,0 +1,128 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pethub-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: pethub
+      POSTGRES_USER: pethub
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-replace_me}
+    volumes:
+      - pethub_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pethub -d pethub"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - pethub_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: pethub-redis
+    restart: always
+    command: >
+      sh -c "redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-replace_me}"
+    volumes:
+      - pethub_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-replace_me}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - pethub_net
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pethub-api
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://pethub:${POSTGRES_PASSWORD:-replace_me}@postgres:5432/pethub?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-replace_me}
+      CORS_ORIGIN: https://app.example.com
+      AUTH_MOCK_ENABLED: "false"
+      FIREBASE_SERVICE_ACCOUNT_JSON: ${FIREBASE_SERVICE_ACCOUNT_JSON:-}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL:-}
+      FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      PAYOS_CLIENT_ID: ${PAYOS_CLIENT_ID:-}
+      PAYOS_API_KEY: ${PAYOS_API_KEY:-}
+      PAYOS_CHECKSUM_KEY: ${PAYOS_CHECKSUM_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+    networks:
+      - pethub_net
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pethub-worker
+    restart: always
+    command: sh -c "PORT=4010 node dist/main.js"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://pethub:${POSTGRES_PASSWORD:-replace_me}@postgres:5432/pethub?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-replace_me}
+      AUTH_MOCK_ENABLED: "false"
+      FIREBASE_SERVICE_ACCOUNT_JSON: ${FIREBASE_SERVICE_ACCOUNT_JSON:-}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL:-}
+      FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - pethub_net
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    container_name: pethub-web
+    restart: always
+    networks:
+      - pethub_net
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: pethub-nginx
+    restart: always
+    depends_on:
+      - web
+      - api
+    volumes:
+      - ./docker/nginx/pethub.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "8088:80"
+    networks:
+      - pethub_net
+
+networks:
+  pethub_net:
+    driver: bridge
+
+volumes:
+  pethub_postgres_data:
+  pethub_redis_data:

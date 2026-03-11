@@ -1,11 +1,57 @@
 
-  # Thiết kế website Pethub
+# PetHub
 
-  This is a code bundle for Thiết kế website Pethub. The original project is available at https://www.figma.com/design/Kx51q6LxJvex05ktCjMczh/Thi%E1%BA%BFt-k%E1%BA%BF-website-Pethub.
+PetHub includes:
 
-  ## Running the code
+- Frontend (`Vite + React`) in project root
+- Backend (`NestJS + Prisma + PostgreSQL + Firebase Auth`) in `/backend`
 
-  Run `npm i` to install the dependencies.
+## 1) Local development
 
-  Run `npm run dev` to start the development server.
-  
+### Frontend
+
+```bash
+npm i
+npm run dev
+```
+
+### Backend
+
+```bash
+cd backend
+npm i
+cp .env.example .env
+npx prisma generate
+npm run start:dev
+```
+
+## 2) Build checks
+
+```bash
+npm run build
+npm --prefix backend run build
+npm --prefix backend test -- --runInBand
+```
+
+## 3) Production deployment (Oracle VPS)
+
+- Compose file: `/docker-compose.production.yml`
+- Nginx route template: `/docker/nginx/pethub.conf`
+- Logic audit: `/docs/LOGIC_AUDIT.md`
+- Operations runbook: `/docs/ORACLE_PRODUCTION_RUNBOOK_VN.md`
+
+Bring up production stack:
+
+```bash
+docker compose -f docker-compose.production.yml -p pethub up -d --build
+```
+
+## 4) Production architecture
+
+- `app.<domain>` -> frontend container
+- `api.<domain>` -> NestJS API container
+- PostgreSQL is source of truth (business data)
+- Redis for queue/realtime support
+- Firebase for authentication tokens
+- payOS/VietQR for subscription payment flow
+- Gemini for reminder text generation
