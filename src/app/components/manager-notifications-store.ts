@@ -44,6 +44,29 @@ function isBrowser() {
   return typeof window !== 'undefined';
 }
 
+function normalizeReadFlag(
+  item: Partial<NotificationItem> & { isRead?: boolean | string | number; read?: boolean | string | number },
+  fallback = false,
+) {
+  const candidate = item.read ?? item.isRead;
+
+  if (typeof candidate === 'boolean') {
+    return candidate;
+  }
+
+  if (typeof candidate === 'number') {
+    return candidate === 1;
+  }
+
+  if (typeof candidate === 'string') {
+    const normalized = candidate.trim().toLowerCase();
+    if (normalized === 'true' || normalized === '1') return true;
+    if (normalized === 'false' || normalized === '0' || normalized === '') return false;
+  }
+
+  return fallback;
+}
+
 function readNotifications() {
   if (!isBrowser()) return defaultNotifications;
   try {
@@ -59,7 +82,7 @@ function readNotifications() {
       body: item.body ?? defaultNotifications[index]?.body ?? '',
       to: item.to ?? '/manager',
       createdAt: item.createdAt ?? item.time ?? 'Vừa xong',
-      read: Boolean(item.read),
+      read: normalizeReadFlag(item, defaultNotifications[index]?.read ?? false),
       readAt: item.readAt,
     }));
   } catch {
