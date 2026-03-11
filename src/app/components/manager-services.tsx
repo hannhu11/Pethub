@@ -23,6 +23,7 @@ import {
 } from './data';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { PetDigitalCard } from './pet-digital-card';
+import { PetProfileDetailPanel } from './pet-profile-detail-panel';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import {
   DropdownMenu,
@@ -376,8 +377,6 @@ function CategoriesTab() {
   );
 }
 
-const referenceDate = new Date('2026-03-10T00:00:00');
-
 const bloodTypeOptions: Array<{ value: BloodType; label: string }> = [
   { value: 'A', label: 'A' },
   { value: 'B', label: 'B' },
@@ -536,13 +535,6 @@ export function ManagerPetsPage() {
 
   const handleCreateCard = (petId: string) => {
     setPets(prev => prev.map(p => p.id === petId ? { ...p, hasDigitalCard: true } : p));
-  };
-
-  const getAge = (dob: string) => {
-    const birth = new Date(`${dob}T00:00:00`);
-    const years = referenceDate.getFullYear() - birth.getFullYear();
-    if (years > 0) return `${years} tuổi`;
-    return 'Dưới 1 tuổi';
   };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -743,45 +735,7 @@ export function ManagerPetsPage() {
               <div className="p-5 space-y-4">
                 {/* Info Tab */}
                 {detailTab === 'info' && (
-                  <>
-                    <div className="grid grid-cols-2 gap-3">
-                      {[
-                        { label: 'Loài', value: selectedPet.species },
-                        { label: 'Giống', value: selectedPet.breed },
-                        { label: 'Giới tính', value: selectedPet.gender },
-                        { label: 'Ngày sinh', value: selectedPet.dob },
-                        { label: 'Cân nặng', value: selectedPet.weight },
-                        { label: 'Tuổi', value: getAge(selectedPet.dob) },
-                        { label: 'Màu lông', value: normalizeNoneText(selectedPet.color) ? 'Không có' : selectedPet.color },
-                        { label: 'Nhóm máu', value: normalizeNoneText(selectedPet.bloodType) ? 'Không có' : selectedPet.bloodType },
-                        { label: 'Microchip', value: normalizeNoneText(selectedPet.microchipId) ? 'Không có' : selectedPet.microchipId },
-                        {
-                          label: 'Triệt sản',
-                          value: selectedPet.neutered === true ? 'Đã triệt sản' : selectedPet.neutered === false ? 'Chưa triệt sản' : 'Không rõ',
-                        },
-                        { label: 'Lưu ý', value: selectedPet.specialNotes || 'Không có' },
-                      ].map(item => (
-                        <div key={item.label} className="p-3 bg-white rounded-xl border border-[#2d2a26]/10">
-                          <p className="text-[10px] text-[#7a756e] mb-1 uppercase tracking-wider">{item.label}</p>
-                          <p className="text-sm" style={{ fontWeight: 500 }}>{item.value}</p>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="bg-white rounded-xl border border-[#2d2a26]/10 p-4">
-                      <p className="text-[10px] text-[#7a756e] mb-2 uppercase tracking-wider">Chủ sở hữu</p>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[#c67d5b] flex items-center justify-center">
-                          <span className="text-white text-xs" style={{ fontWeight: 600 }}>{selectedPet.ownerName.split(' ').pop()?.charAt(0)}</span>
-                        </div>
-                        <div>
-                          <p className="text-sm" style={{ fontWeight: 500 }}>{selectedPet.ownerName}</p>
-                          <p className="text-xs text-[#7a756e]">{selectedPet.ownerPhone}</p>
-                          <p className="text-xs text-[#7a756e]">{selectedPet.ownerEmail}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <p className="text-[10px] text-[#7a756e] font-mono">ID: {selectedPet.id}</p>
-                  </>
+                  <PetProfileDetailPanel pet={selectedPet} />
                 )}
 
                 {/* Medical Records Tab */}

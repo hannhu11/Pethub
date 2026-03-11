@@ -15,7 +15,7 @@ import { ManagerUpgradePremiumPage } from './components/manager-upgrade-premium'
 import { ManagerPOSPage } from './components/manager-pos';
 import { ManagerInvoicePage } from './components/manager-invoice';
 import { ManagerNotificationsPage } from './components/manager-notifications';
-import { PublicOnlyGuard, RequireCustomerGuard, RequireManagerGuard } from './auth-session';
+import { RequireCustomerGuard, RequireManagerGuard, useAuthSession } from './auth-session';
 import {
   PricingPage,
   AboutPage,
@@ -37,6 +37,26 @@ function RedirectToHome() {
   return <Navigate to='/' replace />;
 }
 
+function getAuthenticatedDefaultPath(role: 'customer' | 'manager' | null) {
+  return role === 'manager' ? '/manager' : '/customer/dashboard';
+}
+
+function GuestLoginPage() {
+  const { session } = useAuthSession();
+  if (session.isAuthenticated) {
+    return <Navigate to={getAuthenticatedDefaultPath(session.role)} replace />;
+  }
+  return <LoginPage />;
+}
+
+function GuestRegisterPage() {
+  const { session } = useAuthSession();
+  if (session.isAuthenticated) {
+    return <Navigate to={getAuthenticatedDefaultPath(session.role)} replace />;
+  }
+  return <RegisterPage />;
+}
+
 const access = {
   public: 'public',
   customer: 'customer',
@@ -45,25 +65,20 @@ const access = {
 
 export const router = createBrowserRouter([
   {
-    Component: PublicOnlyGuard,
+    path: '/',
+    Component: PublicLayout,
+    handle: { access: access.public },
     children: [
-      {
-        path: '/',
-        Component: PublicLayout,
-        handle: { access: access.public },
-        children: [
-          { index: true, Component: HomePage, handle: { access: access.public } },
-          { path: 'pricing', Component: PricingPage, handle: { access: access.public } },
-          { path: 'about', Component: AboutPage, handle: { access: access.public } },
-          { path: 'blog', Component: BlogPage, handle: { access: access.public } },
-          { path: 'contact', Component: ContactPage, handle: { access: access.public } },
-          { path: 'help', Component: HelpPage, handle: { access: access.public } },
-          { path: 'terms', Component: TermsPage, handle: { access: access.public } },
-          { path: 'privacy', Component: PrivacyPage, handle: { access: access.public } },
-          { path: 'login', Component: LoginPage, handle: { access: access.public } },
-          { path: 'register', Component: RegisterPage, handle: { access: access.public } },
-        ],
-      },
+      { index: true, Component: HomePage, handle: { access: access.public } },
+      { path: 'pricing', Component: PricingPage, handle: { access: access.public } },
+      { path: 'about', Component: AboutPage, handle: { access: access.public } },
+      { path: 'blog', Component: BlogPage, handle: { access: access.public } },
+      { path: 'contact', Component: ContactPage, handle: { access: access.public } },
+      { path: 'help', Component: HelpPage, handle: { access: access.public } },
+      { path: 'terms', Component: TermsPage, handle: { access: access.public } },
+      { path: 'privacy', Component: PrivacyPage, handle: { access: access.public } },
+      { path: 'login', Component: GuestLoginPage, handle: { access: access.public } },
+      { path: 'register', Component: GuestRegisterPage, handle: { access: access.public } },
     ],
   },
   {

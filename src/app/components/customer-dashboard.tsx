@@ -27,6 +27,7 @@ import {
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { BackButton } from './back-button';
 import { PetDigitalCard } from './pet-digital-card';
+import { PetProfileDetailPanel } from './pet-profile-detail-panel';
 import { downloadElementAsPng } from './export-utils';
 
 export function ProfilePage() {
@@ -232,23 +233,7 @@ export function PetListPage() {
                       <p className='text-sm text-[#7a756e]'>{pet.breed}</p>
                     </div>
                   </div>
-                  <div className='grid grid-cols-2 gap-4'>
-                    {[
-                      { label: 'Loài', value: pet.species },
-                      { label: 'Giống', value: pet.breed },
-                      { label: 'Giới tính', value: pet.gender },
-                      { label: 'Ngày sinh', value: pet.dob },
-                      { label: 'Cân nặng', value: pet.weight },
-                      { label: 'Mã ID', value: pet.id },
-                    ].map((item) => (
-                      <div key={item.label} className='p-3 bg-[#f0ede8] rounded-xl'>
-                        <p className='text-xs text-[#7a756e] mb-1'>{item.label}</p>
-                        <p className='text-sm' style={{ fontWeight: 500 }}>
-                          {item.value}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
+                  <PetProfileDetailPanel pet={pet} />
                 </div>
               ) : (
                 <div className='p-5'>
