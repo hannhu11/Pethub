@@ -192,7 +192,7 @@ export function ManagerLayout() {
 
   return (
     <div className='min-h-screen flex bg-[#faf9f6]'>
-      <aside className='hidden lg:flex flex-col w-64 bg-[#f5f0eb] border-r border-[#2d2a26]'>
+      <aside className='hidden lg:flex flex-col w-64 bg-[#f5f0eb] border-r border-[#2d2a26] print:hidden'>
         <div className='p-5 border-b border-[#2d2a26]'>
           <Link to='/manager' className='flex items-center gap-2'>
             <div className='w-9 h-9 rounded-xl bg-[#6b8f5e] flex items-center justify-center'>
@@ -267,7 +267,7 @@ export function ManagerLayout() {
       </aside>
 
       {sidebarOpen && (
-        <div className='fixed inset-0 z-50 lg:hidden'>
+        <div className='fixed inset-0 z-50 lg:hidden print:hidden'>
           <div className='absolute inset-0 bg-black/30' onClick={() => setSidebarOpen(false)} />
           <aside className='relative w-64 h-full bg-[#f5f0eb] border-r border-[#2d2a26] overflow-y-auto'>
             <div className='p-5 flex items-center justify-between border-b border-[#2d2a26]'>
@@ -323,7 +323,7 @@ export function ManagerLayout() {
       )}
 
       <div className='flex-1 flex flex-col min-h-screen'>
-        <header className='h-14 border-b border-[#2d2a26] bg-white flex items-center px-4 sticky top-0 z-40'>
+        <header className='h-14 border-b border-[#2d2a26] bg-white flex items-center px-4 sticky top-0 z-40 print:hidden'>
           <div className='flex items-center gap-2 min-w-0 flex-1'>
             <button className='lg:hidden p-1' onClick={() => setSidebarOpen(true)}>
               <Menu className='w-5 h-5' />
@@ -421,7 +421,7 @@ export function ManagerLayout() {
           </div>
         </header>
 
-        <main className='flex-1 p-4 md:p-6 overflow-auto'>
+        <main className='flex-1 p-4 md:p-6 overflow-auto print:p-0 print:m-0 print:overflow-visible print:bg-white'>
           <Outlet />
         </main>
       </div>
