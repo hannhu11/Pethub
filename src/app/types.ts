@@ -28,7 +28,7 @@ export interface CancelDialogState {
   appointmentId: string | null;
 }
 
-export type CustomerSegment = 'vip' | 'loyal' | 'new' | 'regular';
+export type CustomerSegment = 'vip' | 'loyal' | 'regular' | 'new';
 
 export type NeuteredStatus = 'yes' | 'no' | 'none';
 
@@ -52,6 +52,41 @@ export interface PetProfileDraft {
   specialNotes: string;
   imageFile?: File | null;
   imagePreview?: string;
+}
+
+export type ReminderStatus = 'scheduled' | 'sent' | 'failed' | 'cancelled';
+
+export interface ReminderTemplate {
+  id: string;
+  name: string;
+  type: 'vaccine' | 'checkup' | 'grooming' | 'medication';
+  channelDefaults: Array<'email' | 'sms'>;
+  messageTemplate: string;
+}
+
+export interface NotificationItem {
+  id: number;
+  title: string;
+  body: string;
+  to: string;
+  createdAt: string;
+  read: boolean;
+  readAt?: string;
+}
+
+export interface ClinicSettings {
+  name: string;
+  taxId: string;
+  phone: string;
+  address: string;
+  invoiceNote: string;
+}
+
+export interface SensitiveSaveConfirmState {
+  open: boolean;
+  target: 'profile' | 'clinic' | null;
+  password: string;
+  submitting: boolean;
 }
 
 export interface DigitalCardModalState {

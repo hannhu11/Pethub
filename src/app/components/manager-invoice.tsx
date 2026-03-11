@@ -1,10 +1,11 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { ArrowLeft, Download, Printer, QrCode } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { getInvoiceById } from './manager-checkout-store';
 import { formatCurrency, mockPets, mockUsers } from './data';
 import { downloadElementAsPdf } from './export-utils';
+import { getClinicSettings, subscribeManagerSettingsUpdates } from './manager-settings-store';
 
 const paymentMethodLabel: Record<string, string> = {
   cash: 'Tiền mặt',
@@ -17,8 +18,15 @@ export function ManagerInvoicePage() {
   const navigate = useNavigate();
   const invoiceRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
+  const [clinic, setClinic] = useState(getClinicSettings());
 
   const invoice = useMemo(() => (invoiceId ? getInvoiceById(invoiceId) : undefined), [invoiceId]);
+
+  useEffect(() => {
+    return subscribeManagerSettingsUpdates(() => {
+      setClinic(getClinicSettings());
+    });
+  }, []);
 
   if (!invoice) {
     return (
@@ -94,8 +102,9 @@ export function ManagerInvoicePage() {
             <p className='text-2xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
               Pet<span className='text-[#c67d5b]'>Hub</span>
             </p>
-            <p className='text-sm text-[#7a756e] mt-1'>PetHub Clinic, TP. Hồ Chí Minh</p>
-            <p className='text-sm text-[#7a756e]'>Hotline: 1900-PETHUB</p>
+            <p className='text-sm text-[#7a756e] mt-1'>{clinic.name}</p>
+            <p className='text-sm text-[#7a756e]'>{clinic.address}</p>
+            <p className='text-sm text-[#7a756e]'>Hotline: {clinic.phone}</p>
           </div>
           <div className='text-right'>
             <p className='text-lg text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
@@ -179,7 +188,7 @@ export function ManagerInvoicePage() {
         </div>
 
         <div className='mt-4 text-xs text-[#7a756e] text-center'>
-          Cảm ơn quý khách đã sử dụng dịch vụ tại PetHub.
+          {clinic.invoiceNote}
           <span className='block mt-1'>
             Xem lại lịch sử tại <Link to='/manager/pos' className='underline text-[#6b8f5e]'>trang POS</Link>
           </span>
@@ -188,4 +197,3 @@ export function ManagerInvoicePage() {
     </div>
   );
 }
-

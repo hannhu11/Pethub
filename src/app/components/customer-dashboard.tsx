@@ -388,7 +388,7 @@ export function BookingListPage() {
 export function DigitalCardPage() {
   const { petId } = useParams();
   const pet = mockPets.find((item) => item.id === petId) || mockPets[0];
-  const cardRef = useRef<HTMLDivElement>(null);
+  const cardExportRef = useRef<HTMLDivElement>(null);
 
   return (
     <div className='py-12'>
@@ -401,18 +401,22 @@ export function DigitalCardPage() {
           PETHUB DIGITAL PET CARD
         </h1>
 
-        <div ref={cardRef} className='mx-auto max-w-2xl'>
+        <div className='mx-auto max-w-2xl'>
           <PetDigitalCard pet={pet} />
+        </div>
+        <div className='fixed -left-[9999px] top-0 pointer-events-none'>
+          <div ref={cardExportRef} className='inline-block'>
+            <PetDigitalCard pet={pet} className='w-[760px]' />
+          </div>
         </div>
 
         <div className='max-w-2xl mx-auto mt-4 flex gap-3'>
           <button
             type='button'
             onClick={() => {
-              if (!cardRef.current) return;
-              void downloadElementAsPng(cardRef.current, {
+              if (!cardExportRef.current) return;
+              void downloadElementAsPng(cardExportRef.current, {
                 fileName: `${pet.id.toLowerCase()}-digital-card.png`,
-                width: 1200,
                 backgroundColor: '#1f2327',
               });
             }}

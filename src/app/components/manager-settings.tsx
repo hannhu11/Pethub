@@ -1,14 +1,24 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { motion } from 'motion/react';
 import {
   User, Building2, CreditCard, BellRing, Save, Check,
-  Crown, Zap, PawPrint, BarChart3, Mail, Smartphone
+  Crown, Zap, PawPrint, BarChart3, Mail, Smartphone, LockKeyhole
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
+import {
+  getClinicSettings,
+  getProfileSettings,
+  saveClinicSettings,
+  saveProfileSettings,
+  subscribeManagerSettingsUpdates,
+} from './manager-settings-store';
+import type { SensitiveSaveConfirmState } from '../types';
 
 const settingsTabs = [
   { id: 'profile', label: 'Hồ sơ cá nhân', icon: User },
   { id: 'clinic', label: 'Thông tin phòng khám', icon: Building2 },
+  { id: 'password', label: 'Đổi mật khẩu', icon: LockKeyhole },
   { id: 'subscription', label: 'Gói & Thanh toán', icon: CreditCard },
   { id: 'notifications', label: 'Thông báo', icon: BellRing },
 ] as const;
@@ -23,24 +33,24 @@ export function ManagerSettingsPage() {
     requestedTab && validTabIds.includes(requestedTab as SettingsTabId) ? (requestedTab as SettingsTabId) : 'profile';
 
   const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
-  const [saved, setSaved] = useState(false);
-
-  // Profile form
-  const [profile, setProfile] = useState({
-    name: 'Phạm Hương',
-    email: 'huong.pham@email.com',
-    phone: '0934567890',
-    role: 'Quản trị viên',
+  const [savedTarget, setSavedTarget] = useState<'profile' | 'clinic' | null>(null);
+  const [profile, setProfile] = useState(getProfileSettings());
+  const [clinic, setClinic] = useState(getClinicSettings());
+  const [confirmState, setConfirmState] = useState<SensitiveSaveConfirmState>({
+    open: false,
+    target: null,
+    password: '',
+    submitting: false,
   });
+  const [confirmError, setConfirmError] = useState('');
 
-  // Clinic form
-  const [clinic, setClinic] = useState({
-    name: 'PetHub Clinic',
-    taxId: '0123456789',
-    phone: '028-1234-5678',
-    address: '123 Nguyễn Huệ, Q.1, TP.HCM',
-    invoiceNote: 'Cảm ơn quý khách đã sử dụng dịch vụ tại PetHub!',
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
   });
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSaved, setPasswordSaved] = useState(false);
 
   // Notification settings
   const [notifications, setNotifications] = useState({
@@ -52,21 +62,19 @@ export function ManagerSettingsPage() {
     weeklyReport: false,
   });
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
-
-  const toggleNotif = (key: keyof typeof notifications) => {
-    setNotifications(prev => ({ ...prev, [key]: !prev[key] }));
-  };
-
   useEffect(() => {
     if (!requestedTab || !validTabIds.includes(requestedTab as SettingsTabId)) {
       return;
     }
     setActiveTab(requestedTab as SettingsTabId);
   }, [requestedTab, validTabIds]);
+
+  useEffect(() => {
+    return subscribeManagerSettingsUpdates(() => {
+      setProfile(getProfileSettings());
+      setClinic(getClinicSettings());
+    });
+  }, []);
 
   const handleTabChange = (tabId: SettingsTabId) => {
     setActiveTab(tabId);
@@ -75,17 +83,78 @@ export function ManagerSettingsPage() {
     setSearchParams(nextParams, { replace: true });
   };
 
+  const openSensitiveConfirm = (target: 'profile' | 'clinic') => {
+    setConfirmError('');
+    setConfirmState({ open: true, target, password: '', submitting: false });
+  };
+
+  const closeSensitiveConfirm = () => {
+    setConfirmError('');
+    setConfirmState({ open: false, target: null, password: '', submitting: false });
+  };
+
+  const submitSensitiveSave = () => {
+    if (!confirmState.target) return;
+    const password = confirmState.password.trim();
+    if (password.length < 6) {
+      setConfirmError('Vui lòng nhập mật khẩu xác nhận (tối thiểu 6 ký tự).');
+      return;
+    }
+
+    setConfirmState(prev => ({ ...prev, submitting: true }));
+    if (confirmState.target === 'profile') {
+      saveProfileSettings(profile);
+      setSavedTarget('profile');
+    } else {
+      saveClinicSettings(clinic);
+      setSavedTarget('clinic');
+    }
+
+    window.setTimeout(() => {
+      setSavedTarget(null);
+    }, 2000);
+
+    closeSensitiveConfirm();
+  };
+
+  const toggleNotif = (key: keyof typeof notifications) => {
+    setNotifications(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const savePassword = () => {
+    setPasswordError('');
+    setPasswordSaved(false);
+
+    if (!passwordForm.currentPassword.trim()) {
+      setPasswordError('Vui lòng nhập mật khẩu hiện tại.');
+      return;
+    }
+    if (passwordForm.newPassword.length < 8) {
+      setPasswordError('Mật khẩu mới phải có ít nhất 8 ký tự.');
+      return;
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError('Xác nhận mật khẩu mới không khớp.');
+      return;
+    }
+
+    setPasswordSaved(true);
+    setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    window.setTimeout(() => {
+      setPasswordSaved(false);
+    }, 2000);
+  };
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl text-[#2d2a26]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
-          {"Cài đặt"}
+          {'Cài đặt'}
         </h1>
-        <p className="text-sm text-[#7a756e] mt-1">{"Quản lý thông tin tài khoản và phòng khám"}</p>
+        <p className="text-sm text-[#7a756e] mt-1">{'Quản lý thông tin tài khoản và phòng khám'}</p>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* Left Nav Tabs */}
         <div className="lg:w-56 flex-shrink-0">
           <div className="bg-white border border-[#2d2a26] rounded-2xl overflow-hidden">
             {settingsTabs.map(tab => (
@@ -105,17 +174,15 @@ export function ManagerSettingsPage() {
           </div>
         </div>
 
-        {/* Right Content */}
         <div className="flex-1 min-w-0">
-          {/* PROFILE TAB */}
           {activeTab === 'profile' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
               className="bg-white border border-[#2d2a26] rounded-2xl">
               <div className="p-5 border-b border-[#2d2a26]/10">
                 <h2 className="text-lg text-[#2d2a26]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
-                  {"Hồ sơ cá nhân"}
+                  {'Hồ sơ cá nhân'}
                 </h2>
-                <p className="text-xs text-[#7a756e] mt-1">{"Thông tin tài khoản quản trị của bạn"}</p>
+                <p className="text-xs text-[#7a756e] mt-1">{'Thông tin tài khoản quản trị của bạn (yêu cầu xác thực mật khẩu khi lưu)'}</p>
               </div>
               <div className="p-5 space-y-4">
                 <div className="flex items-center gap-4 mb-6">
@@ -129,7 +196,7 @@ export function ManagerSettingsPage() {
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs text-[#7a756e] mb-1 block">{"Họ và tên"}</label>
+                    <label className="text-xs text-[#7a756e] mb-1 block">{'Họ và tên'}</label>
                     <input value={profile.name} onChange={e => setProfile({ ...profile, name: e.target.value })}
                       className="w-full p-3 border border-[#2d2a26] rounded-xl text-sm bg-white focus:outline-none focus:bg-[#faf9f6]" />
                   </div>
@@ -139,104 +206,151 @@ export function ManagerSettingsPage() {
                       className="w-full p-3 border border-[#2d2a26] rounded-xl text-sm bg-white focus:outline-none focus:bg-[#faf9f6]" />
                   </div>
                   <div>
-                    <label className="text-xs text-[#7a756e] mb-1 block">{"Số điện thoại"}</label>
+                    <label className="text-xs text-[#7a756e] mb-1 block">{'Số điện thoại'}</label>
                     <input value={profile.phone} onChange={e => setProfile({ ...profile, phone: e.target.value })}
                       className="w-full p-3 border border-[#2d2a26] rounded-xl text-sm bg-white focus:outline-none focus:bg-[#faf9f6]" />
                   </div>
                   <div>
-                    <label className="text-xs text-[#7a756e] mb-1 block">{"Vai trò"}</label>
+                    <label className="text-xs text-[#7a756e] mb-1 block">{'Vai trò'}</label>
                     <input value={profile.role} disabled
                       className="w-full p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-[#f0ede8] text-[#7a756e]" />
                   </div>
                 </div>
                 <div className="pt-3">
-                  <button onClick={handleSave}
+                  <button onClick={() => openSensitiveConfirm('profile')}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#6b8f5e] text-white text-sm hover:-translate-y-0.5 transition-all border border-[#2d2a26]">
-                    {saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-                    {saved ? 'Đã lưu!' : 'Lưu thay đổi'}
+                    {savedTarget === 'profile' ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+                    {savedTarget === 'profile' ? 'Đã lưu!' : 'Lưu thay đổi'}
                   </button>
                 </div>
               </div>
             </motion.div>
           )}
 
-          {/* CLINIC TAB */}
           {activeTab === 'clinic' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
               className="bg-white border border-[#2d2a26] rounded-2xl">
               <div className="p-5 border-b border-[#2d2a26]/10">
                 <h2 className="text-lg text-[#2d2a26]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
-                  {"Thông tin phòng khám"}
+                  {'Thông tin phòng khám'}
                 </h2>
-                <p className="text-xs text-[#7a756e] mt-1">{"Thông tin hiển thị trên hóa đơn và trang công khai"}</p>
+                <p className="text-xs text-[#7a756e] mt-1">{'Thông tin hiển thị trên hóa đơn và trang công khai (yêu cầu xác thực mật khẩu khi lưu)'}</p>
               </div>
               <div className="p-5 space-y-4">
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs text-[#7a756e] mb-1 block">{"Tên phòng khám"}</label>
+                    <label className="text-xs text-[#7a756e] mb-1 block">{'Tên phòng khám'}</label>
                     <input value={clinic.name} onChange={e => setClinic({ ...clinic, name: e.target.value })}
                       className="w-full p-3 border border-[#2d2a26] rounded-xl text-sm bg-white focus:outline-none focus:bg-[#faf9f6]" />
                   </div>
                   <div>
-                    <label className="text-xs text-[#7a756e] mb-1 block">{"Mã số thuế"}</label>
+                    <label className="text-xs text-[#7a756e] mb-1 block">{'Mã số thuế'}</label>
                     <input value={clinic.taxId} onChange={e => setClinic({ ...clinic, taxId: e.target.value })}
                       className="w-full p-3 border border-[#2d2a26] rounded-xl text-sm bg-white focus:outline-none focus:bg-[#faf9f6]" />
                   </div>
                   <div>
-                    <label className="text-xs text-[#7a756e] mb-1 block">{"Số điện thoại"}</label>
+                    <label className="text-xs text-[#7a756e] mb-1 block">{'Số điện thoại'}</label>
                     <input value={clinic.phone} onChange={e => setClinic({ ...clinic, phone: e.target.value })}
                       className="w-full p-3 border border-[#2d2a26] rounded-xl text-sm bg-white focus:outline-none focus:bg-[#faf9f6]" />
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs text-[#7a756e] mb-1 block">{"Địa chỉ"}</label>
+                  <label className="text-xs text-[#7a756e] mb-1 block">{'Địa chỉ'}</label>
                   <input value={clinic.address} onChange={e => setClinic({ ...clinic, address: e.target.value })}
                     className="w-full p-3 border border-[#2d2a26] rounded-xl text-sm bg-white focus:outline-none focus:bg-[#faf9f6]" />
                 </div>
                 <div>
-                  <label className="text-xs text-[#7a756e] mb-1 block">{"Ghi chú hóa đơn"}</label>
+                  <label className="text-xs text-[#7a756e] mb-1 block">{'Ghi chú hóa đơn'}</label>
                   <textarea value={clinic.invoiceNote} onChange={e => setClinic({ ...clinic, invoiceNote: e.target.value })}
                     rows={3}
                     className="w-full p-3 border border-[#2d2a26] rounded-xl text-sm bg-white focus:outline-none focus:bg-[#faf9f6] resize-none" />
                 </div>
                 <div className="pt-3">
-                  <button onClick={handleSave}
+                  <button onClick={() => openSensitiveConfirm('clinic')}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#6b8f5e] text-white text-sm hover:-translate-y-0.5 transition-all border border-[#2d2a26]">
-                    {saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-                    {saved ? 'Đã lưu!' : 'Lưu thay đổi'}
+                    {savedTarget === 'clinic' ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+                    {savedTarget === 'clinic' ? 'Đã lưu!' : 'Lưu thay đổi'}
                   </button>
                 </div>
               </div>
             </motion.div>
           )}
 
-          {/* SUBSCRIPTION TAB */}
+          {activeTab === 'password' && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+              className="bg-white border border-[#2d2a26] rounded-2xl">
+              <div className="p-5 border-b border-[#2d2a26]/10">
+                <h2 className="text-lg text-[#2d2a26]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
+                  {'Đổi mật khẩu'}
+                </h2>
+                <p className="text-xs text-[#7a756e] mt-1">{'Chuẩn bảo mật quốc tế: tối thiểu 8 ký tự và xác nhận khớp mật khẩu mới'}</p>
+              </div>
+              <div className="p-5 space-y-3">
+                <div>
+                  <label className="text-xs text-[#7a756e] mb-1 block">Mật khẩu hiện tại</label>
+                  <input
+                    type="password"
+                    value={passwordForm.currentPassword}
+                    onChange={e => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                    className="w-full p-3 border border-[#2d2a26] rounded-xl text-sm bg-white"
+                  />
+                </div>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-[#7a756e] mb-1 block">Mật khẩu mới</label>
+                    <input
+                      type="password"
+                      value={passwordForm.newPassword}
+                      onChange={e => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                      className="w-full p-3 border border-[#2d2a26] rounded-xl text-sm bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-[#7a756e] mb-1 block">Xác nhận mật khẩu mới</label>
+                    <input
+                      type="password"
+                      value={passwordForm.confirmPassword}
+                      onChange={e => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                      className="w-full p-3 border border-[#2d2a26] rounded-xl text-sm bg-white"
+                    />
+                  </div>
+                </div>
+                {passwordError ? <p className="text-xs text-red-600">{passwordError}</p> : null}
+                {passwordSaved ? <p className="text-xs text-emerald-700">Đã cập nhật mật khẩu thành công (mock).</p> : null}
+                <div className="pt-2">
+                  <button onClick={savePassword}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#6b8f5e] text-white text-sm hover:-translate-y-0.5 transition-all border border-[#2d2a26]">
+                    {passwordSaved ? <Check className="w-4 h-4" /> : <LockKeyhole className="w-4 h-4" />}
+                    {passwordSaved ? 'Đã cập nhật' : 'Đổi mật khẩu'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           {activeTab === 'subscription' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
               className="space-y-6">
-              {/* Current Plan Status */}
               <div className="bg-white border border-[#2d2a26] rounded-2xl p-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-[#7a756e]">{"Gói hiện tại"}</p>
+                    <p className="text-xs text-[#7a756e]">{'Gói hiện tại'}</p>
                     <p className="text-lg text-[#2d2a26] mt-1" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
                       Basic (Miễn phí)
                     </p>
                   </div>
                   <div className="px-3 py-1.5 rounded-lg bg-[#f0ede8] border border-[#2d2a26]/20 text-xs" style={{ fontWeight: 500 }}>
-                    {"Đang sử dụng"}
+                    {'Đang sử dụng'}
                   </div>
                 </div>
                 <div className="mt-3 flex items-center gap-4 text-xs text-[#7a756e]">
-                  <span>{"Bắt đầu: 01/01/2026"}</span>
+                  <span>{'Bắt đầu: 01/01/2026'}</span>
                   <span>&bull;</span>
-                  <span>{"Thú cưng: 10/10 (đã dùng hết)"}</span>
+                  <span>{'Thú cưng: 10/10 (đã dùng hết)'}</span>
                 </div>
               </div>
 
-              {/* Pricing Cards */}
               <div className="grid sm:grid-cols-2 gap-5">
-                {/* Basic Plan */}
                 <div className="bg-white border border-[#2d2a26] rounded-2xl p-6">
                   <div className="flex items-center gap-2 mb-4">
                     <PawPrint className="w-5 h-5 text-[#7a756e]" />
@@ -244,7 +358,7 @@ export function ManagerSettingsPage() {
                   </div>
                   <div className="mb-4">
                     <span className="text-3xl text-[#2d2a26]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
-                      {"Miễn phí"}
+                      {'Miễn phí'}
                     </span>
                   </div>
                   <ul className="space-y-2.5 mb-6 text-sm text-[#7a756e]">
@@ -261,14 +375,13 @@ export function ManagerSettingsPage() {
                     ))}
                   </ul>
                   <div className="px-4 py-2.5 rounded-xl border border-[#2d2a26]/30 text-center text-sm text-[#7a756e]">
-                    {"Gói hiện tại"}
+                    {'Gói hiện tại'}
                   </div>
                 </div>
 
-                {/* Premium Plan */}
                 <div className="bg-[#6b8f5e]/5 border-2 border-[#6b8f5e] rounded-2xl p-6 relative">
                   <div className="absolute -top-3 right-4 px-3 py-1 rounded-full bg-[#6b8f5e] text-white text-[10px]" style={{ fontWeight: 600 }}>
-                    {"PHỔ BIẾN NHẤT"}
+                    {'PHỔ BIẾN NHẤT'}
                   </div>
                   <div className="flex items-center gap-2 mb-4">
                     <Crown className="w-5 h-5 text-[#c67d5b]" />
@@ -280,7 +393,7 @@ export function ManagerSettingsPage() {
                     </span>
                     <span className="text-sm text-[#7a756e] ml-1">VND/tháng</span>
                   </div>
-                  <p className="text-xs text-[#7a756e] mb-4">{"Thanh toán hàng tháng, hủy bất cứ lúc nào"}</p>
+                  <p className="text-xs text-[#7a756e] mb-4">{'Thanh toán hàng tháng, hủy bất cứ lúc nào'}</p>
                   <ul className="space-y-2.5 mb-6 text-sm">
                     {[
                       { text: 'Không giới hạn thú cưng', highlight: true },
@@ -300,25 +413,23 @@ export function ManagerSettingsPage() {
                     className="w-full py-3 rounded-xl bg-[#6b8f5e] text-white text-sm border border-[#2d2a26] hover:-translate-y-1 active:translate-y-0 transition-all cursor-pointer"
                     style={{ fontWeight: 600 }}
                   >
-                    {"Nâng cấp lên Premium"}
+                    {'Nâng cấp lên Premium'}
                   </button>
                 </div>
               </div>
             </motion.div>
           )}
 
-          {/* NOTIFICATIONS TAB */}
           {activeTab === 'notifications' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
               className="bg-white border border-[#2d2a26] rounded-2xl">
               <div className="p-5 border-b border-[#2d2a26]/10">
                 <h2 className="text-lg text-[#2d2a26]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
-                  {"Cài đặt thông báo"}
+                  {'Cài đặt thông báo'}
                 </h2>
-                <p className="text-xs text-[#7a756e] mt-1">{"Quản lý cách nhận thông báo từ hệ thống"}</p>
+                <p className="text-xs text-[#7a756e] mt-1">{'Quản lý cách nhận thông báo từ hệ thống'}</p>
               </div>
               <div className="divide-y divide-[#2d2a26]/10">
-                {/* Email */}
                 <div className="p-5">
                   <div className="flex items-center gap-2 mb-4">
                     <Mail className="w-4 h-4 text-[#6b8f5e]" />
@@ -349,7 +460,6 @@ export function ManagerSettingsPage() {
                   </div>
                 </div>
 
-                {/* SMS */}
                 <div className="p-5">
                   <div className="flex items-center gap-2 mb-4">
                     <Smartphone className="w-4 h-4 text-[#c67d5b]" />
@@ -380,11 +490,10 @@ export function ManagerSettingsPage() {
                   </div>
                 </div>
 
-                {/* Reports */}
                 <div className="p-5">
                   <div className="flex items-center gap-2 mb-4">
                     <BarChart3 className="w-4 h-4 text-[#4a90d9]" />
-                    <h3 className="text-sm" style={{ fontWeight: 600 }}>{"Báo cáo"}</h3>
+                    <h3 className="text-sm" style={{ fontWeight: 600 }}>{'Báo cáo'}</h3>
                   </div>
                   <div className="space-y-3">
                     {[
@@ -411,17 +520,55 @@ export function ManagerSettingsPage() {
                   </div>
                 </div>
               </div>
-              <div className="p-5 border-t border-[#2d2a26]/10">
-                <button onClick={handleSave}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#6b8f5e] text-white text-sm hover:-translate-y-0.5 transition-all border border-[#2d2a26]">
-                  {saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-                  {saved ? 'Đã lưu!' : 'Lưu thay đổi'}
-                </button>
-              </div>
             </motion.div>
           )}
         </div>
       </div>
+
+      <Dialog open={confirmState.open} onOpenChange={(open) => (open ? undefined : closeSensitiveConfirm())}>
+        <DialogContent className='max-w-md border-[#2d2a26] bg-[#faf9f6]'>
+          <DialogHeader>
+            <DialogTitle style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Xác thực thay đổi nhạy cảm</DialogTitle>
+            <DialogDescription>
+              Vui lòng nhập mật khẩu để xác nhận lưu thay đổi {confirmState.target === 'clinic' ? 'thông tin phòng khám' : 'hồ sơ cá nhân'}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className='space-y-3'>
+            <div>
+              <label className='text-xs text-[#7a756e] mb-1 block'>Mật khẩu xác nhận</label>
+              <input
+                type='password'
+                value={confirmState.password}
+                onChange={(event) => {
+                  setConfirmError('');
+                  setConfirmState((prev) => ({ ...prev, password: event.target.value }));
+                }}
+                placeholder='Nhập mật khẩu của bạn'
+                className='w-full p-3 border border-[#2d2a26] rounded-xl text-sm bg-white'
+              />
+            </div>
+            {confirmError ? <p className='text-xs text-red-600'>{confirmError}</p> : null}
+            <div className='flex justify-end gap-2 pt-1'>
+              <button
+                type='button'
+                onClick={closeSensitiveConfirm}
+                className='px-4 py-2 rounded-xl border border-[#2d2a26]/30 text-sm bg-white'
+              >
+                Hủy
+              </button>
+              <button
+                type='button'
+                onClick={submitSensitiveSave}
+                disabled={confirmState.submitting}
+                className='px-4 py-2 rounded-xl border border-[#2d2a26] bg-[#6b8f5e] text-white text-sm disabled:opacity-70'
+                style={{ fontWeight: 600 }}
+              >
+                Xác nhận lưu
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

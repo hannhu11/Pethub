@@ -445,7 +445,7 @@ const draftFromPet = (pet: Pet): PetProfileDraft => ({
   bloodType: normalizeNoneText(pet.bloodType) ? 'none' : ((pet.bloodType as BloodType) ?? 'none'),
   neutered: toNeuteredStatus(pet.neutered),
   microchipId: normalizeNoneText(pet.microchipId) ? '' : pet.microchipId,
-  specialNotes: (pet.specialNotes ?? '').slice(0, 15),
+  specialNotes: (pet.specialNotes ?? '').slice(0, 55),
   imageFile: null,
   imagePreview: pet.image,
 });
@@ -457,16 +457,9 @@ const resolveSegmentStyle = (segment: CustomerSegment) => {
   return { label: 'Khách thường', className: 'bg-[#f0ede8] text-[#7a756e] border-[#2d2a26]/10' };
 };
 
-const dateDiffInDays = (to: Date, fromDate: string) => {
-  const from = new Date(`${fromDate}T00:00:00`);
-  const diff = to.getTime() - from.getTime();
-  return Math.floor(diff / (1000 * 60 * 60 * 24));
-};
-
 async function exportPetCardAsPng(targetElement: HTMLElement, petId: string) {
   await downloadElementAsPng(targetElement, {
     fileName: `${petId.toLowerCase()}-digital-card.png`,
-    width: 1200,
     backgroundColor: '#1f2327',
   });
 }
@@ -482,7 +475,7 @@ export function ManagerPetsPage() {
   const [detailTab, setDetailTab] = useState<'info' | 'medical' | 'card'>('info');
   const [petFormMode, setPetFormMode] = useState<'create' | 'edit'>('create');
   const [editingPetId, setEditingPetId] = useState<string | null>(null);
-  const petCardRef = useRef<HTMLDivElement>(null);
+  const petCardExportRef = useRef<HTMLDivElement>(null);
 
   // Quick Add form
   const [addForm, setAddForm] = useState<PetProfileDraft>(initialPetDraft);
@@ -598,7 +591,7 @@ export function ManagerPetsPage() {
       microchipId: addForm.microchipId.trim() || 'None',
       bloodType: addForm.bloodType === 'none' ? 'None' : addForm.bloodType,
       neutered: toNeuteredValue(addForm.neutered),
-      specialNotes: addForm.specialNotes.trim().slice(0, 15),
+      specialNotes: addForm.specialNotes.trim().slice(0, 55),
       vaccinationLevel: 'Chưa cập nhật',
       lastCheckup: '2026-03-10',
       image: resolvedImage,
@@ -850,8 +843,13 @@ export function ManagerPetsPage() {
 
                     {selectedPet.hasDigitalCard ? (
                       <>
-                        <div ref={petCardRef} className="mx-auto max-w-2xl">
+                        <div className="mx-auto max-w-2xl">
                           <PetDigitalCard pet={selectedPet} />
+                        </div>
+                        <div className="fixed -left-[9999px] top-0 pointer-events-none">
+                          <div ref={petCardExportRef} className="inline-block">
+                            <PetDigitalCard pet={selectedPet} className="w-[760px]" />
+                          </div>
                         </div>
                         <div className="bg-white border border-[#2d2a26]/10 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-2">
                           <p className="text-xs text-[#7a756e]">
@@ -859,8 +857,8 @@ export function ManagerPetsPage() {
                           </p>
                           <button
                             onClick={() => {
-                              if (!petCardRef.current) return;
-                              void exportPetCardAsPng(petCardRef.current, selectedPet.id);
+                              if (!petCardExportRef.current) return;
+                              void exportPetCardAsPng(petCardExportRef.current, selectedPet.id);
                             }}
                             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#6b8f5e] text-white border border-[#2d2a26] text-xs hover:-translate-y-0.5 transition-all"
                             style={{ fontWeight: 600 }}
@@ -1103,12 +1101,12 @@ export function ManagerPetsPage() {
                     </div>
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label className="text-[10px] text-[#7a756e] uppercase tracking-wider">Lưu ý (tối đa 15 ký tự)</label>
-                        <span className="text-[10px] text-[#7a756e]">{addForm.specialNotes.length}/15</span>
+                        <label className="text-[10px] text-[#7a756e] uppercase tracking-wider">Lưu ý (tối đa 55 ký tự)</label>
+                        <span className="text-[10px] text-[#7a756e]">{addForm.specialNotes.length}/55</span>
                       </div>
                       <input
                         value={addForm.specialNotes}
-                        maxLength={15}
+                        maxLength={55}
                         onChange={e => setAddForm({ ...addForm, specialNotes: e.target.value })}
                         placeholder="VD: Dị ứng gà"
                         className="w-full p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white focus:outline-none"
@@ -1144,7 +1142,7 @@ export function ManagerCustomersPage() {
   const [segmentFilter, setSegmentFilter] = useState<'all' | CustomerSegment>('all');
   const [customerPets, setCustomerPets] = useState(mockPets.map(p => ({ ...p })));
   const [cardModal, setCardModal] = useState<DigitalCardModalState>({ open: false, petId: null, source: 'customers' });
-  const customerCardRef = useRef<HTMLDivElement>(null);
+  const customerCardExportRef = useRef<HTMLDivElement>(null);
 
   const getCustomerPets = (userId: string) => customerPets.filter(p => p.ownerId === userId);
   const getCustomerAppointments = (userId: string) => mockAppointments.filter(a => a.userId === userId);
@@ -1155,26 +1153,39 @@ export function ManagerCustomersPage() {
   };
   const getCustomerTier = (userId: string) => {
     const ltv = getCustomerLTV(userId);
-    if (ltv >= 500000) return resolveSegmentStyle('vip');
-    if (ltv >= 200000) return resolveSegmentStyle('loyal');
-    const recentCompleted = getCustomerAppointments(userId)
-      .filter(a => a.status === 'completed')
-      .filter(a => dateDiffInDays(referenceDate, a.date) <= 30);
-    if (recentCompleted.length <= 1) return resolveSegmentStyle('new');
+    if (ltv >= 10000000) return resolveSegmentStyle('vip');
+    if (ltv >= 3000000) return resolveSegmentStyle('loyal');
+    if (ltv > 0) return resolveSegmentStyle('regular');
+    const recentCompleted = getCustomerAppointments(userId).filter(a => a.status === 'completed');
+    if (recentCompleted.length === 0) return resolveSegmentStyle('new');
     return resolveSegmentStyle('regular');
   };
 
-  const filteredCustomers = customers.filter(c => {
-    const keyword = search.trim().toLowerCase();
-    const matchesKeyword = !keyword || c.name.toLowerCase().includes(keyword) || c.phone.includes(keyword) || c.email.toLowerCase().includes(keyword);
-    const tier = getCustomerTier(c.id);
-    const matchesTier = segmentFilter === 'all'
-      || (segmentFilter === 'vip' && tier.label === 'Khách VIP')
-      || (segmentFilter === 'loyal' && tier.label === 'Thân thiết')
-      || (segmentFilter === 'new' && tier.label === 'Khách mới')
-      || (segmentFilter === 'regular' && tier.label === 'Khách thường');
-    return matchesKeyword && matchesTier;
-  });
+  const tierPriority: Record<string, number> = {
+    'Khách VIP': 0,
+    'Thân thiết': 1,
+    'Khách thường': 2,
+    'Khách mới': 3,
+  };
+
+  const filteredCustomers = [...customers]
+    .filter(c => {
+      const keyword = search.trim().toLowerCase();
+      const matchesKeyword = !keyword || c.name.toLowerCase().includes(keyword) || c.phone.includes(keyword) || c.email.toLowerCase().includes(keyword);
+      const tier = getCustomerTier(c.id);
+      const matchesTier = segmentFilter === 'all'
+        || (segmentFilter === 'vip' && tier.label === 'Khách VIP')
+        || (segmentFilter === 'loyal' && tier.label === 'Thân thiết')
+        || (segmentFilter === 'regular' && tier.label === 'Khách thường')
+        || (segmentFilter === 'new' && tier.label === 'Khách mới');
+      return matchesKeyword && matchesTier;
+    })
+    .sort((a, b) => {
+      const tierA = tierPriority[getCustomerTier(a.id).label] ?? 99;
+      const tierB = tierPriority[getCustomerTier(b.id).label] ?? 99;
+      if (tierA !== tierB) return tierA - tierB;
+      return getCustomerLTV(b.id) - getCustomerLTV(a.id);
+    });
 
   const selectedCustomer = customers.find(c => c.id === selectedId);
   const selectedCardPet = cardModal.petId ? customerPets.find(p => p.id === cardModal.petId) : null;
@@ -1195,8 +1206,8 @@ export function ManagerCustomersPage() {
   const segmentCounts = {
     vip: customers.filter(c => getCustomerTier(c.id).label === 'Khách VIP').length,
     loyal: customers.filter(c => getCustomerTier(c.id).label === 'Thân thiết').length,
-    new: customers.filter(c => getCustomerTier(c.id).label === 'Khách mới').length,
     regular: customers.filter(c => getCustomerTier(c.id).label === 'Khách thường').length,
+    new: customers.filter(c => getCustomerTier(c.id).label === 'Khách mới').length,
   };
 
   const totalLtv = customers.reduce((sum, customer) => sum + getCustomerLTV(customer.id), 0);
@@ -1231,7 +1242,7 @@ export function ManagerCustomersPage() {
         {[
           { label: 'Khách VIP', value: segmentCounts.vip.toString() },
           { label: 'Thân thiết', value: segmentCounts.loyal.toString() },
-          { label: 'Khách mới', value: segmentCounts.new.toString() },
+          { label: 'Khách thường', value: segmentCounts.regular.toString() },
           { label: 'Tổng LTV', value: formatCurrency(totalLtv) },
         ].map(kpi => (
           <div key={kpi.label} className="bg-white border border-[#2d2a26] rounded-2xl p-4">
@@ -1248,8 +1259,8 @@ export function ManagerCustomersPage() {
           { id: 'all' as const, label: 'Tất cả', count: customers.length },
           { id: 'vip' as const, label: 'Khách VIP', count: segmentCounts.vip },
           { id: 'loyal' as const, label: 'Thân thiết', count: segmentCounts.loyal },
-          { id: 'new' as const, label: 'Khách mới', count: segmentCounts.new },
           { id: 'regular' as const, label: 'Khách thường', count: segmentCounts.regular },
+          { id: 'new' as const, label: 'Khách mới', count: segmentCounts.new },
         ].map(item => (
           <button
             key={item.id}
@@ -1264,6 +1275,9 @@ export function ManagerCustomersPage() {
             {item.label} ({item.count})
           </button>
         ))}
+        <p className="w-full text-[10px] text-[#7a756e] pt-1">
+          Phân hạng chi tiêu: VIP ≥ 10.000.000đ • Thân thiết 3.000.000đ–9.999.999đ • Khách thường 1đ–2.999.999đ • Khách mới = 0đ
+        </p>
       </div>
 
       {/* Customer List + Detail Split */}
@@ -1464,8 +1478,13 @@ export function ManagerCustomersPage() {
           </DialogHeader>
           {selectedCardPet ? (
             <>
-              <div ref={customerCardRef} className="mx-auto max-w-2xl">
+              <div className="mx-auto max-w-2xl">
                 <PetDigitalCard pet={selectedCardPet} />
+              </div>
+              <div className="fixed -left-[9999px] top-0 pointer-events-none">
+                <div ref={customerCardExportRef} className="inline-block">
+                  <PetDigitalCard pet={selectedCardPet} className="w-[760px]" />
+                </div>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs text-[#7a756e]">
@@ -1473,8 +1492,8 @@ export function ManagerCustomersPage() {
                 </p>
                 <button
                   onClick={() => {
-                    if (!customerCardRef.current) return;
-                    void exportPetCardAsPng(customerCardRef.current, selectedCardPet.id);
+                    if (!customerCardExportRef.current) return;
+                    void exportPetCardAsPng(customerCardExportRef.current, selectedCardPet.id);
                   }}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#6b8f5e] text-white border border-[#2d2a26] text-xs hover:-translate-y-0.5 transition-all"
                   style={{ fontWeight: 600 }}
