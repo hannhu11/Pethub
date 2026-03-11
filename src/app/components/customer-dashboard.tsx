@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { motion } from 'motion/react';
 import {
@@ -15,7 +15,6 @@ import {
   CreditCard,
   X,
   Download,
-  Share2,
 } from 'lucide-react';
 import {
   mockPets,
@@ -28,6 +27,7 @@ import {
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { BackButton } from './back-button';
 import { PetDigitalCard } from './pet-digital-card';
+import { downloadElementAsPng } from './export-utils';
 
 export function ProfilePage() {
   const [editing, setEditing] = useState(false);
@@ -388,6 +388,7 @@ export function BookingListPage() {
 export function DigitalCardPage() {
   const { petId } = useParams();
   const pet = mockPets.find((item) => item.id === petId) || mockPets[0];
+  const cardRef = useRef<HTMLDivElement>(null);
 
   return (
     <div className='py-12'>
@@ -400,16 +401,25 @@ export function DigitalCardPage() {
           PETHUB DIGITAL PET CARD
         </h1>
 
-        <PetDigitalCard pet={pet} className='mx-auto max-w-2xl' />
+        <div ref={cardRef} className='mx-auto max-w-2xl'>
+          <PetDigitalCard pet={pet} />
+        </div>
 
         <div className='max-w-2xl mx-auto mt-4 flex gap-3'>
-          <button className='flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-[#2d2a26] rounded-xl bg-white hover:-translate-y-0.5 transition-all'>
+          <button
+            type='button'
+            onClick={() => {
+              if (!cardRef.current) return;
+              void downloadElementAsPng(cardRef.current, {
+                fileName: `${pet.id.toLowerCase()}-digital-card.png`,
+                width: 1200,
+                backgroundColor: '#1f2327',
+              });
+            }}
+            className='flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-[#2d2a26] rounded-xl bg-white hover:-translate-y-0.5 transition-all'
+          >
             <Download className='w-4 h-4' />
-            Tải thẻ
-          </button>
-          <button className='flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-[#2d2a26] rounded-xl bg-white hover:-translate-y-0.5 transition-all'>
-            <Share2 className='w-4 h-4' />
-            Chia sẻ
+            Tải ảnh thẻ (PNG)
           </button>
         </div>
       </div>

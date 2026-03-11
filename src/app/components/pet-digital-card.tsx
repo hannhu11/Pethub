@@ -19,6 +19,7 @@ export function PetDigitalCard({ pet, className }: PetDigitalCardProps) {
 
   const neuteredLabel =
     pet.neutered === true ? 'Đã triệt sản' : pet.neutered === false ? 'Chưa triệt sản' : 'Không rõ';
+  const specialNotes = pet.specialNotes ? pet.specialNotes.slice(0, 15) : '';
 
   const ownerData = [
     { label: 'Họ và tên', value: pet.ownerName },
@@ -111,9 +112,9 @@ export function PetDigitalCard({ pet, className }: PetDigitalCardProps) {
           </section>
         </div>
 
-        {pet.specialNotes && (
+        {specialNotes && (
           <p className='mt-3 text-xs text-white/85'>
-            <span className='text-white/65'>Lưu ý:</span> {pet.specialNotes}
+            <span className='text-white/65'>Lưu ý:</span> {specialNotes}
           </p>
         )}
       </div>
