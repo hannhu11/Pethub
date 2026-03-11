@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import {
   getClinicSettings,
   getProfileSettings,
+  getSubscriptionSettings,
   saveClinicSettings,
   saveProfileSettings,
   subscribeManagerSettingsUpdates,
@@ -37,6 +38,7 @@ export function ManagerSettingsPage() {
   const [savedTarget, setSavedTarget] = useState<'profile' | 'clinic' | null>(null);
   const [profile, setProfile] = useState(getProfileSettings());
   const [clinic, setClinic] = useState(getClinicSettings());
+  const [subscription, setSubscription] = useState(getSubscriptionSettings());
   const [confirmState, setConfirmState] = useState<SensitiveSaveConfirmState>({
     open: false,
     target: null,
@@ -74,6 +76,7 @@ export function ManagerSettingsPage() {
     return subscribeManagerSettingsUpdates(() => {
       setProfile(getProfileSettings());
       setClinic(getClinicSettings());
+      setSubscription(getSubscriptionSettings());
     });
   }, []);
 
@@ -337,17 +340,23 @@ export function ManagerSettingsPage() {
                   <div>
                     <p className="text-xs text-[#7a756e]">{'Gói hiện tại'}</p>
                     <p className="text-lg text-[#2d2a26] mt-1" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
-                      Basic (Miễn phí)
+                      {subscription.plan === 'premium' ? 'Premium' : 'Basic (Miễn phí)'}
                     </p>
                   </div>
                   <div className="px-3 py-1.5 rounded-lg bg-[#f0ede8] border border-[#2d2a26]/20 text-xs" style={{ fontWeight: 500 }}>
-                    {'Đang sử dụng'}
+                    {subscription.plan === 'premium' ? 'Premium đang hoạt động' : 'Đang sử dụng'}
                   </div>
                 </div>
                 <div className="mt-3 flex items-center gap-4 text-xs text-[#7a756e]">
-                  <span>{'Bắt đầu: 01/01/2026'}</span>
+                  <span>{`Bắt đầu: ${subscription.activatedAt ?? '01/01/2026'}`}</span>
                   <span>&bull;</span>
-                  <span>{'Thú cưng: 10/10 (đã dùng hết)'}</span>
+                  <span>{subscription.plan === 'premium' ? 'Không giới hạn hồ sơ thú cưng' : 'Thú cưng: 10/10 (đã dùng hết)'}</span>
+                  {subscription.paymentMethod ? (
+                    <>
+                      <span>&bull;</span>
+                      <span>{`Phương thức: ${subscription.paymentMethod.toUpperCase()}`}</span>
+                    </>
+                  ) : null}
                 </div>
               </div>
 
@@ -413,10 +422,15 @@ export function ManagerSettingsPage() {
                   <button
                     type='button'
                     onClick={() => navigate('/manager/settings/upgrade-premium')}
-                    className="w-full py-3 rounded-xl bg-[#6b8f5e] text-white text-sm border border-[#2d2a26] hover:-translate-y-1 active:translate-y-0 transition-all cursor-pointer"
+                    disabled={subscription.plan === 'premium'}
+                    className={`w-full py-3 rounded-xl text-sm border border-[#2d2a26] transition-all ${
+                      subscription.plan === 'premium'
+                        ? 'bg-[#f0ede8] text-[#7a756e] cursor-not-allowed'
+                        : 'bg-[#6b8f5e] text-white hover:-translate-y-1 active:translate-y-0 cursor-pointer'
+                    }`}
                     style={{ fontWeight: 600 }}
                   >
-                    {'Nâng cấp lên Premium'}
+                    {subscription.plan === 'premium' ? 'Bạn đang dùng Premium' : 'Nâng cấp lên Premium'}
                   </button>
                 </div>
               </div>

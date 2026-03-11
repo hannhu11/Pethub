@@ -10,9 +10,19 @@ export interface ManagerProfileSettings {
   role: string;
 }
 
+export interface ManagerSubscriptionSettings {
+  plan: 'basic' | 'premium';
+  amount: number;
+  currency: 'VND';
+  billingCycle: 'monthly';
+  paymentMethod: 'vietqr' | 'momo' | 'zalopay' | 'card' | null;
+  activatedAt?: string;
+}
+
 interface ManagerSettingsState {
   profile: ManagerProfileSettings;
   clinic: ClinicSettings;
+  subscription: ManagerSubscriptionSettings;
 }
 
 const defaultSettings: ManagerSettingsState = {
@@ -28,6 +38,13 @@ const defaultSettings: ManagerSettingsState = {
     phone: '028-1234-5678',
     address: '123 Nguyễn Huệ, Q.1, TP.HCM',
     invoiceNote: 'Cảm ơn quý khách đã sử dụng dịch vụ tại PetHub!',
+  },
+  subscription: {
+    plan: 'basic',
+    amount: 249000,
+    currency: 'VND',
+    billingCycle: 'monthly',
+    paymentMethod: null,
   },
 };
 
@@ -50,6 +67,10 @@ function readSettingsState(): ManagerSettingsState {
       clinic: {
         ...defaultSettings.clinic,
         ...(parsed.clinic ?? {}),
+      },
+      subscription: {
+        ...defaultSettings.subscription,
+        ...(parsed.subscription ?? {}),
       },
     };
   } catch {
@@ -79,6 +100,10 @@ export function getClinicSettings() {
   return readSettingsState().clinic;
 }
 
+export function getSubscriptionSettings() {
+  return readSettingsState().subscription;
+}
+
 export function saveProfileSettings(profile: ManagerProfileSettings) {
   const current = readSettingsState();
   writeSettingsState({
@@ -93,6 +118,15 @@ export function saveClinicSettings(clinic: ClinicSettings) {
   writeSettingsState({
     ...current,
     clinic,
+  });
+  notifyUpdate();
+}
+
+export function saveSubscriptionSettings(subscription: ManagerSubscriptionSettings) {
+  const current = readSettingsState();
+  writeSettingsState({
+    ...current,
+    subscription,
   });
   notifyUpdate();
 }
@@ -117,4 +151,3 @@ export function subscribeManagerSettingsUpdates(callback: () => void) {
     window.removeEventListener('storage', onStorage);
   };
 }
-
