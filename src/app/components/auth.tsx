@@ -1,152 +1,400 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
-import { PawPrint, Mail, Lock, User, Phone, Eye, EyeOff } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router';
+import { PawPrint, Mail, Lock, User, Building2, Eye, EyeOff, ArrowLeft, ShieldCheck, SendHorizontal, CheckCircle2 } from 'lucide-react';
+import { useAuthSession } from '../auth-session';
+import type { AuthRole, ForgotPasswordState } from '../types';
+import { LEGAL_ROUTES } from '../constants/legal';
+import loginVisual from '../../assets/images/auth/login-hero.jpg';
+import registerVisual from '../../assets/images/auth/register-hero.jpg';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
 
-export function LoginPage() {
-  const [showPass, setShowPass] = useState(false);
-  const navigate = useNavigate();
-
+function AuthShell({
+  title,
+  subtitle,
+  quote,
+  image,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  quote: string;
+  image: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="min-h-[80vh] flex items-center justify-center py-12 px-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-[#6b8f5e] flex items-center justify-center mx-auto mb-4">
-            <PawPrint className="w-8 h-8 text-white" />
+    <div className='min-h-screen bg-[#faf9f6]'>
+      <div className='grid lg:grid-cols-2 min-h-screen'>
+        <aside className='hidden lg:block relative border-r border-[#2d2a26]'>
+          <img src={image} alt='PetHub visual' className='absolute inset-0 w-full h-full object-cover' />
+          <div className='absolute inset-0 bg-gradient-to-br from-[#2d2a26]/35 via-[#6b8f5e]/18 to-[#c67d5b]/20' />
+          <div className='absolute bottom-10 left-10 right-10 rounded-2xl border border-[#fbf9f6]/45 bg-black/28 p-7 backdrop-blur-[1px]'>
+            <p className='text-[36px] leading-tight text-[#fbf9f6]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+              {quote}
+            </p>
+            <p className='text-sm mt-4 text-[#fbf9f6]/90'>PetHub Premium Veterinary SaaS</p>
           </div>
-          <h1 className="text-2xl text-[#2d2a26]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
-            Đăng nhập PetHub
-          </h1>
-          <p className="text-sm text-[#7a756e] mt-2">Chào mừng bạn trở lại!</p>
-        </div>
+        </aside>
 
-        <div className="bg-white border border-[#2d2a26] rounded-2xl p-8">
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm text-[#2d2a26] mb-1 block">Email</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#7a756e]" />
-                <input
-                  type="email"
-                  placeholder="email@example.com"
-                  className="w-full pl-10 pr-4 py-3 border border-[#2d2a26] rounded-xl bg-[#faf9f6] focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]"
-                />
+        <main className='px-6 py-8 sm:px-10 md:px-14 lg:px-16 flex items-center'>
+          <div className='w-full max-w-md mx-auto'>
+            <Link to='/' className='inline-flex items-center gap-2 text-sm text-[#7a756e] hover:text-[#2d2a26] transition-colors'>
+              <ArrowLeft className='w-4 h-4' />
+              Quay về trang chủ
+            </Link>
+
+            <div className='mt-6 mb-8'>
+              <div className='flex items-center gap-2 mb-5'>
+                <div className='w-11 h-11 rounded-2xl bg-[#6b8f5e] border border-[#2d2a26] flex items-center justify-center'>
+                  <PawPrint className='w-6 h-6 text-white' />
+                </div>
+                <span className='text-3xl' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                  Pet<span className='text-[#c67d5b]'>Hub</span>
+                </span>
               </div>
+              <h1 className='text-4xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>{title}</h1>
+              <p className='text-[#7a756e] mt-2'>{subtitle}</p>
             </div>
 
-            <div>
-              <label className="text-sm text-[#2d2a26] mb-1 block">Mật khẩu</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#7a756e]" />
-                <input
-                  type={showPass ? 'text' : 'password'}
-                  placeholder="Nhập mật khẩu"
-                  className="w-full pl-10 pr-12 py-3 border border-[#2d2a26] rounded-xl bg-[#faf9f6] focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]"
-                />
-                <button onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2">
-                  {showPass ? <EyeOff className="w-5 h-5 text-[#7a756e]" /> : <Eye className="w-5 h-5 text-[#7a756e]" />}
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="w-4 h-4 rounded border-[#2d2a26] accent-[#6b8f5e]" />
-                <span className="text-[#7a756e]">Ghi nhớ đăng nhập</span>
-              </label>
-              <a href="#" className="text-[#6b8f5e] hover:underline">Quên mật khẩu?</a>
-            </div>
-
-            <button
-              onClick={() => navigate('/')}
-              className="w-full py-3 rounded-xl bg-[#6b8f5e] text-white hover:-translate-y-0.5 transition-all border border-[#2d2a26]"
-            >
-              Đăng nhập
-            </button>
-
-            <div className="relative my-4">
-              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[#2d2a26]/20" /></div>
-              <div className="relative flex justify-center">
-                <span className="bg-white px-4 text-sm text-[#7a756e]">hoặc</span>
-              </div>
-            </div>
-
-            <button className="w-full py-3 rounded-xl bg-white text-[#2d2a26] border border-[#2d2a26] hover:-translate-y-0.5 transition-all flex items-center justify-center gap-3">
-              <svg className="w-5 h-5" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-              Đăng nhập với Google
-            </button>
+            {children}
           </div>
-        </div>
-
-        <p className="text-center text-sm text-[#7a756e] mt-6">
-          Chưa có tài khoản?{' '}
-          <Link to="/register" className="text-[#6b8f5e] hover:underline" style={{ fontWeight: 600 }}>Đăng ký ngay</Link>
-        </p>
+        </main>
       </div>
     </div>
   );
 }
 
-export function RegisterPage() {
+function resolveDefaultPath(role: AuthRole) {
+  return role === 'manager' ? '/manager' : '/customer/dashboard';
+}
+
+const defaultForgotState: ForgotPasswordState = {
+  open: false,
+  email: '',
+  submitting: false,
+  sent: false,
+};
+
+function LegalConsent({ mode }: { mode: 'login' | 'register' }) {
+  return (
+    <p className='text-xs leading-relaxed text-[#7a756e] mt-4'>
+      Bằng việc {mode === 'login' ? 'đăng nhập' : 'đăng ký'}, bạn đồng ý với{' '}
+      <Link to={LEGAL_ROUTES.terms} className='underline decoration-[#2d2a26] underline-offset-2 text-[#2d2a26]' style={{ fontWeight: 600 }}>
+        Điều khoản sử dụng
+      </Link>{' '}
+      và{' '}
+      <Link to={LEGAL_ROUTES.privacy} className='underline decoration-[#2d2a26] underline-offset-2 text-[#2d2a26]' style={{ fontWeight: 600 }}>
+        Chính sách bảo mật
+      </Link>
+      .
+    </p>
+  );
+}
+
+export function LoginPage() {
+  const [role, setRole] = useState<AuthRole>('customer');
   const [showPass, setShowPass] = useState(false);
+  const [forgot, setForgot] = useState<ForgotPasswordState>(defaultForgotState);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuthSession();
+
+  const redirectTo = resolveDefaultPath(role);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const fallbackName = role === 'manager' ? 'Phạm Hương' : 'Nguyễn Văn An';
+    login(role, fallbackName);
+
+    const fromState = location.state as { from?: { pathname?: string } } | null;
+    const fromPath = fromState?.from?.pathname;
+
+    if (fromPath && fromPath.startsWith(role === 'manager' ? '/manager' : '/customer')) {
+      navigate(fromPath, { replace: true });
+      return;
+    }
+
+    navigate(redirectTo, { replace: true });
+  };
+
+  const handleForgotSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgot((prev) => ({ ...prev, submitting: true }));
+    window.setTimeout(() => {
+      setForgot((prev) => ({ ...prev, submitting: false, sent: true }));
+    }, 700);
+  };
+
+  const handleForgotResend = () => {
+    if (!forgot.email) {
+      return;
+    }
+    setForgot((prev) => ({ ...prev, submitting: true }));
+    window.setTimeout(() => {
+      setForgot((prev) => ({ ...prev, submitting: false, sent: true }));
+    }, 700);
+  };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center py-12 px-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-[#c67d5b] flex items-center justify-center mx-auto mb-4">
-            <PawPrint className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-2xl text-[#2d2a26]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
-            Tạo tài khoản PetHub
-          </h1>
-          <p className="text-sm text-[#7a756e] mt-2">Đăng ký miễn phí trong 30 giây!</p>
-        </div>
-
-        <div className="bg-white border border-[#2d2a26] rounded-2xl p-8">
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm text-[#2d2a26] mb-1 block">Họ và tên</label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#7a756e]" />
-                <input type="text" placeholder="Nguyễn Văn An" className="w-full pl-10 pr-4 py-3 border border-[#2d2a26] rounded-xl bg-[#faf9f6] focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]" />
-              </div>
-            </div>
-            <div>
-              <label className="text-sm text-[#2d2a26] mb-1 block">Email</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#7a756e]" />
-                <input type="email" placeholder="email@example.com" className="w-full pl-10 pr-4 py-3 border border-[#2d2a26] rounded-xl bg-[#faf9f6] focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]" />
-              </div>
-            </div>
-            <div>
-              <label className="text-sm text-[#2d2a26] mb-1 block">Số điện thoại</label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#7a756e]" />
-                <input type="tel" placeholder="0901234567" className="w-full pl-10 pr-4 py-3 border border-[#2d2a26] rounded-xl bg-[#faf9f6] focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]" />
-              </div>
-            </div>
-            <div>
-              <label className="text-sm text-[#2d2a26] mb-1 block">Mật khẩu</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#7a756e]" />
-                <input type={showPass ? 'text' : 'password'} placeholder="Tối thiểu 8 ký tự" className="w-full pl-10 pr-12 py-3 border border-[#2d2a26] rounded-xl bg-[#faf9f6] focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]" />
-                <button onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2">
-                  {showPass ? <EyeOff className="w-5 h-5 text-[#7a756e]" /> : <Eye className="w-5 h-5 text-[#7a756e]" />}
-                </button>
-              </div>
-            </div>
-            <button onClick={() => navigate('/')} className="w-full py-3 rounded-xl bg-[#6b8f5e] text-white hover:-translate-y-0.5 transition-all border border-[#2d2a26]">
-              Đăng ký
+    <AuthShell
+      title='Chào mừng trở lại!'
+      subtitle='Đăng nhập để quản lý lịch hẹn, hồ sơ và vận hành PetHub.'
+      quote='Hơn cả một dịch vụ, chúng tôi chăm sóc những thành viên trong gia đình bạn.'
+      image={loginVisual}
+    >
+      <form onSubmit={handleSubmit} className='space-y-5'>
+        <div>
+          <label className='text-sm text-[#2d2a26] block mb-2' style={{ fontWeight: 700 }}>Đăng nhập với vai trò</label>
+          <div className='grid grid-cols-2 gap-2'>
+            <button
+              type='button'
+              onClick={() => setRole('customer')}
+              className={`p-3 border rounded-xl text-left transition-all ${
+                role === 'customer' ? 'border-[#c67d5b] bg-[#c67d5b]/10' : 'border-[#2d2a26]/25 bg-white'
+              }`}
+            >
+              <p className='text-sm text-[#2d2a26]' style={{ fontWeight: 700 }}>Khách hàng</p>
+              <p className='text-xs text-[#7a756e]'>Đặt lịch & quản lý thú cưng</p>
+            </button>
+            <button
+              type='button'
+              onClick={() => setRole('manager')}
+              className={`p-3 border rounded-xl text-left transition-all ${
+                role === 'manager' ? 'border-[#6b8f5e] bg-[#6b8f5e]/10' : 'border-[#2d2a26]/25 bg-white'
+              }`}
+            >
+              <p className='text-sm text-[#2d2a26]' style={{ fontWeight: 700 }}>Quản lý</p>
+              <p className='text-xs text-[#7a756e]'>Vận hành cửa hàng</p>
             </button>
           </div>
         </div>
 
-        <p className="text-center text-sm text-[#7a756e] mt-6">
-          Đã có tài khoản?{' '}
-          <Link to="/login" className="text-[#6b8f5e] hover:underline" style={{ fontWeight: 600 }}>Đăng nhập</Link>
-        </p>
-      </div>
-    </div>
+        <div>
+          <label className='text-sm text-[#2d2a26] mb-2 block' style={{ fontWeight: 700 }}>Email</label>
+          <div className='relative'>
+            <Mail className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#7a756e]' />
+            <input
+              type='email'
+              placeholder='your@email.com'
+              className='w-full pl-10 pr-4 py-3 border border-[#2d2a26] rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]'
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className='text-sm text-[#2d2a26] mb-2 block' style={{ fontWeight: 700 }}>Mật khẩu</label>
+          <div className='relative'>
+            <Lock className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#7a756e]' />
+            <input
+              type={showPass ? 'text' : 'password'}
+              placeholder='••••••••'
+              className='w-full pl-10 pr-12 py-3 border border-[#2d2a26] rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]'
+            />
+            <button type='button' onClick={() => setShowPass((v) => !v)} className='absolute right-3 top-1/2 -translate-y-1/2'>
+              {showPass ? <EyeOff className='w-5 h-5 text-[#7a756e]' /> : <Eye className='w-5 h-5 text-[#7a756e]' />}
+            </button>
+          </div>
+        </div>
+
+        <div className='flex items-center justify-between text-sm'>
+          <label className='flex items-center gap-2 text-[#7a756e]'>
+            <input type='checkbox' className='accent-[#6b8f5e]' />
+            Ghi nhớ đăng nhập
+          </label>
+          <button
+            type='button'
+            onClick={() => setForgot({ ...defaultForgotState, open: true })}
+            className='text-[#c67d5b] underline underline-offset-2 decoration-[#c67d5b]/50'
+          >
+            Quên mật khẩu?
+          </button>
+        </div>
+
+        <button
+          type='submit'
+          className='w-full py-3 bg-[#6b8f5e] text-white rounded-xl border border-[#2d2a26] hover:-translate-y-0.5 active:translate-y-[2px] transition-transform'
+        >
+          Đăng nhập
+        </button>
+      </form>
+
+      <LegalConsent mode='login' />
+
+      <p className='text-sm text-[#7a756e] mt-6'>
+        Chưa có tài khoản?{' '}
+        <Link to='/register' className='text-[#6b8f5e]' style={{ fontWeight: 600 }}>
+          Tạo tài khoản miễn phí
+        </Link>
+      </p>
+
+      <Dialog
+        open={forgot.open}
+        onOpenChange={(open) => {
+          if (!open) {
+            setForgot(defaultForgotState);
+            return;
+          }
+          setForgot((prev) => ({ ...prev, open: true }));
+        }}
+      >
+        <DialogContent className='border-[#2d2a26] bg-[#faf9f6]'>
+          <DialogHeader>
+            <div className='inline-flex w-fit items-center gap-2 px-3 py-1 rounded-full border border-[#2d2a26]/20 bg-[#6b8f5e]/10 text-[#2d2a26] text-xs'>
+              <ShieldCheck className='w-3.5 h-3.5 text-[#6b8f5e]' />
+              Bảo mật tài khoản
+            </div>
+            <DialogTitle style={{ fontFamily: "'Playfair Display', serif" }}>Khôi phục mật khẩu</DialogTitle>
+            <DialogDescription>Nhập email để nhận liên kết đặt lại mật khẩu an toàn trong 15 phút.</DialogDescription>
+          </DialogHeader>
+
+          {!forgot.sent ? (
+            <form onSubmit={handleForgotSubmit} className='space-y-4'>
+              <label className='text-sm text-[#2d2a26] block'>Email đăng nhập</label>
+              <div className='relative'>
+                <Mail className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7a756e]' />
+                <input
+                  type='email'
+                  required
+                  value={forgot.email}
+                  onChange={(e) => setForgot((prev) => ({ ...prev, email: e.target.value }))}
+                  placeholder='your@email.com'
+                  className='w-full pl-10 pr-4 py-3 border border-[#2d2a26] rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]'
+                />
+              </div>
+              <p className='text-xs text-[#7a756e]'>
+                Nếu email tồn tại trong hệ thống, bạn sẽ nhận được liên kết đặt lại mật khẩu qua email.
+              </p>
+              <DialogFooter>
+                <button
+                  type='submit'
+                  disabled={forgot.submitting}
+                  className='inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#2d2a26] bg-[#6b8f5e] text-white disabled:opacity-60 hover:-translate-y-0.5 active:translate-y-[2px] transition-transform'
+                >
+                  <SendHorizontal className='w-4 h-4' />
+                  {forgot.submitting ? 'Đang gửi...' : 'Gửi liên kết'}
+                </button>
+              </DialogFooter>
+            </form>
+          ) : (
+            <div className='space-y-4'>
+              <div className='rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900'>
+                <p className='flex items-center gap-2' style={{ fontWeight: 600 }}>
+                  <CheckCircle2 className='w-4 h-4' />
+                  Liên kết đã được gửi thành công
+                </p>
+                <p className='mt-1'>Vui lòng kiểm tra hộp thư của <span style={{ fontWeight: 600 }}>{forgot.email}</span>.</p>
+              </div>
+              <div className='flex items-center justify-between'>
+                <button
+                  type='button'
+                  onClick={handleForgotResend}
+                  disabled={forgot.submitting}
+                  className='text-sm text-[#6b8f5e] underline underline-offset-2 disabled:opacity-50'
+                >
+                  {forgot.submitting ? 'Đang gửi lại...' : 'Gửi lại liên kết'}
+                </button>
+                <button
+                  type='button'
+                  onClick={() => setForgot(defaultForgotState)}
+                  className='px-4 py-2 text-sm rounded-xl border border-[#2d2a26] bg-white hover:-translate-y-0.5 transition-transform'
+                >
+                  Đóng
+                </button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </AuthShell>
+  );
+}
+
+export function RegisterPage() {
+  const [showPass, setShowPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+  const navigate = useNavigate();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    navigate('/login', { replace: true });
+  };
+
+  return (
+    <AuthShell
+      title='Tạo tài khoản miễn phí'
+      subtitle='Thiết lập tài khoản PetHub trong vài phút để bắt đầu số hóa vận hành.'
+      quote='Nền tảng quản lý hiện đại cho pet store và phòng khám thú y chuyên nghiệp.'
+      image={registerVisual}
+    >
+      <form onSubmit={handleSubmit} className='space-y-4'>
+        <div>
+          <label className='text-sm text-[#2d2a26] mb-2 block' style={{ fontWeight: 700 }}>Họ và tên</label>
+          <div className='relative'>
+            <User className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#7a756e]' />
+            <input type='text' placeholder='Nguyễn Văn A' className='w-full pl-10 pr-4 py-3 border border-[#2d2a26] rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]' />
+          </div>
+        </div>
+
+        <div>
+          <label className='text-sm text-[#2d2a26] mb-2 block' style={{ fontWeight: 700 }}>Tên cửa hàng / phòng khám</label>
+          <div className='relative'>
+            <Building2 className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#7a756e]' />
+            <input type='text' placeholder='Happy Pets Clinic' className='w-full pl-10 pr-4 py-3 border border-[#2d2a26] rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]' />
+          </div>
+        </div>
+
+        <div>
+          <label className='text-sm text-[#2d2a26] mb-2 block' style={{ fontWeight: 700 }}>Email</label>
+          <div className='relative'>
+            <Mail className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#7a756e]' />
+            <input type='email' placeholder='your@email.com' className='w-full pl-10 pr-4 py-3 border border-[#2d2a26] rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]' />
+          </div>
+        </div>
+
+        <div>
+          <label className='text-sm text-[#2d2a26] mb-2 block' style={{ fontWeight: 700 }}>Mật khẩu</label>
+          <div className='relative'>
+            <Lock className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#7a756e]' />
+            <input type={showPass ? 'text' : 'password'} placeholder='Tối thiểu 8 ký tự' className='w-full pl-10 pr-12 py-3 border border-[#2d2a26] rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]' />
+            <button type='button' onClick={() => setShowPass((v) => !v)} className='absolute right-3 top-1/2 -translate-y-1/2'>
+              {showPass ? <EyeOff className='w-5 h-5 text-[#7a756e]' /> : <Eye className='w-5 h-5 text-[#7a756e]' />}
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label className='text-sm text-[#2d2a26] mb-2 block' style={{ fontWeight: 700 }}>Xác nhận mật khẩu</label>
+          <div className='relative'>
+            <Lock className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#7a756e]' />
+            <input type={showConfirmPass ? 'text' : 'password'} placeholder='Nhập lại mật khẩu' className='w-full pl-10 pr-12 py-3 border border-[#2d2a26] rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]' />
+            <button type='button' onClick={() => setShowConfirmPass((v) => !v)} className='absolute right-3 top-1/2 -translate-y-1/2'>
+              {showConfirmPass ? <EyeOff className='w-5 h-5 text-[#7a756e]' /> : <Eye className='w-5 h-5 text-[#7a756e]' />}
+            </button>
+          </div>
+        </div>
+
+        <button
+          type='submit'
+          className='w-full py-3 bg-[#6b8f5e] text-white rounded-xl border border-[#2d2a26] hover:-translate-y-0.5 active:translate-y-[2px] transition-transform'
+        >
+          Tạo tài khoản
+        </button>
+      </form>
+
+      <LegalConsent mode='register' />
+
+      <p className='text-sm text-[#7a756e] mt-6'>
+        Đã có tài khoản?{' '}
+        <Link to='/login' className='text-[#6b8f5e]' style={{ fontWeight: 600 }}>
+          Đăng nhập ngay
+        </Link>
+      </p>
+    </AuthShell>
   );
 }

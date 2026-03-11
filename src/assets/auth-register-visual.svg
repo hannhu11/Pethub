@@ -1,0 +1,24 @@
+<svg width="1600" height="1200" viewBox="0 0 1600 1200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="1200" x2="1600" y2="0" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6B8F5E"/>
+      <stop offset="0.52" stop-color="#9D846E"/>
+      <stop offset="1" stop-color="#C67D5B"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="1200" fill="url(#bg)"/>
+  <rect x="180" y="160" width="1240" height="880" rx="52" fill="#FBF9F6" fill-opacity="0.14" stroke="#FBF9F6" stroke-opacity="0.35" stroke-width="2"/>
+  <rect x="260" y="250" width="500" height="560" rx="44" fill="#FBF9F6" fill-opacity="0.92"/>
+  <rect x="840" y="250" width="470" height="160" rx="24" fill="#FBF9F6" fill-opacity="0.86"/>
+  <rect x="840" y="445" width="420" height="88" rx="18" fill="#FBF9F6" fill-opacity="0.70"/>
+  <rect x="840" y="560" width="470" height="88" rx="18" fill="#FBF9F6" fill-opacity="0.70"/>
+  <rect x="840" y="675" width="360" height="88" rx="18" fill="#FBF9F6" fill-opacity="0.70"/>
+  <circle cx="510" cy="530" r="155" fill="#DDE7D8"/>
+  <ellipse cx="450" cy="470" rx="32" ry="40" fill="#2D2A26"/>
+  <ellipse cx="570" cy="470" rx="32" ry="40" fill="#2D2A26"/>
+  <ellipse cx="510" cy="590" rx="70" ry="56" fill="#2D2A26"/>
+  <circle cx="450" cy="540" r="23" fill="#FBF9F6" fill-opacity="0.6"/>
+  <circle cx="570" cy="540" r="23" fill="#FBF9F6" fill-opacity="0.6"/>
+  <text x="300" y="900" fill="#FBF9F6" font-size="56" font-family="Georgia, 'Times New Roman', serif" font-weight="700">Start with confidence</text>
+  <text x="300" y="960" fill="#FBF9F6" font-size="30" font-family="Arial, sans-serif" opacity="0.92">Secure onboarding for stores and clinics</text>
+</svg>
