@@ -6,6 +6,7 @@ import {
   DollarSign,
   ArrowUpRight,
   ArrowDownRight,
+  PackageSearch,
 } from 'lucide-react';
 import {
   BarChart,
@@ -21,7 +22,15 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import { mockAppointments, revenueByMonth, revenueByWeek, formatCurrency, getStatusColor, getStatusLabel } from './data';
+import {
+  mockAppointments,
+  mockTransactions,
+  revenueByMonth,
+  revenueByWeek,
+  formatCurrency,
+  getStatusColor,
+  getStatusLabel,
+} from './data';
 
 const todayBookings = mockAppointments.filter((appointment) => appointment.date === '2026-03-10');
 const completedBookings = mockAppointments.filter((appointment) => appointment.status === 'completed');
@@ -54,8 +63,35 @@ const serviceUsageCount = Object.entries(
   }))
   .sort((left, right) => right.count - left.count);
 
-const totalRevenueThisWeek = completedBookings.reduce((sum, booking) => sum + booking.servicePrice, 0);
-const avgTicketValue = completedBookings.length > 0 ? Math.round(totalRevenueThisWeek / completedBookings.length) : 0;
+const productRevenuePalette = ['#c67d5b', '#6b8f5e', '#b8850a', '#4a90d9', '#7d5a4f'];
+
+const productRevenueByType = Object.entries(
+  mockTransactions.reduce<Record<string, { revenue: number; quantity: number }>>((accumulator, transaction) => {
+    transaction.products.forEach((product) => {
+      const existing = accumulator[product.name] ?? { revenue: 0, quantity: 0 };
+      accumulator[product.name] = {
+        revenue: existing.revenue + product.price * product.quantity,
+        quantity: existing.quantity + product.quantity,
+      };
+    });
+    return accumulator;
+  }, {}),
+)
+  .map(([productName, values], index) => ({
+    productName,
+    revenue: values.revenue,
+    quantity: values.quantity,
+    fill: productRevenuePalette[index % productRevenuePalette.length],
+  }))
+  .sort((left, right) => right.revenue - left.revenue)
+  .slice(0, 5);
+
+const totalServiceRevenue = completedBookings.reduce((sum, booking) => sum + booking.servicePrice, 0);
+const totalProductRevenue = productRevenueByType.reduce((sum, item) => sum + item.revenue, 0);
+const combinedRevenue = totalServiceRevenue + totalProductRevenue;
+const serviceRevenueRatio = combinedRevenue > 0 ? Math.round((totalServiceRevenue / combinedRevenue) * 100) : 0;
+const productRevenueRatio = combinedRevenue > 0 ? Math.round((totalProductRevenue / combinedRevenue) * 100) : 0;
+const avgTicketValue = completedBookings.length > 0 ? Math.round(totalServiceRevenue / completedBookings.length) : 0;
 const topServiceRevenue = serviceRevenueByType[0];
 
 type KpiCard = {
@@ -71,7 +107,7 @@ const kpiCards: KpiCard[] = [
   {
     icon: DollarSign,
     label: 'Doanh thu tuần này',
-    value: formatCurrency(totalRevenueThisWeek),
+    value: formatCurrency(combinedRevenue),
     trend: '+12.5% vs tuần trước',
     trendDirection: 'up',
     color: '#6b8f5e',
@@ -188,9 +224,9 @@ export function ManagerDashboardPage() {
               </PieChart>
             </ResponsiveContainer>
             <div className='absolute inset-0 pointer-events-none flex flex-col items-center justify-center'>
-              <p className='text-[11px] uppercase tracking-[0.14em] text-[#7a756e]'>Tổng doanh thu</p>
+              <p className='text-[11px] uppercase tracking-[0.14em] text-[#7a756e]'>Dịch vụ</p>
               <p className='text-sm text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
-                {formatCurrency(totalRevenueThisWeek)}
+                {formatCurrency(totalServiceRevenue)}
               </p>
             </div>
           </div>
@@ -210,8 +246,8 @@ export function ManagerDashboardPage() {
         </div>
       </div>
 
-      <div className='grid md:grid-cols-3 gap-6'>
-        <div className='md:col-span-2 bg-white border border-[#2d2a26] rounded-2xl p-5'>
+      <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
+        <div className='lg:col-span-2 bg-white border border-[#2d2a26] rounded-2xl p-5'>
           <h3 className='text-sm mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
             Doanh thu theo ngày trong tuần
           </h3>
@@ -236,30 +272,86 @@ export function ManagerDashboardPage() {
           </div>
         </div>
 
-        <div className='bg-white border border-[#2d2a26] rounded-2xl p-5'>
-          <h3 className='text-sm mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
-            Dịch vụ được sử dụng nhiều
-          </h3>
-          <div className='space-y-3'>
-            {serviceUsageCount.map((service) => {
-              const maxUsage = Math.max(...serviceUsageCount.map((item) => item.count), 1);
-              const widthPercent = (service.count / maxUsage) * 100;
-              return (
-                <div key={service.name} className='space-y-1'>
-                  <div className='flex items-center justify-between text-xs'>
-                    <div className='flex items-center gap-2 min-w-0'>
-                      <span className='w-2.5 h-2.5 rounded-full flex-shrink-0' style={{ backgroundColor: service.fill }} />
-                      <span className='truncate'>{service.name}</span>
-                    </div>
-                    <span style={{ fontWeight: 600 }}>{service.count} lượt</span>
-                  </div>
-                  <div className='h-2 rounded-full bg-[#f0ede8] overflow-hidden'>
-                    <div className='h-full rounded-full' style={{ width: `${widthPercent}%`, backgroundColor: service.fill }} />
-                  </div>
-                </div>
-              );
-            })}
+        <div className='space-y-6'>
+          <div className='bg-white border border-[#2d2a26] rounded-2xl p-5'>
+            <h3 className='text-sm mb-4 flex items-center gap-2' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
+              <PackageSearch className='w-4 h-4 text-[#c67d5b]' />
+              Top sản phẩm bán chạy
+            </h3>
+            <div className='h-56'>
+              <ResponsiveContainer width='100%' height='100%'>
+                <BarChart data={productRevenueByType} layout='vertical' margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
+                  <CartesianGrid horizontal={false} strokeDasharray='4 4' stroke='#b7afa4' strokeOpacity={0.2} />
+                  <XAxis type='number' tick={{ fontSize: 11 }} axisLine={{ stroke: '#6f6961', strokeWidth: 1 }} tickLine={false} />
+                  <YAxis dataKey='productName' type='category' width={90} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    formatter={(value: number) => formatCurrency(value)}
+                    contentStyle={{ border: '1px solid #2d2a26', borderRadius: '12px', fontSize: 12 }}
+                  />
+                  <Bar dataKey='revenue' radius={[0, 8, 8, 0]}>
+                    {productRevenueByType.map((entry) => (
+                      <Cell key={entry.productName} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
+
+          <div className='bg-white border border-[#2d2a26] rounded-2xl p-5'>
+            <h3 className='text-sm mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
+              Tỷ trọng doanh thu
+            </h3>
+            <div className='space-y-3'>
+              <div className='space-y-1'>
+                <div className='flex items-center justify-between text-xs'>
+                  <span>Dịch vụ</span>
+                  <span style={{ fontWeight: 600 }}>{serviceRevenueRatio}%</span>
+                </div>
+                <div className='h-2 rounded-full bg-[#f0ede8] overflow-hidden'>
+                  <div className='h-full rounded-full bg-[#6b8f5e]' style={{ width: `${serviceRevenueRatio}%` }} />
+                </div>
+              </div>
+              <div className='space-y-1'>
+                <div className='flex items-center justify-between text-xs'>
+                  <span>Sản phẩm</span>
+                  <span style={{ fontWeight: 600 }}>{productRevenueRatio}%</span>
+                </div>
+                <div className='h-2 rounded-full bg-[#f0ede8] overflow-hidden'>
+                  <div className='h-full rounded-full bg-[#c67d5b]' style={{ width: `${productRevenueRatio}%` }} />
+                </div>
+              </div>
+              <div className='pt-1 text-xs text-[#7a756e]'>
+                Tổng doanh thu: <span className='text-[#2d2a26]' style={{ fontWeight: 600 }}>{formatCurrency(combinedRevenue)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className='bg-white border border-[#2d2a26] rounded-2xl p-5'>
+        <h3 className='text-sm mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
+          Dịch vụ được sử dụng nhiều
+        </h3>
+        <div className='grid md:grid-cols-2 gap-4'>
+          {serviceUsageCount.map((service) => {
+            const maxUsage = Math.max(...serviceUsageCount.map((item) => item.count), 1);
+            const widthPercent = (service.count / maxUsage) * 100;
+            return (
+              <div key={service.name} className='space-y-1'>
+                <div className='flex items-center justify-between text-xs'>
+                  <div className='flex items-center gap-2 min-w-0'>
+                    <span className='w-2.5 h-2.5 rounded-full flex-shrink-0' style={{ backgroundColor: service.fill }} />
+                    <span className='truncate'>{service.name}</span>
+                  </div>
+                  <span style={{ fontWeight: 600 }}>{service.count} lượt</span>
+                </div>
+                <div className='h-2 rounded-full bg-[#f0ede8] overflow-hidden'>
+                  <div className='h-full rounded-full' style={{ width: `${widthPercent}%`, backgroundColor: service.fill }} />
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 

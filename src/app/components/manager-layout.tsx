@@ -8,7 +8,6 @@ import {
   Users,
   Menu,
   X,
-  ChevronLeft,
   Bell,
   Settings,
   ShoppingCart,
@@ -194,7 +193,7 @@ export function ManagerLayout() {
 
   const doLogout = () => {
     logout();
-    navigate('/login', { replace: true });
+    navigate('/', { replace: true });
   };
 
   const handleCommandNavigate = (to: string) => {
@@ -272,13 +271,14 @@ export function ManagerLayout() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Link
-            to='/'
-            className='flex items-center gap-2 px-4 py-2 rounded-xl text-sm text-[#7a756e] hover:bg-[#e8e4de] transition-all'
+          <button
+            type='button'
+            onClick={doLogout}
+            className='w-full flex items-center gap-2 px-4 py-2 rounded-xl text-sm text-red-600 hover:bg-red-50 transition-all'
           >
-            <ChevronLeft className='w-4 h-4' />
-            Về trang khách hàng
-          </Link>
+            <LogOut className='w-4 h-4' />
+            Đăng xuất
+          </button>
         </div>
       </aside>
 
@@ -333,49 +333,47 @@ export function ManagerLayout() {
               >
                 <LogOut className='w-4 h-4' /> Đăng xuất
               </button>
-              <Link to='/' className='flex items-center gap-2 px-4 py-2 text-sm text-[#7a756e]' onClick={() => setSidebarOpen(false)}>
-                <ChevronLeft className='w-4 h-4' /> Về trang khách hàng
-              </Link>
             </div>
           </aside>
         </div>
       )}
 
       <div className='flex-1 flex flex-col min-h-screen'>
-        <header className='h-14 border-b border-[#2d2a26] bg-white flex items-center px-4 gap-3 sticky top-0 z-40'>
-          <button className='lg:hidden p-1' onClick={() => setSidebarOpen(true)}>
-            <Menu className='w-5 h-5' />
-          </button>
+        <header className='h-14 border-b border-[#2d2a26] bg-white flex items-center px-4 sticky top-0 z-40'>
+          <div className='flex items-center gap-2 min-w-0 flex-1'>
+            <button className='lg:hidden p-1' onClick={() => setSidebarOpen(true)}>
+              <Menu className='w-5 h-5' />
+            </button>
 
-          <button
-            type='button'
-            onClick={() => setCommandOpen(true)}
-            className='flex-1 max-w-md hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#faf9f6] border border-[#2d2a26]/15 hover:border-[#6b8f5e]/50 transition-colors text-left'
-          >
-            <Search className='w-4 h-4 text-[#7a756e]' />
-            <span className='text-sm text-[#a09b94] flex-1'>Tìm kiếm nhanh...</span>
-            <kbd className='text-[10px] text-[#7a756e] border border-[#2d2a26]/20 rounded px-1.5 py-0.5'>Ctrl K</kbd>
-          </button>
+            <button
+              type='button'
+              onClick={() => setCommandOpen(true)}
+              className='hidden sm:flex w-full max-w-xl items-center gap-2 px-3 py-1.5 rounded-xl bg-[#faf9f6] border border-[#2d2a26]/15 hover:border-[#6b8f5e]/50 transition-colors text-left'
+            >
+              <Search className='w-4 h-4 text-[#7a756e]' />
+              <span className='text-sm text-[#a09b94] flex-1'>Tìm kiếm nhanh...</span>
+              <kbd className='text-[10px] text-[#7a756e] border border-[#2d2a26]/20 rounded px-1.5 py-0.5'>Ctrl K</kbd>
+            </button>
+          </div>
 
-          <div className='flex-1 sm:hidden' />
-
-          <Popover open={notifOpen} onOpenChange={setNotifOpen}>
-            <PopoverTrigger asChild>
-              <button
-                type='button'
-                className='relative p-2 rounded-xl border border-[#2d2a26]/20 hover:bg-[#f0ede8] transition-all'
-              >
-                <Bell className='w-5 h-5 text-[#2d2a26]' />
-                {unreadCount > 0 && (
-                  <span
-                    className='absolute -top-1 -right-1 bg-[#e04444] text-white text-[9px] rounded-full flex items-center justify-center'
-                    style={{ fontWeight: 700, minWidth: '18px', height: '18px' }}
-                  >
-                    {unreadCount}
-                  </span>
-                )}
-              </button>
-            </PopoverTrigger>
+          <div className='ml-auto flex items-center gap-2'>
+            <Popover open={notifOpen} onOpenChange={setNotifOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  type='button'
+                  className='relative p-1.5 rounded-xl border border-[#2d2a26]/20 hover:bg-[#f0ede8] transition-all'
+                >
+                  <Bell className='w-5 h-5 text-[#2d2a26]' />
+                  {unreadCount > 0 && (
+                    <span
+                      className='absolute -top-1 -right-1 bg-[#e04444] text-white text-[9px] rounded-full flex items-center justify-center'
+                      style={{ fontWeight: 700, minWidth: '18px', height: '18px' }}
+                    >
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+              </PopoverTrigger>
             <PopoverContent align='end' className='w-[22rem] p-0 border-[#2d2a26] bg-white'>
               <div className='p-3 border-b border-[#2d2a26]/10 flex items-center justify-between'>
                 <h3 className='text-sm' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
@@ -421,18 +419,21 @@ export function ManagerLayout() {
                 </button>
               </div>
             </PopoverContent>
-          </Popover>
+            </Popover>
 
-          <button
-            type='button'
-            onClick={goToProfileSettings}
-            className='flex items-center gap-2 px-2.5 py-1.5 rounded-xl border border-[#2d2a26]/15 hover:bg-[#f0ede8] transition-all'
-          >
-            <div className='w-8 h-8 rounded-full bg-[#c67d5b] flex items-center justify-center border border-[#2d2a26]/20'>
-              <span className='text-white text-xs' style={{ fontWeight: 600 }}>PH</span>
-            </div>
-            <span className='text-sm hidden sm:block' style={{ fontWeight: 600 }}>{managerName}</span>
-          </button>
+            <button
+              type='button'
+              onClick={goToProfileSettings}
+              className='flex items-center gap-2 px-2 py-1 rounded-xl border border-[#2d2a26]/15 hover:bg-[#f0ede8] transition-all'
+            >
+              <div className='w-7 h-7 rounded-full bg-[#c67d5b] flex items-center justify-center border border-[#2d2a26]/20'>
+                <span className='text-white text-xs' style={{ fontWeight: 600 }}>PH</span>
+              </div>
+              <span className='text-sm hidden md:block max-w-[9rem] truncate' style={{ fontWeight: 600 }}>
+                {managerName}
+              </span>
+            </button>
+          </div>
         </header>
 
         <main className='flex-1 p-4 md:p-6 overflow-auto'>

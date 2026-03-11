@@ -31,7 +31,7 @@ export interface Pet {
   color: string;
   microchipId: string;
   bloodType: string;
-  neutered: boolean;
+  neutered: boolean | null;
   vaccinationLevel: string;
   lastCheckup: string;
   specialNotes?: string;
