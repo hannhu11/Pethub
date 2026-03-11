@@ -6,5 +6,6 @@ tmp
 # Keep environment variables out of version control
 .env
 .env.*
+!.env.example
 
 /generated/prisma
