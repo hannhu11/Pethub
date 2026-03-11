@@ -1,16 +1,37 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Plus, Edit3, Trash2, Search, X, Save, PawPrint,
-  Stethoscope, Download, Share2, Sparkles, Phone, Mail,
-  CalendarDays, DollarSign, Clock, ChevronRight, Eye, CreditCard,
-  UserPlus, FileText, Tag
+  Stethoscope, Download, Sparkles, Phone,
+  CalendarDays, CreditCard, MoreHorizontal,
+  UserPlus, FileText, Tag, Upload
 } from 'lucide-react';
-import { mockServices, mockCategories, mockProducts, mockPets, mockUsers, mockAppointments, mockMedicalRecords, formatCurrency, type Service, type Product, type Category } from './data';
+import {
+  mockServices,
+  mockCategories,
+  mockProducts,
+  mockPets,
+  mockUsers,
+  mockAppointments,
+  mockMedicalRecords,
+  formatCurrency,
+  type Service,
+  type Product,
+  type Category,
+  type Pet,
+} from './data';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { PetDigitalCard } from './pet-digital-card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
+import { downloadElementAsPng } from './export-utils';
+import type { BloodType, CustomerSegment, DigitalCardModalState, NeuteredStatus, PetProfileDraft } from '../types';
 
 // ============ COMBINED CATALOG PAGE (Services + Products + Categories) ============
 type CatalogTab = 'services' | 'products' | 'categories';
@@ -355,6 +376,101 @@ function CategoriesTab() {
   );
 }
 
+const referenceDate = new Date('2026-03-10T00:00:00');
+
+const bloodTypeOptions: Array<{ value: BloodType; label: string }> = [
+  { value: 'A', label: 'A' },
+  { value: 'B', label: 'B' },
+  { value: 'AB', label: 'AB' },
+  { value: 'DEA 1.1+', label: 'DEA 1.1+' },
+  { value: 'DEA 1.1-', label: 'DEA 1.1-' },
+  { value: 'none', label: 'Không có' },
+];
+
+const neuteredOptions: Array<{ value: NeuteredStatus; label: string }> = [
+  { value: 'yes', label: 'Đã triệt sản' },
+  { value: 'no', label: 'Chưa triệt sản' },
+  { value: 'none', label: 'Không rõ' },
+];
+
+const initialPetDraft: PetProfileDraft = {
+  ownerName: '',
+  ownerPhone: '',
+  ownerEmail: '',
+  existingOwner: '',
+  petName: '',
+  petSpecies: 'Chó',
+  petBreed: '',
+  petGender: 'Đực',
+  petDob: '',
+  petWeight: '',
+  color: '',
+  bloodType: 'none',
+  neutered: 'none',
+  microchipId: '',
+  specialNotes: '',
+  imageFile: null,
+  imagePreview: '',
+};
+
+const normalizeNoneText = (value: string) => {
+  const normalized = value.trim().toLowerCase();
+  return normalized === '' || normalized === 'none' || normalized === 'không có';
+};
+
+const toNeuteredStatus = (value: boolean | null): NeuteredStatus => {
+  if (value === true) return 'yes';
+  if (value === false) return 'no';
+  return 'none';
+};
+
+const toNeuteredValue = (value: NeuteredStatus): boolean | null => {
+  if (value === 'yes') return true;
+  if (value === 'no') return false;
+  return null;
+};
+
+const draftFromPet = (pet: Pet): PetProfileDraft => ({
+  ownerName: pet.ownerName,
+  ownerPhone: pet.ownerPhone,
+  ownerEmail: pet.ownerEmail,
+  existingOwner: pet.ownerId,
+  petName: pet.name,
+  petSpecies: pet.species,
+  petBreed: pet.breed,
+  petGender: pet.gender,
+  petDob: pet.dob,
+  petWeight: pet.weight,
+  color: normalizeNoneText(pet.color) ? '' : pet.color,
+  bloodType: normalizeNoneText(pet.bloodType) ? 'none' : ((pet.bloodType as BloodType) ?? 'none'),
+  neutered: toNeuteredStatus(pet.neutered),
+  microchipId: normalizeNoneText(pet.microchipId) ? '' : pet.microchipId,
+  specialNotes: (pet.specialNotes ?? '').slice(0, 15),
+  imageFile: null,
+  imagePreview: pet.image,
+});
+
+const resolveSegmentStyle = (segment: CustomerSegment) => {
+  if (segment === 'vip') return { label: 'Khách VIP', className: 'bg-amber-100 text-amber-800 border-amber-300' };
+  if (segment === 'loyal') return { label: 'Thân thiết', className: 'bg-[#6b8f5e]/10 text-[#6b8f5e] border-[#6b8f5e]/30' };
+  if (segment === 'new') return { label: 'Khách mới', className: 'bg-emerald-100 text-emerald-700 border-emerald-300' };
+  return { label: 'Khách thường', className: 'bg-[#f0ede8] text-[#7a756e] border-[#2d2a26]/10' };
+};
+
+const dateDiffInDays = (to: Date, fromDate: string) => {
+  const from = new Date(`${fromDate}T00:00:00`);
+  const diff = to.getTime() - from.getTime();
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
+};
+
+async function exportPetCardAsPng(targetElement: HTMLElement, petId: string) {
+  await downloadElementAsPng(targetElement, {
+    fileName: `${petId.toLowerCase()}-digital-card.png`,
+    width: 1200,
+    backgroundColor: '#1f2327',
+  });
+}
+
 
 // ============ PET MANAGEMENT (with Digital Card + Quick Add) ============
 export function ManagerPetsPage() {
@@ -364,15 +480,12 @@ export function ManagerPetsPage() {
   const [selectedPetId, setSelectedPetId] = useState<string | null>(null);
   const [showAddDrawer, setShowAddDrawer] = useState(false);
   const [detailTab, setDetailTab] = useState<'info' | 'medical' | 'card'>('info');
-  const [shareNotice, setShareNotice] = useState<string | null>(null);
-  const [showCardDialog, setShowCardDialog] = useState(false);
+  const [petFormMode, setPetFormMode] = useState<'create' | 'edit'>('create');
+  const [editingPetId, setEditingPetId] = useState<string | null>(null);
+  const petCardRef = useRef<HTMLDivElement>(null);
 
   // Quick Add form
-  const [addForm, setAddForm] = useState({
-    ownerName: '', ownerPhone: '', ownerEmail: '',
-    petName: '', petSpecies: 'Chó', petBreed: '', petGender: 'Đực', petDob: '', petWeight: '',
-    existingOwner: '',
-  });
+  const [addForm, setAddForm] = useState<PetProfileDraft>(initialPetDraft);
   const [addMode, setAddMode] = useState<'new' | 'existing'>('new');
 
   const filtered = pets.filter(p =>
@@ -384,10 +497,30 @@ export function ManagerPetsPage() {
   const petMedicalRecords = selectedPetId ? mockMedicalRecords.filter(r => r.petId === selectedPetId) : [];
   const customers = mockUsers.filter(u => u.role === 'customer');
 
+  const openCreateDrawer = () => {
+    if (addForm.imagePreview?.startsWith('blob:')) {
+      URL.revokeObjectURL(addForm.imagePreview);
+    }
+    setAddForm(initialPetDraft);
+    setAddMode('new');
+    setPetFormMode('create');
+    setEditingPetId(null);
+    setShowAddDrawer(true);
+  };
+
+  const openEditDrawer = (pet: Pet) => {
+    setPetFormMode('edit');
+    setEditingPetId(pet.id);
+    setAddMode('new');
+    setAddForm(draftFromPet(pet));
+    setShowAddDrawer(true);
+  };
+
   useEffect(() => {
     if (searchParams.get('action') === 'quick-add') {
-      setShowAddDrawer(true);
+      openCreateDrawer();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   const clearQuickAddQuery = () => {
@@ -401,7 +534,6 @@ export function ManagerPetsPage() {
 
   const closePetDetail = () => {
     setSelectedPetId(null);
-    setShowCardDialog(false);
   };
 
   const closeAddDrawer = () => {
@@ -409,37 +541,30 @@ export function ManagerPetsPage() {
     clearQuickAddQuery();
   };
 
-  const handleCreateCard = (petId: string, openPreview = true) => {
+  const handleCreateCard = (petId: string) => {
     setPets(prev => prev.map(p => p.id === petId ? { ...p, hasDigitalCard: true } : p));
-    if (openPreview) {
-      setShowCardDialog(true);
-    }
-  };
-
-  const handleShare = async (petId: string) => {
-    const shareUrl = `${window.location.origin}/customer/digital-card/${petId}`;
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(shareUrl);
-      }
-    } catch {
-      // ignore clipboard errors in frontend mock mode
-    }
-    setShareNotice(petId);
-    setTimeout(() => setShareNotice(null), 2000);
   };
 
   const getAge = (dob: string) => {
-    const birth = new Date(dob);
-    const now = new Date('2026-03-10');
-    const years = now.getFullYear() - birth.getFullYear();
+    const birth = new Date(`${dob}T00:00:00`);
+    const years = referenceDate.getFullYear() - birth.getFullYear();
     if (years > 0) return `${years} tuổi`;
     return 'Dưới 1 tuổi';
   };
 
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const nextPreview = URL.createObjectURL(file);
+    if (addForm.imagePreview?.startsWith('blob:')) {
+      URL.revokeObjectURL(addForm.imagePreview);
+    }
+    setAddForm(prev => ({ ...prev, imageFile: file, imagePreview: nextPreview }));
+  };
+
   const handleAddPet = () => {
     let ownerId = '', ownerName = '', ownerPhone = '', ownerEmail = '';
-    if (addMode === 'existing' && addForm.existingOwner) {
+    if (petFormMode === 'create' && addMode === 'existing' && addForm.existingOwner) {
       const customer = customers.find(c => c.id === addForm.existingOwner);
       if (customer) {
         ownerId = customer.id;
@@ -448,43 +573,59 @@ export function ManagerPetsPage() {
         ownerEmail = customer.email;
       }
     } else {
-      ownerId = `u${Date.now()}`;
-      ownerName = addForm.ownerName;
-      ownerPhone = addForm.ownerPhone;
+      ownerId = petFormMode === 'edit' && addForm.existingOwner ? addForm.existingOwner : `u${Date.now()}`;
+      ownerName = addForm.ownerName.trim();
+      ownerPhone = addForm.ownerPhone.trim();
       ownerEmail = addForm.ownerEmail || 'chua-cap-nhat@email.com';
     }
 
-    if (!addForm.petName.trim() || !ownerName) return;
+    if (!addForm.petName.trim() || !ownerName || !ownerPhone) return;
 
-    const newPetId = `PH-2026-${String(pets.length + 1).padStart(3, '0')}`;
-    const newPet = {
-      id: newPetId,
-      name: addForm.petName,
+    const resolvedImage = addForm.imagePreview || (
+      addForm.petSpecies === 'Chó'
+        ? mockPets.find((pet) => pet.species === 'Chó')?.image || ''
+        : mockPets.find((pet) => pet.species === 'Mèo')?.image || mockPets[0]?.image || ''
+    );
+
+    const payload = {
+      name: addForm.petName.trim(),
       species: addForm.petSpecies,
-      breed: addForm.petBreed || 'Chưa xác định',
+      breed: addForm.petBreed.trim() || 'Chưa xác định',
       gender: addForm.petGender,
       dob: addForm.petDob || '2025-01-01',
       weight: addForm.petWeight || 'Chưa cân',
-      color: addForm.petSpecies === 'Chó' ? 'Nâu vàng' : 'Xám trắng',
-      microchipId: `MC-${Date.now()}`,
-      bloodType: addForm.petSpecies === 'Chó' ? 'DEA 1.1+' : 'A',
-      neutered: false,
+      color: addForm.color.trim() || 'None',
+      microchipId: addForm.microchipId.trim() || 'None',
+      bloodType: addForm.bloodType === 'none' ? 'None' : addForm.bloodType,
+      neutered: toNeuteredValue(addForm.neutered),
+      specialNotes: addForm.specialNotes.trim().slice(0, 15),
       vaccinationLevel: 'Chưa cập nhật',
       lastCheckup: '2026-03-10',
-      image: addForm.petSpecies === 'Chó'
-        ? mockPets.find((pet) => pet.species === 'Chó')?.image || ''
-        : mockPets.find((pet) => pet.species === 'Mèo')?.image || '',
+      image: resolvedImage,
       ownerId,
       ownerName,
       ownerPhone,
       ownerEmail,
+    };
+
+    if (petFormMode === 'edit' && editingPetId) {
+      setPets(prev => prev.map(p => p.id === editingPetId ? { ...p, ...payload } : p));
+      setSelectedPetId(editingPetId);
+      closeAddDrawer();
+      return;
+    }
+
+    const newPetId = `PH-2026-${String(pets.length + 1).padStart(3, '0')}`;
+    const newPet = {
+      id: newPetId,
+      ...payload,
       hasDigitalCard: false,
     };
 
     setPets(prev => [...prev, newPet]);
     setSelectedPetId(newPetId);
     setDetailTab('card');
-    setAddForm({ ownerName: '', ownerPhone: '', ownerEmail: '', petName: '', petSpecies: 'Chó', petBreed: '', petGender: 'Đực', petDob: '', petWeight: '', existingOwner: '' });
+    setAddForm(initialPetDraft);
     setAddMode('new');
     closeAddDrawer();
   };
@@ -505,7 +646,7 @@ export function ManagerPetsPage() {
               className="pl-9 pr-4 py-2.5 border border-[#2d2a26] rounded-xl bg-white text-sm w-56 focus:outline-none focus:bg-[#faf9f6]" />
           </div>
           <button
-            onClick={() => setShowAddDrawer(true)}
+            onClick={openCreateDrawer}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#6b8f5e] text-white hover:-translate-y-0.5 transition-all border border-[#2d2a26] text-sm whitespace-nowrap"
             style={{ fontWeight: 600 }}
           >
@@ -569,9 +710,19 @@ export function ManagerPetsPage() {
                     <p className="text-xs text-[#7a756e]">{selectedPet.breed} • {selectedPet.species}</p>
                   </div>
                 </div>
-                <button onClick={closePetDetail} className="p-1.5 hover:bg-[#f0ede8] rounded-lg">
-                  <X className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => openEditDrawer(selectedPet)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-[#2d2a26] bg-white hover:-translate-y-0.5 transition-all"
+                    style={{ fontWeight: 600 }}
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    Sửa hồ sơ
+                  </button>
+                  <button onClick={closePetDetail} className="p-1.5 hover:bg-[#f0ede8] rounded-lg">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
 
               {/* Tabs */}
@@ -608,6 +759,14 @@ export function ManagerPetsPage() {
                         { label: 'Ngày sinh', value: selectedPet.dob },
                         { label: 'Cân nặng', value: selectedPet.weight },
                         { label: 'Tuổi', value: getAge(selectedPet.dob) },
+                        { label: 'Màu lông', value: normalizeNoneText(selectedPet.color) ? 'Không có' : selectedPet.color },
+                        { label: 'Nhóm máu', value: normalizeNoneText(selectedPet.bloodType) ? 'Không có' : selectedPet.bloodType },
+                        { label: 'Microchip', value: normalizeNoneText(selectedPet.microchipId) ? 'Không có' : selectedPet.microchipId },
+                        {
+                          label: 'Triệt sản',
+                          value: selectedPet.neutered === true ? 'Đã triệt sản' : selectedPet.neutered === false ? 'Chưa triệt sản' : 'Không rõ',
+                        },
+                        { label: 'Lưu ý', value: selectedPet.specialNotes || 'Không có' },
                       ].map(item => (
                         <div key={item.label} className="p-3 bg-white rounded-xl border border-[#2d2a26]/10">
                           <p className="text-[10px] text-[#7a756e] mb-1 uppercase tracking-wider">{item.label}</p>
@@ -624,6 +783,7 @@ export function ManagerPetsPage() {
                         <div>
                           <p className="text-sm" style={{ fontWeight: 500 }}>{selectedPet.ownerName}</p>
                           <p className="text-xs text-[#7a756e]">{selectedPet.ownerPhone}</p>
+                          <p className="text-xs text-[#7a756e]">{selectedPet.ownerEmail}</p>
                         </div>
                       </div>
                     </div>
@@ -686,48 +846,31 @@ export function ManagerPetsPage() {
                           Generate Digital Smart Card
                         </button>
                       </div>
-                    ) : (
-                      <div className="bg-white border border-[#2d2a26]/10 rounded-2xl p-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm text-[#2d2a26]" style={{ fontWeight: 600 }}>
-                            Thẻ đã được tạo theo mẫu Premium mới
-                          </p>
-                          <span className="text-[11px] px-2 py-1 rounded-full bg-[#6b8f5e]/10 text-[#6b8f5e] border border-[#6b8f5e]/30">
-                            Active
-                          </span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3 text-xs text-[#7a756e]">
-                          <p>Cập nhật gần nhất: <span className="text-[#2d2a26]">{selectedPet.lastCheckup}</span></p>
-                          <p>Microchip: <span className="text-[#2d2a26]">{selectedPet.microchipId}</span></p>
-                        </div>
-                      </div>
-                    )}
+                    ) : null}
 
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={() => {
-                          if (!selectedPet.hasDigitalCard) {
-                            handleCreateCard(selectedPet.id, false);
-                          }
-                          setShowCardDialog(true);
-                        }}
-                        className="flex-1 min-w-[160px] flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#2d2a26] bg-white text-xs hover:-translate-y-0.5 transition-all"
-                        style={{ fontWeight: 500 }}
-                      >
-                        <Eye className="w-3.5 h-3.5 text-[#2d2a26]" /> Xem thẻ chuẩn mới
-                      </button>
-                      <button
-                        onClick={() => handleShare(selectedPet.id)}
-                        className="flex-1 min-w-[160px] flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#2d2a26] bg-white text-xs hover:-translate-y-0.5 transition-all"
-                        style={{ fontWeight: 500 }}
-                      >
-                        {shareNotice === selectedPet.id ? (
-                          <span className="text-[#6b8f5e]">Link đã sao chép!</span>
-                        ) : (
-                          <><Share2 className="w-3.5 h-3.5 text-[#c67d5b]" />Sao chép link</>
-                        )}
-                      </button>
-                    </div>
+                    {selectedPet.hasDigitalCard ? (
+                      <>
+                        <div ref={petCardRef} className="mx-auto max-w-2xl">
+                          <PetDigitalCard pet={selectedPet} />
+                        </div>
+                        <div className="bg-white border border-[#2d2a26]/10 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-xs text-[#7a756e]">
+                            Cập nhật gần nhất: <span className="text-[#2d2a26]" style={{ fontWeight: 600 }}>{selectedPet.lastCheckup}</span>
+                          </p>
+                          <button
+                            onClick={() => {
+                              if (!petCardRef.current) return;
+                              void exportPetCardAsPng(petCardRef.current, selectedPet.id);
+                            }}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#6b8f5e] text-white border border-[#2d2a26] text-xs hover:-translate-y-0.5 transition-all"
+                            style={{ fontWeight: 600 }}
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            Tải ảnh thẻ (PNG)
+                          </button>
+                        </div>
+                      </>
+                    ) : null}
                   </div>
                 )}
               </div>
@@ -735,31 +878,6 @@ export function ManagerPetsPage() {
           </div>
         )}
       </AnimatePresence>
-
-      <Dialog open={showCardDialog} onOpenChange={setShowCardDialog}>
-        <DialogContent className="max-w-4xl border-[#2d2a26] bg-[#faf9f6]">
-          <DialogHeader>
-            <DialogTitle style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Digital Smart Card</DialogTitle>
-            <DialogDescription>
-              Bản hiển thị đồng bộ với thẻ phía khách hàng cho pet {selectedPet?.name ?? ''}.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedPet ? <PetDigitalCard pet={selectedPet} className="mx-auto max-w-2xl" /> : null}
-          <div className="flex flex-wrap gap-2">
-            <button className="flex-1 min-w-[160px] flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#2d2a26] bg-white text-sm hover:-translate-y-0.5 transition-all">
-              <Download className="w-4 h-4 text-[#6b8f5e]" /> Tải PDF
-            </button>
-            {selectedPet ? (
-              <button
-                onClick={() => handleShare(selectedPet.id)}
-                className="flex-1 min-w-[160px] flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#2d2a26] bg-white text-sm hover:-translate-y-0.5 transition-all"
-              >
-                <Share2 className="w-4 h-4 text-[#c67d5b]" /> Sao chép link
-              </button>
-            ) : null}
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Quick Add Pet & Owner Slide-over Drawer */}
       <AnimatePresence>
@@ -777,9 +895,11 @@ export function ManagerPetsPage() {
               <div className="sticky top-0 z-10 bg-[#faf9f6] border-b border-[#2d2a26]/15 p-5 flex items-center justify-between">
                 <div>
                   <h2 className="text-lg" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
-                    Thêm nhanh — Walk-in
+                    {petFormMode === 'create' ? 'Thêm nhanh — Walk-in' : 'Sửa hồ sơ thú cưng'}
                   </h2>
-                  <p className="text-xs text-[#7a756e] mt-0.5">Đăng ký thú cưng & chủ cho khách vãng lai</p>
+                  <p className="text-xs text-[#7a756e] mt-0.5">
+                    {petFormMode === 'create' ? 'Đăng ký thú cưng & chủ cho khách vãng lai' : 'Đồng bộ hồ sơ với Digital Smart Card'}
+                  </p>
                 </div>
                 <button onClick={closeAddDrawer} className="p-1.5 hover:bg-[#f0ede8] rounded-lg">
                   <X className="w-5 h-5" />
@@ -787,6 +907,31 @@ export function ManagerPetsPage() {
               </div>
 
               <div className="p-5 space-y-5">
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-7 h-7 rounded-lg bg-[#6b8f5e]/10 flex items-center justify-center">
+                      <Upload className="w-4 h-4 text-[#6b8f5e]" />
+                    </div>
+                    <h3 className="text-sm" style={{ fontWeight: 600 }}>Ảnh thú cưng</h3>
+                  </div>
+                  <label className="block border border-dashed border-[#2d2a26]/40 rounded-2xl bg-white p-4 cursor-pointer hover:border-[#6b8f5e]/60 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-16 h-16 rounded-xl overflow-hidden border border-[#2d2a26]/20 bg-[#f0ede8] flex items-center justify-center">
+                        {addForm.imagePreview ? (
+                          <ImageWithFallback src={addForm.imagePreview} alt='Pet preview' className='w-full h-full object-cover' />
+                        ) : (
+                          <PawPrint className="w-6 h-6 text-[#7a756e]" />
+                        )}
+                      </div>
+                      <div className="text-xs text-[#7a756e]">
+                        <p style={{ fontWeight: 600 }} className="text-[#2d2a26]">Tải ảnh thú cưng</p>
+                        <p>PNG/JPG, hiển thị trên Digital Smart Card</p>
+                      </div>
+                    </div>
+                    <input type='file' accept='image/*' onChange={handleImageUpload} className='hidden' />
+                  </label>
+                </div>
+
                 {/* Owner Section */}
                 <div>
                   <div className="flex items-center gap-2 mb-3">
@@ -797,24 +942,26 @@ export function ManagerPetsPage() {
                   </div>
 
                   {/* Toggle mode */}
-                  <div className="flex gap-1 mb-3 bg-[#f0ede8] p-0.5 rounded-lg">
-                    <button
-                      onClick={() => setAddMode('new')}
-                      className={`flex-1 py-1.5 text-xs rounded-md transition-all ${addMode === 'new' ? 'bg-white text-[#2d2a26] border border-[#2d2a26]/15' : 'text-[#7a756e]'}`}
-                      style={addMode === 'new' ? { fontWeight: 600 } : {}}
-                    >
-                      Khách mới
-                    </button>
-                    <button
-                      onClick={() => setAddMode('existing')}
-                      className={`flex-1 py-1.5 text-xs rounded-md transition-all ${addMode === 'existing' ? 'bg-white text-[#2d2a26] border border-[#2d2a26]/15' : 'text-[#7a756e]'}`}
-                      style={addMode === 'existing' ? { fontWeight: 600 } : {}}
-                    >
-                      Khách cũ
-                    </button>
-                  </div>
+                  {petFormMode === 'create' ? (
+                    <div className="flex gap-1 mb-3 bg-[#f0ede8] p-0.5 rounded-lg">
+                      <button
+                        onClick={() => setAddMode('new')}
+                        className={`flex-1 py-1.5 text-xs rounded-md transition-all ${addMode === 'new' ? 'bg-white text-[#2d2a26] border border-[#2d2a26]/15' : 'text-[#7a756e]'}`}
+                        style={addMode === 'new' ? { fontWeight: 600 } : {}}
+                      >
+                        Khách mới
+                      </button>
+                      <button
+                        onClick={() => setAddMode('existing')}
+                        className={`flex-1 py-1.5 text-xs rounded-md transition-all ${addMode === 'existing' ? 'bg-white text-[#2d2a26] border border-[#2d2a26]/15' : 'text-[#7a756e]'}`}
+                        style={addMode === 'existing' ? { fontWeight: 600 } : {}}
+                      >
+                        Khách cũ
+                      </button>
+                    </div>
+                  ) : null}
 
-                  {addMode === 'existing' ? (
+                  {petFormMode === 'create' && addMode === 'existing' ? (
                     <select
                       value={addForm.existingOwner}
                       onChange={e => setAddForm({ ...addForm, existingOwner: e.target.value })}
@@ -907,6 +1054,66 @@ export function ManagerPetsPage() {
                         />
                       </div>
                     </div>
+                    <input
+                      value={addForm.color}
+                      onChange={e => setAddForm({ ...addForm, color: e.target.value })}
+                      placeholder="Màu lông"
+                      className="w-full p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white focus:outline-none"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] text-[#7a756e] mb-1 block">Nhóm máu</label>
+                        <select
+                          value={addForm.bloodType}
+                          onChange={e => setAddForm({ ...addForm, bloodType: e.target.value as BloodType })}
+                          className="w-full p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white"
+                        >
+                          {bloodTypeOptions.map(option => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-[#7a756e] mb-1 block">Triệt sản</label>
+                        <select
+                          value={addForm.neutered}
+                          onChange={e => setAddForm({ ...addForm, neutered: e.target.value as NeuteredStatus })}
+                          className="w-full p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white"
+                        >
+                          {neuteredOptions.map(option => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <input
+                        value={addForm.microchipId}
+                        onChange={e => setAddForm({ ...addForm, microchipId: e.target.value })}
+                        placeholder="Microchip ID"
+                        className="w-full p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setAddForm({ ...addForm, microchipId: 'None' })}
+                        className="w-full py-2 text-xs rounded-xl border border-[#2d2a26]/20 bg-white hover:bg-[#f0ede8] transition-colors"
+                      >
+                        Không có microchip
+                      </button>
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] text-[#7a756e] uppercase tracking-wider">Lưu ý (tối đa 15 ký tự)</label>
+                        <span className="text-[10px] text-[#7a756e]">{addForm.specialNotes.length}/15</span>
+                      </div>
+                      <input
+                        value={addForm.specialNotes}
+                        maxLength={15}
+                        onChange={e => setAddForm({ ...addForm, specialNotes: e.target.value })}
+                        placeholder="VD: Dị ứng gà"
+                        className="w-full p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white focus:outline-none"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -916,8 +1123,8 @@ export function ManagerPetsPage() {
                   className="w-full py-3.5 rounded-xl bg-[#6b8f5e] text-white text-sm border border-[#2d2a26] hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2"
                   style={{ fontWeight: 700 }}
                 >
-                  <Plus className="w-4 h-4" />
-                  Đăng ký & Lưu hồ sơ
+                  {petFormMode === 'create' ? <Plus className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+                  {petFormMode === 'create' ? 'Đăng ký & Lưu hồ sơ' : 'Lưu cập nhật hồ sơ'}
                 </button>
               </div>
             </motion.div>
@@ -931,17 +1138,15 @@ export function ManagerPetsPage() {
 
 // ============ CUSTOMER MANAGEMENT ============
 export function ManagerCustomersPage() {
-  const customers = mockUsers.filter(u => u.role === 'customer');
+  const customers = useMemo(() => mockUsers.filter(u => u.role === 'customer'), []);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [segmentFilter, setSegmentFilter] = useState<'all' | CustomerSegment>('all');
+  const [customerPets, setCustomerPets] = useState(mockPets.map(p => ({ ...p })));
+  const [cardModal, setCardModal] = useState<DigitalCardModalState>({ open: false, petId: null, source: 'customers' });
+  const customerCardRef = useRef<HTMLDivElement>(null);
 
-  const selectedCustomer = customers.find(c => c.id === selectedId);
-  const filteredCustomers = customers.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.phone.includes(search)
-  );
-
-  const getCustomerPets = (userId: string) => mockPets.filter(p => p.ownerId === userId);
+  const getCustomerPets = (userId: string) => customerPets.filter(p => p.ownerId === userId);
   const getCustomerAppointments = (userId: string) => mockAppointments.filter(a => a.userId === userId);
   const getCustomerLTV = (userId: string) => {
     return getCustomerAppointments(userId)
@@ -950,10 +1155,29 @@ export function ManagerCustomersPage() {
   };
   const getCustomerTier = (userId: string) => {
     const ltv = getCustomerLTV(userId);
-    if (ltv >= 500000) return { label: 'VIP', color: 'bg-amber-100 text-amber-800 border-amber-300' };
-    if (ltv >= 200000) return { label: 'Thân thiết', color: 'bg-[#6b8f5e]/10 text-[#6b8f5e] border-[#6b8f5e]/30' };
-    return { label: 'Tiêu chuẩn', color: 'bg-[#f0ede8] text-[#7a756e] border-[#2d2a26]/10' };
+    if (ltv >= 500000) return resolveSegmentStyle('vip');
+    if (ltv >= 200000) return resolveSegmentStyle('loyal');
+    const recentCompleted = getCustomerAppointments(userId)
+      .filter(a => a.status === 'completed')
+      .filter(a => dateDiffInDays(referenceDate, a.date) <= 30);
+    if (recentCompleted.length <= 1) return resolveSegmentStyle('new');
+    return resolveSegmentStyle('regular');
   };
+
+  const filteredCustomers = customers.filter(c => {
+    const keyword = search.trim().toLowerCase();
+    const matchesKeyword = !keyword || c.name.toLowerCase().includes(keyword) || c.phone.includes(keyword) || c.email.toLowerCase().includes(keyword);
+    const tier = getCustomerTier(c.id);
+    const matchesTier = segmentFilter === 'all'
+      || (segmentFilter === 'vip' && tier.label === 'Khách VIP')
+      || (segmentFilter === 'loyal' && tier.label === 'Thân thiết')
+      || (segmentFilter === 'new' && tier.label === 'Khách mới')
+      || (segmentFilter === 'regular' && tier.label === 'Khách thường');
+    return matchesKeyword && matchesTier;
+  });
+
+  const selectedCustomer = customers.find(c => c.id === selectedId);
+  const selectedCardPet = cardModal.petId ? customerPets.find(p => p.id === cardModal.petId) : null;
 
   const getTimeline = (userId: string) => {
     const appts = getCustomerAppointments(userId).sort((a, b) => b.date.localeCompare(a.date));
@@ -966,6 +1190,20 @@ export function ManagerCustomersPage() {
       amount: a.servicePrice,
       status: a.status,
     }));
+  };
+
+  const segmentCounts = {
+    vip: customers.filter(c => getCustomerTier(c.id).label === 'Khách VIP').length,
+    loyal: customers.filter(c => getCustomerTier(c.id).label === 'Thân thiết').length,
+    new: customers.filter(c => getCustomerTier(c.id).label === 'Khách mới').length,
+    regular: customers.filter(c => getCustomerTier(c.id).label === 'Khách thường').length,
+  };
+
+  const totalLtv = customers.reduce((sum, customer) => sum + getCustomerLTV(customer.id), 0);
+
+  const openCustomerCard = (petId: string) => {
+    setCustomerPets(prev => prev.map(p => p.id === petId ? { ...p, hasDigitalCard: true } : p));
+    setCardModal({ open: true, petId, source: 'customers' });
   };
 
   return (
@@ -991,18 +1229,40 @@ export function ManagerCustomersPage() {
       {/* KPI Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Tổng khách hàng', value: customers.length.toString(), icon: '👥' },
-          { label: 'Khách VIP', value: customers.filter(c => getCustomerLTV(c.id) >= 500000).length.toString(), icon: '⭐' },
-          { label: 'Tổng LTV', value: formatCurrency(customers.reduce((s, c) => s + getCustomerLTV(c.id), 0)), icon: '💰' },
-          { label: 'Thú cưng đăng ký', value: mockPets.length.toString(), icon: '🐾' },
+          { label: 'Khách VIP', value: segmentCounts.vip.toString() },
+          { label: 'Thân thiết', value: segmentCounts.loyal.toString() },
+          { label: 'Khách mới', value: segmentCounts.new.toString() },
+          { label: 'Tổng LTV', value: formatCurrency(totalLtv) },
         ].map(kpi => (
           <div key={kpi.label} className="bg-white border border-[#2d2a26] rounded-2xl p-4">
-            <div className="text-xl mb-2">{kpi.icon}</div>
             <p className="text-xs text-[#7a756e]">{kpi.label}</p>
             <p className="text-lg text-[#2d2a26] mt-0.5" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
               {kpi.value}
             </p>
           </div>
+        ))}
+      </div>
+
+      <div className="bg-white border border-[#2d2a26] rounded-2xl p-3 flex flex-wrap items-center gap-2">
+        {[
+          { id: 'all' as const, label: 'Tất cả', count: customers.length },
+          { id: 'vip' as const, label: 'Khách VIP', count: segmentCounts.vip },
+          { id: 'loyal' as const, label: 'Thân thiết', count: segmentCounts.loyal },
+          { id: 'new' as const, label: 'Khách mới', count: segmentCounts.new },
+          { id: 'regular' as const, label: 'Khách thường', count: segmentCounts.regular },
+        ].map(item => (
+          <button
+            key={item.id}
+            onClick={() => setSegmentFilter(item.id)}
+            className={`px-3 py-1.5 rounded-xl text-xs border transition-all ${
+              segmentFilter === item.id
+                ? 'bg-[#6b8f5e] text-white border-[#2d2a26]'
+                : 'bg-[#faf9f6] text-[#2d2a26] border-[#2d2a26]/20 hover:bg-[#f0ede8]'
+            }`}
+            style={{ fontWeight: 600 }}
+          >
+            {item.label} ({item.count})
+          </button>
         ))}
       </div>
 
@@ -1035,10 +1295,10 @@ export function ManagerCustomersPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <h3 className="text-sm truncate" style={{ fontWeight: 600 }}>{u.name}</h3>
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full border ${tier.color}`} style={{ fontWeight: 600 }}>{tier.label}</span>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full border ${tier.className}`} style={{ fontWeight: 600 }}>{tier.label}</span>
                         </div>
                         <div className="flex items-center gap-3 text-xs text-[#7a756e] mt-0.5">
-                          <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{u.phone}</span>
+                          <span>{u.phone}</span>
                           <span>{pets.length} thú cưng</span>
                         </div>
                       </div>
@@ -1046,7 +1306,30 @@ export function ManagerCustomersPage() {
                         <p className="text-xs text-[#7a756e]">LTV</p>
                         <p className="text-sm text-[#6b8f5e]" style={{ fontWeight: 600 }}>{formatCurrency(ltv)}</p>
                       </div>
-                      <ChevronRight className={`w-4 h-4 text-[#7a756e] transition-transform ${isSelected ? 'rotate-90' : ''}`} />
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            onClick={(event) => event.stopPropagation()}
+                            className="p-1.5 rounded-lg border border-[#2d2a26]/20 hover:bg-[#f0ede8] transition-colors"
+                            aria-label="Tùy chọn khách hàng"
+                          >
+                            <MoreHorizontal className="w-4 h-4 text-[#7a756e]" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="border-[#2d2a26]">
+                          <DropdownMenuItem onClick={() => setSelectedId(u.id)}>Xem chi tiết</DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              if (pets.length > 0) {
+                                openCustomerCard(pets[0].id);
+                              }
+                            }}
+                          >
+                            Mở Digital Card
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </motion.div>
                 );
@@ -1072,13 +1355,13 @@ export function ManagerCustomersPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <h2 className="text-lg text-[#2d2a26]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>{selectedCustomer.name}</h2>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full border ${getCustomerTier(selectedCustomer.id).color}`} style={{ fontWeight: 600 }}>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full border ${getCustomerTier(selectedCustomer.id).className}`} style={{ fontWeight: 600 }}>
                           {getCustomerTier(selectedCustomer.id).label}
                         </span>
                       </div>
                       <div className="flex items-center gap-4 text-xs text-[#7a756e] mt-1">
-                        <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{selectedCustomer.email}</span>
-                        <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{selectedCustomer.phone}</span>
+                        <span>{selectedCustomer.email}</span>
+                        <span>{selectedCustomer.phone}</span>
                       </div>
                     </div>
                   </div>
@@ -1090,25 +1373,22 @@ export function ManagerCustomersPage() {
 
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-white border border-[#2d2a26] rounded-2xl p-4 text-center">
-                  <DollarSign className="w-5 h-5 text-[#6b8f5e] mx-auto mb-1" />
                   <p className="text-[10px] text-[#7a756e] uppercase tracking-wider">Lifetime Value</p>
                   <p className="text-xl text-[#2d2a26] mt-1" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>{formatCurrency(getCustomerLTV(selectedCustomer.id))}</p>
                 </div>
                 <div className="bg-white border border-[#2d2a26] rounded-2xl p-4 text-center">
-                  <CalendarDays className="w-5 h-5 text-[#c67d5b] mx-auto mb-1" />
                   <p className="text-[10px] text-[#7a756e] uppercase tracking-wider">Lượt ghé thăm</p>
                   <p className="text-xl text-[#2d2a26] mt-1" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>{getCustomerAppointments(selectedCustomer.id).length}</p>
                 </div>
                 <div className="bg-white border border-[#2d2a26] rounded-2xl p-4 text-center">
-                  <Clock className="w-5 h-5 text-[#4a90d9] mx-auto mb-1" />
                   <p className="text-[10px] text-[#7a756e] uppercase tracking-wider">Lần cuối</p>
                   <p className="text-sm text-[#2d2a26] mt-1" style={{ fontWeight: 600 }}>{getCustomerAppointments(selectedCustomer.id).sort((a, b) => b.date.localeCompare(a.date))[0]?.date || '—'}</p>
                 </div>
               </div>
 
               <div className="bg-white border border-[#2d2a26] rounded-2xl p-5">
-                <h3 className="text-sm mb-3 flex items-center gap-2" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
-                  <PawPrint className="w-4 h-4 text-[#6b8f5e]" /> Thú cưng ({getCustomerPets(selectedCustomer.id).length})
+                <h3 className="text-sm mb-3" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
+                  Thú cưng ({getCustomerPets(selectedCustomer.id).length})
                 </h3>
                 <div className="flex gap-3 overflow-x-auto pb-1">
                   {getCustomerPets(selectedCustomer.id).map(pet => (
@@ -1118,12 +1398,14 @@ export function ManagerCustomersPage() {
                       </div>
                       <p className="text-xs text-center" style={{ fontWeight: 600 }}>{pet.name}</p>
                       <p className="text-[10px] text-[#7a756e] text-center">{pet.species} • {pet.breed}</p>
-                      {pet.hasDigitalCard && (
-                        <div className="flex items-center justify-center gap-1 mt-1.5">
-                          <CreditCard className="w-3 h-3 text-[#6b8f5e]" />
-                          <span className="text-[9px] text-[#6b8f5e]" style={{ fontWeight: 500 }}>Digital Card</span>
-                        </div>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => openCustomerCard(pet.id)}
+                        className="w-full mt-1.5 flex items-center justify-center py-1 rounded-lg border border-[#2d2a26]/30 text-[9px] text-[#6b8f5e] hover:bg-[#6b8f5e]/10 transition-all"
+                        style={{ fontWeight: 600 }}
+                      >
+                        Digital Card
+                      </button>
                     </div>
                   ))}
                   {getCustomerPets(selectedCustomer.id).length === 0 && (
@@ -1133,8 +1415,8 @@ export function ManagerCustomersPage() {
               </div>
 
               <div className="bg-white border border-[#2d2a26] rounded-2xl p-5">
-                <h3 className="text-sm mb-4 flex items-center gap-2" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
-                  <Clock className="w-4 h-4 text-[#c67d5b]" /> Lịch sử hoạt động
+                <h3 className="text-sm mb-4" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
+                  Lịch sử hoạt động
                 </h3>
                 <div className="space-y-0">
                   {getTimeline(selectedCustomer.id).map((item, idx) => {
@@ -1170,6 +1452,41 @@ export function ManagerCustomersPage() {
           )}
         </AnimatePresence>
       </div>
+
+      <Dialog
+        open={cardModal.open}
+        onOpenChange={open => setCardModal(prev => ({ ...prev, open }))}
+      >
+        <DialogContent className="max-w-4xl border-[#2d2a26] bg-[#faf9f6]">
+          <DialogHeader>
+            <DialogTitle style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Digital Smart Card</DialogTitle>
+            <DialogDescription>Hiển thị trực tiếp thẻ định danh thú cưng từ CRM khách hàng.</DialogDescription>
+          </DialogHeader>
+          {selectedCardPet ? (
+            <>
+              <div ref={customerCardRef} className="mx-auto max-w-2xl">
+                <PetDigitalCard pet={selectedCardPet} />
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs text-[#7a756e]">
+                  Cập nhật gần nhất: <span className="text-[#2d2a26]" style={{ fontWeight: 600 }}>{selectedCardPet.lastCheckup}</span>
+                </p>
+                <button
+                  onClick={() => {
+                    if (!customerCardRef.current) return;
+                    void exportPetCardAsPng(customerCardRef.current, selectedCardPet.id);
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#6b8f5e] text-white border border-[#2d2a26] text-xs hover:-translate-y-0.5 transition-all"
+                  style={{ fontWeight: 600 }}
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Tải ảnh thẻ (PNG)
+                </button>
+              </div>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

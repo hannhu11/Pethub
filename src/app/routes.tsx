@@ -11,6 +11,7 @@ import { ManagerCatalogPage, ManagerPetsPage, ManagerCustomersPage } from './com
 import { ManagerRemindersPage } from './components/manager-reminders';
 import { ManagerSettingsPage } from './components/manager-settings';
 import { ManagerPOSPage } from './components/manager-pos';
+import { ManagerInvoicePage } from './components/manager-invoice';
 import { PublicOnlyGuard, RequireCustomerGuard, RequireManagerGuard } from './auth-session';
 import {
   PricingPage,
@@ -96,10 +97,11 @@ export const router = createBrowserRouter([
           { path: 'pets', Component: ManagerPetsPage, handle: { access: access.manager } },
           { path: 'catalog', Component: ManagerCatalogPage, handle: { access: access.manager } },
           { path: 'reminders', Component: ManagerRemindersPage, handle: { access: access.manager } },
-          { path: 'settings', Component: ManagerSettingsPage, handle: { access: access.manager } },
-        ],
-      },
-    ],
+            { path: 'settings', Component: ManagerSettingsPage, handle: { access: access.manager } },
+            { path: 'invoice/:invoiceId', Component: ManagerInvoicePage, handle: { access: access.manager } },
+          ],
+        },
+      ],
   },
   {
     path: '*',

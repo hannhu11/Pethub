@@ -10,6 +10,17 @@ type PetDigitalCardProps = {
 };
 
 export function PetDigitalCard({ pet, className }: PetDigitalCardProps) {
+  const formatFieldValue = (value: string | null | undefined) => {
+    if (!value || value.toLowerCase() === 'none') {
+      return 'Không có';
+    }
+    return value;
+  };
+
+  const neuteredLabel =
+    pet.neutered === true ? 'Đã triệt sản' : pet.neutered === false ? 'Chưa triệt sản' : 'Không rõ';
+  const specialNotes = pet.specialNotes ? pet.specialNotes.slice(0, 15) : '';
+
   const ownerData = [
     { label: 'Họ và tên', value: pet.ownerName },
     { label: 'Số điện thoại', value: pet.ownerPhone },
@@ -21,10 +32,10 @@ export function PetDigitalCard({ pet, className }: PetDigitalCardProps) {
     { label: 'Giới tính', value: pet.gender },
     { label: 'Ngày sinh', value: pet.dob },
     { label: 'Cân nặng', value: pet.weight },
-    { label: 'Màu lông', value: pet.color },
-    { label: 'Nhóm máu', value: pet.bloodType },
-    { label: 'Microchip', value: pet.microchipId },
-    { label: 'Triệt sản', value: pet.neutered ? 'Đã triệt sản' : 'Chưa triệt sản' },
+    { label: 'Màu lông', value: formatFieldValue(pet.color) },
+    { label: 'Nhóm máu', value: formatFieldValue(pet.bloodType) },
+    { label: 'Microchip', value: formatFieldValue(pet.microchipId) },
+    { label: 'Triệt sản', value: neuteredLabel },
   ];
 
   return (
@@ -101,9 +112,9 @@ export function PetDigitalCard({ pet, className }: PetDigitalCardProps) {
           </section>
         </div>
 
-        {pet.specialNotes && (
+        {specialNotes && (
           <p className='mt-3 text-xs text-white/85'>
-            <span className='text-white/65'>Lưu ý:</span> {pet.specialNotes}
+            <span className='text-white/65'>Lưu ý:</span> {specialNotes}
           </p>
         )}
       </div>

@@ -27,3 +27,68 @@ export interface CancelDialogState {
   open: boolean;
   appointmentId: string | null;
 }
+
+export type CustomerSegment = 'vip' | 'loyal' | 'new' | 'regular';
+
+export type NeuteredStatus = 'yes' | 'no' | 'none';
+
+export type BloodType = 'A' | 'B' | 'AB' | 'DEA 1.1+' | 'DEA 1.1-' | 'none';
+
+export interface PetProfileDraft {
+  ownerName: string;
+  ownerPhone: string;
+  ownerEmail: string;
+  existingOwner: string;
+  petName: string;
+  petSpecies: string;
+  petBreed: string;
+  petGender: string;
+  petDob: string;
+  petWeight: string;
+  color: string;
+  bloodType: BloodType;
+  neutered: NeuteredStatus;
+  microchipId: string;
+  specialNotes: string;
+  imageFile?: File | null;
+  imagePreview?: string;
+}
+
+export interface DigitalCardModalState {
+  open: boolean;
+  petId: string | null;
+  source: 'customers' | 'pets';
+}
+
+export interface ProductRevenueDatum {
+  productName: string;
+  revenue: number;
+  quantity: number;
+}
+
+export interface InvoiceLineItem {
+  name: string;
+  type: 'service' | 'product';
+  qty: number;
+  unitPrice: number;
+  total: number;
+}
+
+export interface InvoiceRecord {
+  id: string;
+  appointmentId?: string;
+  customerId: string;
+  petId?: string;
+  items: InvoiceLineItem[];
+  subtotal: number;
+  tax: number;
+  grandTotal: number;
+  paymentMethod: 'cash' | 'transfer' | 'card';
+  createdAt: string;
+}
+
+export interface AppointmentCheckoutState {
+  appointmentId: string;
+  paid: boolean;
+  invoiceId?: string;
+}
