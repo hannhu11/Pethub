@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { motion } from 'motion/react';
 import {
   User, Building2, CreditCard, BellRing, Save, Check,
@@ -10,10 +11,18 @@ const settingsTabs = [
   { id: 'clinic', label: 'Thông tin phòng khám', icon: Building2 },
   { id: 'subscription', label: 'Gói & Thanh toán', icon: CreditCard },
   { id: 'notifications', label: 'Thông báo', icon: BellRing },
-];
+] as const;
+
+type SettingsTabId = (typeof settingsTabs)[number]['id'];
 
 export function ManagerSettingsPage() {
-  const [activeTab, setActiveTab] = useState('profile');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const validTabIds = useMemo(() => settingsTabs.map((tab) => tab.id), []);
+  const requestedTab = searchParams.get('tab');
+  const initialTab: SettingsTabId =
+    requestedTab && validTabIds.includes(requestedTab as SettingsTabId) ? (requestedTab as SettingsTabId) : 'profile';
+
+  const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
   const [saved, setSaved] = useState(false);
 
   // Profile form
@@ -52,6 +61,20 @@ export function ManagerSettingsPage() {
     setNotifications(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  useEffect(() => {
+    if (!requestedTab || !validTabIds.includes(requestedTab as SettingsTabId)) {
+      return;
+    }
+    setActiveTab(requestedTab as SettingsTabId);
+  }, [requestedTab, validTabIds]);
+
+  const handleTabChange = (tabId: SettingsTabId) => {
+    setActiveTab(tabId);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('tab', tabId);
+    setSearchParams(nextParams, { replace: true });
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -68,7 +91,7 @@ export function ManagerSettingsPage() {
             {settingsTabs.map(tab => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
                 className={`w-full flex items-center gap-3 px-4 py-3 text-sm text-left transition-all border-b border-[#2d2a26]/10 last:border-b-0 ${
                   activeTab === tab.id
                     ? 'bg-[#6b8f5e] text-white'

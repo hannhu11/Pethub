@@ -1,14 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Plus, Edit3, Trash2, Search, X, Save, PawPrint,
-  Stethoscope, Download, Share2, Sparkles, Shield, Phone, Mail,
+  Stethoscope, Download, Share2, Sparkles, Phone, Mail,
   CalendarDays, DollarSign, Clock, ChevronRight, Eye, CreditCard,
   UserPlus, FileText, Tag
 } from 'lucide-react';
 import { mockServices, mockCategories, mockProducts, mockPets, mockUsers, mockAppointments, mockMedicalRecords, formatCurrency, type Service, type Product, type Category } from './data';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { QRCodeSVG } from 'qrcode.react';
+import { PetDigitalCard } from './pet-digital-card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 
 // ============ COMBINED CATALOG PAGE (Services + Products + Categories) ============
 type CatalogTab = 'services' | 'products' | 'categories';
@@ -356,12 +358,14 @@ function CategoriesTab() {
 
 // ============ PET MANAGEMENT (with Digital Card + Quick Add) ============
 export function ManagerPetsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const [pets, setPets] = useState(mockPets.map(p => ({ ...p })));
   const [selectedPetId, setSelectedPetId] = useState<string | null>(null);
   const [showAddDrawer, setShowAddDrawer] = useState(false);
   const [detailTab, setDetailTab] = useState<'info' | 'medical' | 'card'>('info');
   const [shareNotice, setShareNotice] = useState<string | null>(null);
+  const [showCardDialog, setShowCardDialog] = useState(false);
 
   // Quick Add form
   const [addForm, setAddForm] = useState({
@@ -377,12 +381,50 @@ export function ManagerPetsPage() {
     p.ownerName.toLowerCase().includes(search.toLowerCase())
   );
   const selectedPet = pets.find(p => p.id === selectedPetId);
+  const petMedicalRecords = selectedPetId ? mockMedicalRecords.filter(r => r.petId === selectedPetId) : [];
+  const customers = mockUsers.filter(u => u.role === 'customer');
 
-  const handleCreateCard = (petId: string) => {
-    setPets(prev => prev.map(p => p.id === petId ? { ...p, hasDigitalCard: true } : p));
+  useEffect(() => {
+    if (searchParams.get('action') === 'quick-add') {
+      setShowAddDrawer(true);
+    }
+  }, [searchParams]);
+
+  const clearQuickAddQuery = () => {
+    if (searchParams.get('action') !== 'quick-add') {
+      return;
+    }
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('action');
+    setSearchParams(nextParams, { replace: true });
   };
 
-  const handleShare = (petId: string) => {
+  const closePetDetail = () => {
+    setSelectedPetId(null);
+    setShowCardDialog(false);
+  };
+
+  const closeAddDrawer = () => {
+    setShowAddDrawer(false);
+    clearQuickAddQuery();
+  };
+
+  const handleCreateCard = (petId: string, openPreview = true) => {
+    setPets(prev => prev.map(p => p.id === petId ? { ...p, hasDigitalCard: true } : p));
+    if (openPreview) {
+      setShowCardDialog(true);
+    }
+  };
+
+  const handleShare = async (petId: string) => {
+    const shareUrl = `${window.location.origin}/customer/digital-card/${petId}`;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(shareUrl);
+      }
+    } catch {
+      // ignore clipboard errors in frontend mock mode
+    }
     setShareNotice(petId);
     setTimeout(() => setShareNotice(null), 2000);
   };
@@ -394,9 +436,6 @@ export function ManagerPetsPage() {
     if (years > 0) return `${years} tuổi`;
     return 'Dưới 1 tuổi';
   };
-
-  const petMedicalRecords = selectedPetId ? mockMedicalRecords.filter(r => r.petId === selectedPetId) : [];
-  const customers = mockUsers.filter(u => u.role === 'customer');
 
   const handleAddPet = () => {
     let ownerId = '', ownerName = '', ownerPhone = '', ownerEmail = '';
@@ -417,8 +456,9 @@ export function ManagerPetsPage() {
 
     if (!addForm.petName.trim() || !ownerName) return;
 
+    const newPetId = `PH-2026-${String(pets.length + 1).padStart(3, '0')}`;
     const newPet = {
-      id: `PH-2026-${String(pets.length + 1).padStart(3, '0')}`,
+      id: newPetId,
       name: addForm.petName,
       species: addForm.petSpecies,
       breed: addForm.petBreed || 'Chưa xác định',
@@ -442,9 +482,11 @@ export function ManagerPetsPage() {
     };
 
     setPets(prev => [...prev, newPet]);
-    setShowAddDrawer(false);
+    setSelectedPetId(newPetId);
+    setDetailTab('card');
     setAddForm({ ownerName: '', ownerPhone: '', ownerEmail: '', petName: '', petSpecies: 'Chó', petBreed: '', petGender: 'Đực', petDob: '', petWeight: '', existingOwner: '' });
     setAddMode('new');
+    closeAddDrawer();
   };
 
   return (
@@ -467,7 +509,7 @@ export function ManagerPetsPage() {
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#6b8f5e] text-white hover:-translate-y-0.5 transition-all border border-[#2d2a26] text-sm whitespace-nowrap"
             style={{ fontWeight: 600 }}
           >
-            <UserPlus className="w-4 h-4" /> Thêm nhanh
+            <UserPlus className="w-4 h-4" /> Quick Add Walk-in
           </button>
         </div>
       </div>
@@ -504,7 +546,7 @@ export function ManagerPetsPage() {
       {/* Pet Detail Slide-over */}
       <AnimatePresence>
         {selectedPetId && selectedPet && (
-          <div className="fixed inset-0 z-50 flex justify-end" onClick={() => setSelectedPetId(null)}>
+          <div className="fixed inset-0 z-50 flex justify-end" onClick={closePetDetail}>
             <div className="absolute inset-0 bg-black/30" />
             <motion.div
               initial={{ x: '100%' }}
@@ -527,7 +569,7 @@ export function ManagerPetsPage() {
                     <p className="text-xs text-[#7a756e]">{selectedPet.breed} • {selectedPet.species}</p>
                   </div>
                 </div>
-                <button onClick={() => setSelectedPetId(null)} className="p-1.5 hover:bg-[#f0ede8] rounded-lg">
+                <button onClick={closePetDetail} className="p-1.5 hover:bg-[#f0ede8] rounded-lg">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -625,15 +667,15 @@ export function ManagerPetsPage() {
 
                 {/* Digital Card Tab */}
                 {detailTab === 'card' && (
-                  <>
+                  <div className="space-y-4">
                     {!selectedPet.hasDigitalCard ? (
-                      <div className="text-center py-8 space-y-4">
+                      <div className="text-center py-8 space-y-4 bg-white border border-[#2d2a26]/10 rounded-2xl px-4">
                         <div className="w-16 h-16 rounded-2xl bg-[#c67d5b]/10 flex items-center justify-center mx-auto">
                           <Sparkles className="w-8 h-8 text-[#c67d5b]" />
                         </div>
                         <div>
                           <p className="text-sm" style={{ fontWeight: 500 }}>Chưa có Digital Card</p>
-                          <p className="text-xs text-[#7a756e] mt-1">Tạo thẻ định danh điện tử cho {selectedPet.name}</p>
+                          <p className="text-xs text-[#7a756e] mt-1">Tạo thẻ định danh điện tử chuẩn mới cho {selectedPet.name}</p>
                         </div>
                         <button
                           onClick={() => handleCreateCard(selectedPet.id)}
@@ -645,100 +687,48 @@ export function ManagerPetsPage() {
                         </button>
                       </div>
                     ) : (
-                      <div className="space-y-4">
-                        {/* Premium Card */}
-                        <div
-                          className="relative rounded-2xl overflow-hidden border-2 border-[#2d2a26]"
-                          style={{ aspectRatio: '1.586/1' }}
-                        >
-                          <div
-                            className="absolute inset-0"
-                            style={{
-                              background: selectedPet.species === 'Chó'
-                                ? 'linear-gradient(160deg, #f7f0e4 0%, #efe3d0 40%, #e8dbc5 100%)'
-                                : 'linear-gradient(160deg, #eef3fb 0%, #dde8f6 40%, #cdddf0 100%)',
-                            }}
-                          />
-                          <div className="absolute inset-0 opacity-[0.04]">
-                            {Array.from({ length: 8 }).map((_, j) => (
-                              <div key={j} className="absolute border border-[#2d2a26]" style={{
-                                width: `${60 + j * 25}px`, height: `${60 + j * 25}px`, borderRadius: '50%',
-                                right: `${-20 + j * 5}px`, bottom: `${-30 + j * 5}px`,
-                              }} />
-                            ))}
-                          </div>
-                          <div className="relative h-8 bg-[#2d2a26] flex items-center justify-between px-4">
-                            <div className="flex items-center gap-2">
-                              <PawPrint className="w-3.5 h-3.5 text-[#6b8f5e]" />
-                              <span className="text-[9px] text-white tracking-[0.2em] uppercase" style={{ fontWeight: 600 }}>
-                                PetHub Digital Pet Card
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Shield className="w-3 h-3 text-[#6b8f5e]" />
-                              <span className="text-[8px] text-[#6b8f5e]" style={{ fontWeight: 600 }}>VERIFIED</span>
-                            </div>
-                          </div>
-                          <div className="relative flex h-[calc(100%-32px)]">
-                            <div className="flex-[65] p-4 flex flex-col justify-between">
-                              <div className="flex items-start gap-3">
-                                <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-[#2d2a26] flex-shrink-0 bg-white">
-                                  <ImageWithFallback src={selectedPet.image} alt={selectedPet.name} className="w-full h-full object-cover" />
-                                </div>
-                                <div className="pt-0.5">
-                                  <h3 className="text-xl text-[#2d2a26] leading-tight" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
-                                    {selectedPet.name}
-                                  </h3>
-                                  <p className="text-[11px] text-[#2d2a26]/60 mt-0.5">{selectedPet.breed}</p>
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full border ${
-                                      selectedPet.species === 'Chó' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-blue-50 text-blue-700 border-blue-200'
-                                    }`} style={{ fontWeight: 600 }}>{selectedPet.species}</span>
-                                    <span className="text-[9px] text-[#2d2a26]/50">{selectedPet.gender} • {getAge(selectedPet.dob)}</span>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="space-y-1">
-                                <div className="border-t border-[#2d2a26]/10 pt-2">
-                                  <p className="text-[8px] text-[#2d2a26]/40 uppercase tracking-[0.15em]" style={{ fontWeight: 600 }}>Chủ sở hữu</p>
-                                  <p className="text-[11px] text-[#2d2a26]" style={{ fontWeight: 500 }}>{selectedPet.ownerName}</p>
-                                  <p className="text-[10px] text-[#2d2a26]/60">{selectedPet.ownerPhone}</p>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <span className="text-[8px] text-[#2d2a26]/30 uppercase tracking-[0.1em]">ID</span>
-                                  <span className="text-[10px] text-[#2d2a26]/60 font-mono">{selectedPet.id}</span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex-[35] flex flex-col items-center justify-center pr-4">
-                              <div className="bg-white p-2.5 rounded-xl border border-[#2d2a26]">
-                                <QRCodeSVG value={`https://pethub.vn/pet/${selectedPet.id}`} size={72} bgColor="transparent" fgColor="#2d2a26" level="H" />
-                              </div>
-                              <p className="text-[7px] text-[#2d2a26]/30 mt-2 text-center tracking-wider uppercase">Quét để xem hồ sơ</p>
-                            </div>
-                          </div>
+                      <div className="bg-white border border-[#2d2a26]/10 rounded-2xl p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm text-[#2d2a26]" style={{ fontWeight: 600 }}>
+                            Thẻ đã được tạo theo mẫu Premium mới
+                          </p>
+                          <span className="text-[11px] px-2 py-1 rounded-full bg-[#6b8f5e]/10 text-[#6b8f5e] border border-[#6b8f5e]/30">
+                            Active
+                          </span>
                         </div>
-
-                        {/* Action Buttons */}
-                        <div className="flex gap-2">
-                          <button className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#2d2a26] bg-white text-xs hover:-translate-y-0.5 transition-all" style={{ fontWeight: 500 }}>
-                            <Download className="w-3.5 h-3.5 text-[#6b8f5e]" /> Tải PDF
-                          </button>
-                          <button
-                            onClick={() => handleShare(selectedPet.id)}
-                            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#2d2a26] bg-white text-xs hover:-translate-y-0.5 transition-all"
-                            style={{ fontWeight: 500 }}
-                          >
-                            {shareNotice === selectedPet.id ? (
-                              <span className="text-[#6b8f5e]">Link đã sao chép!</span>
-                            ) : (
-                              <><Share2 className="w-3.5 h-3.5 text-[#c67d5b]" />Chia sẻ link</>
-                            )}
-                          </button>
+                        <div className="grid grid-cols-2 gap-3 text-xs text-[#7a756e]">
+                          <p>Cập nhật gần nhất: <span className="text-[#2d2a26]">{selectedPet.lastCheckup}</span></p>
+                          <p>Microchip: <span className="text-[#2d2a26]">{selectedPet.microchipId}</span></p>
                         </div>
                       </div>
                     )}
-                  </>
+
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => {
+                          if (!selectedPet.hasDigitalCard) {
+                            handleCreateCard(selectedPet.id, false);
+                          }
+                          setShowCardDialog(true);
+                        }}
+                        className="flex-1 min-w-[160px] flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#2d2a26] bg-white text-xs hover:-translate-y-0.5 transition-all"
+                        style={{ fontWeight: 500 }}
+                      >
+                        <Eye className="w-3.5 h-3.5 text-[#2d2a26]" /> Xem thẻ chuẩn mới
+                      </button>
+                      <button
+                        onClick={() => handleShare(selectedPet.id)}
+                        className="flex-1 min-w-[160px] flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#2d2a26] bg-white text-xs hover:-translate-y-0.5 transition-all"
+                        style={{ fontWeight: 500 }}
+                      >
+                        {shareNotice === selectedPet.id ? (
+                          <span className="text-[#6b8f5e]">Link đã sao chép!</span>
+                        ) : (
+                          <><Share2 className="w-3.5 h-3.5 text-[#c67d5b]" />Sao chép link</>
+                        )}
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             </motion.div>
@@ -746,10 +736,35 @@ export function ManagerPetsPage() {
         )}
       </AnimatePresence>
 
+      <Dialog open={showCardDialog} onOpenChange={setShowCardDialog}>
+        <DialogContent className="max-w-4xl border-[#2d2a26] bg-[#faf9f6]">
+          <DialogHeader>
+            <DialogTitle style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Digital Smart Card</DialogTitle>
+            <DialogDescription>
+              Bản hiển thị đồng bộ với thẻ phía khách hàng cho pet {selectedPet?.name ?? ''}.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedPet ? <PetDigitalCard pet={selectedPet} className="mx-auto max-w-2xl" /> : null}
+          <div className="flex flex-wrap gap-2">
+            <button className="flex-1 min-w-[160px] flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#2d2a26] bg-white text-sm hover:-translate-y-0.5 transition-all">
+              <Download className="w-4 h-4 text-[#6b8f5e]" /> Tải PDF
+            </button>
+            {selectedPet ? (
+              <button
+                onClick={() => handleShare(selectedPet.id)}
+                className="flex-1 min-w-[160px] flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#2d2a26] bg-white text-sm hover:-translate-y-0.5 transition-all"
+              >
+                <Share2 className="w-4 h-4 text-[#c67d5b]" /> Sao chép link
+              </button>
+            ) : null}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Quick Add Pet & Owner Slide-over Drawer */}
       <AnimatePresence>
         {showAddDrawer && (
-          <div className="fixed inset-0 z-50 flex justify-end" onClick={() => setShowAddDrawer(false)}>
+          <div className="fixed inset-0 z-50 flex justify-end" onClick={closeAddDrawer}>
             <div className="absolute inset-0 bg-black/30" />
             <motion.div
               initial={{ x: '100%' }}
@@ -766,7 +781,7 @@ export function ManagerPetsPage() {
                   </h2>
                   <p className="text-xs text-[#7a756e] mt-0.5">Đăng ký thú cưng & chủ cho khách vãng lai</p>
                 </div>
-                <button onClick={() => setShowAddDrawer(false)} className="p-1.5 hover:bg-[#f0ede8] rounded-lg">
+                <button onClick={closeAddDrawer} className="p-1.5 hover:bg-[#f0ede8] rounded-lg">
                   <X className="w-5 h-5" />
                 </button>
               </div>
