@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Plus, Edit3, Trash2, Search, X, Save, PawPrint,
-  Stethoscope, Download, Sparkles, Phone, Mail,
-  CalendarDays, DollarSign, Clock, ChevronRight, CreditCard,
+  Stethoscope, Download, Sparkles, Phone,
+  CalendarDays, CreditCard, MoreHorizontal,
   UserPlus, FileText, Tag, Upload
 } from 'lucide-react';
 import {
@@ -24,6 +24,13 @@ import {
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { PetDigitalCard } from './pet-digital-card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
+import { downloadElementAsPng } from './export-utils';
 import type { BloodType, CustomerSegment, DigitalCardModalState, NeuteredStatus, PetProfileDraft } from '../types';
 
 // ============ COMBINED CATALOG PAGE (Services + Products + Categories) ============
@@ -401,6 +408,7 @@ const initialPetDraft: PetProfileDraft = {
   bloodType: 'none',
   neutered: 'none',
   microchipId: '',
+  specialNotes: '',
   imageFile: null,
   imagePreview: '',
 };
@@ -437,6 +445,7 @@ const draftFromPet = (pet: Pet): PetProfileDraft => ({
   bloodType: normalizeNoneText(pet.bloodType) ? 'none' : ((pet.bloodType as BloodType) ?? 'none'),
   neutered: toNeuteredStatus(pet.neutered),
   microchipId: normalizeNoneText(pet.microchipId) ? '' : pet.microchipId,
+  specialNotes: (pet.specialNotes ?? '').slice(0, 15),
   imageFile: null,
   imagePreview: pet.image,
 });
@@ -454,104 +463,12 @@ const dateDiffInDays = (to: Date, fromDate: string) => {
   return Math.floor(diff / (1000 * 60 * 60 * 24));
 };
 
-async function exportPetCardAsPng(pet: Pet) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 1400;
-  canvas.height = 860;
-  const context = canvas.getContext('2d');
-  if (!context) {
-    return;
-  }
-
-  const gradient = context.createLinearGradient(0, 0, 1400, 860);
-  gradient.addColorStop(0, '#2f3945');
-  gradient.addColorStop(0.6, '#2a3038');
-  gradient.addColorStop(1, '#5f4b43');
-  context.fillStyle = gradient;
-  context.fillRect(0, 0, 1400, 860);
-
-  context.fillStyle = '#8fb39f';
-  context.globalAlpha = 0.16;
-  context.beginPath();
-  context.arc(180, 760, 240, 0, Math.PI * 2);
-  context.fill();
-  context.globalAlpha = 1;
-
-  const image = new Image();
-  image.crossOrigin = 'anonymous';
-  image.src = pet.image;
-  await new Promise<void>((resolve) => {
-    image.onload = () => resolve();
-    image.onerror = () => resolve();
+async function exportPetCardAsPng(targetElement: HTMLElement, petId: string) {
+  await downloadElementAsPng(targetElement, {
+    fileName: `${petId.toLowerCase()}-digital-card.png`,
+    width: 1200,
+    backgroundColor: '#1f2327',
   });
-
-  context.save();
-  context.beginPath();
-  context.arc(190, 210, 100, 0, Math.PI * 2);
-  context.closePath();
-  context.clip();
-  context.drawImage(image, 90, 110, 200, 200);
-  context.restore();
-  context.strokeStyle = 'rgba(255,255,255,0.8)';
-  context.lineWidth = 3;
-  context.beginPath();
-  context.arc(190, 210, 100, 0, Math.PI * 2);
-  context.stroke();
-
-  context.fillStyle = 'rgba(255,255,255,0.9)';
-  context.font = '700 34px "Playfair Display", serif';
-  context.fillText('PREMIUM IDENTITY', 330, 90);
-  context.font = '700 78px "Playfair Display", serif';
-  context.fillText(pet.name, 330, 220);
-  context.font = '500 42px "Inter", sans-serif';
-  context.fillText(pet.breed, 330, 280);
-
-  context.font = '600 30px "Inter", sans-serif';
-  context.fillText(`PET ID: ${pet.id}`, 330, 340);
-  context.fillText(`Last checkup: ${pet.lastCheckup}`, 910, 340);
-
-  context.fillStyle = 'rgba(255,255,255,0.15)';
-  context.fillRect(80, 420, 580, 320);
-  context.fillRect(700, 420, 620, 320);
-  context.strokeStyle = 'rgba(255,255,255,0.3)';
-  context.strokeRect(80, 420, 580, 320);
-  context.strokeRect(700, 420, 620, 320);
-
-  context.fillStyle = 'rgba(255,255,255,0.95)';
-  context.font = '600 34px "Inter", sans-serif';
-  context.fillText('Chủ thú cưng', 110, 470);
-  context.fillText('Thông tin thú cưng', 730, 470);
-
-  context.font = '500 30px "Inter", sans-serif';
-  const ownerLines = [
-    `Họ và tên: ${pet.ownerName}`,
-    `Số điện thoại: ${pet.ownerPhone}`,
-    `Email: ${pet.ownerEmail}`,
-  ];
-  ownerLines.forEach((line, index) => context.fillText(line, 110, 530 + index * 58));
-
-  const petLines = [
-    `Loài: ${pet.species}`,
-    `Giới tính: ${pet.gender}`,
-    `Ngày sinh: ${pet.dob}`,
-    `Cân nặng: ${pet.weight}`,
-    `Màu lông: ${normalizeNoneText(pet.color) ? 'Không có' : pet.color}`,
-    `Nhóm máu: ${normalizeNoneText(pet.bloodType) ? 'Không có' : pet.bloodType}`,
-    `Microchip: ${normalizeNoneText(pet.microchipId) ? 'Không có' : pet.microchipId}`,
-    `Triệt sản: ${pet.neutered === true ? 'Đã triệt sản' : pet.neutered === false ? 'Chưa triệt sản' : 'Không rõ'}`,
-  ];
-  petLines.forEach((line, index) => context.fillText(line, 730, 530 + index * 42));
-
-  if (pet.specialNotes) {
-    context.fillStyle = 'rgba(255,255,255,0.82)';
-    context.font = '500 28px "Inter", sans-serif';
-    context.fillText(`Lưu ý: ${pet.specialNotes}`, 110, 790);
-  }
-
-  const link = document.createElement('a');
-  link.download = `${pet.id.toLowerCase()}-digital-card.png`;
-  link.href = canvas.toDataURL('image/png');
-  link.click();
 }
 
 
@@ -565,6 +482,7 @@ export function ManagerPetsPage() {
   const [detailTab, setDetailTab] = useState<'info' | 'medical' | 'card'>('info');
   const [petFormMode, setPetFormMode] = useState<'create' | 'edit'>('create');
   const [editingPetId, setEditingPetId] = useState<string | null>(null);
+  const petCardRef = useRef<HTMLDivElement>(null);
 
   // Quick Add form
   const [addForm, setAddForm] = useState<PetProfileDraft>(initialPetDraft);
@@ -680,6 +598,7 @@ export function ManagerPetsPage() {
       microchipId: addForm.microchipId.trim() || 'None',
       bloodType: addForm.bloodType === 'none' ? 'None' : addForm.bloodType,
       neutered: toNeuteredValue(addForm.neutered),
+      specialNotes: addForm.specialNotes.trim().slice(0, 15),
       vaccinationLevel: 'Chưa cập nhật',
       lastCheckup: '2026-03-10',
       image: resolvedImage,
@@ -701,7 +620,6 @@ export function ManagerPetsPage() {
       id: newPetId,
       ...payload,
       hasDigitalCard: false,
-      specialNotes: '',
     };
 
     setPets(prev => [...prev, newPet]);
@@ -848,6 +766,7 @@ export function ManagerPetsPage() {
                           label: 'Triệt sản',
                           value: selectedPet.neutered === true ? 'Đã triệt sản' : selectedPet.neutered === false ? 'Chưa triệt sản' : 'Không rõ',
                         },
+                        { label: 'Lưu ý', value: selectedPet.specialNotes || 'Không có' },
                       ].map(item => (
                         <div key={item.label} className="p-3 bg-white rounded-xl border border-[#2d2a26]/10">
                           <p className="text-[10px] text-[#7a756e] mb-1 uppercase tracking-wider">{item.label}</p>
@@ -931,13 +850,18 @@ export function ManagerPetsPage() {
 
                     {selectedPet.hasDigitalCard ? (
                       <>
-                        <PetDigitalCard pet={selectedPet} className="mx-auto max-w-2xl" />
+                        <div ref={petCardRef} className="mx-auto max-w-2xl">
+                          <PetDigitalCard pet={selectedPet} />
+                        </div>
                         <div className="bg-white border border-[#2d2a26]/10 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-2">
                           <p className="text-xs text-[#7a756e]">
                             Cập nhật gần nhất: <span className="text-[#2d2a26]" style={{ fontWeight: 600 }}>{selectedPet.lastCheckup}</span>
                           </p>
                           <button
-                            onClick={() => exportPetCardAsPng(selectedPet)}
+                            onClick={() => {
+                              if (!petCardRef.current) return;
+                              void exportPetCardAsPng(petCardRef.current, selectedPet.id);
+                            }}
                             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#6b8f5e] text-white border border-[#2d2a26] text-xs hover:-translate-y-0.5 transition-all"
                             style={{ fontWeight: 600 }}
                           >
@@ -1177,6 +1101,19 @@ export function ManagerPetsPage() {
                         Không có microchip
                       </button>
                     </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] text-[#7a756e] uppercase tracking-wider">Lưu ý (tối đa 15 ký tự)</label>
+                        <span className="text-[10px] text-[#7a756e]">{addForm.specialNotes.length}/15</span>
+                      </div>
+                      <input
+                        value={addForm.specialNotes}
+                        maxLength={15}
+                        onChange={e => setAddForm({ ...addForm, specialNotes: e.target.value })}
+                        placeholder="VD: Dị ứng gà"
+                        className="w-full p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white focus:outline-none"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -1207,6 +1144,7 @@ export function ManagerCustomersPage() {
   const [segmentFilter, setSegmentFilter] = useState<'all' | CustomerSegment>('all');
   const [customerPets, setCustomerPets] = useState(mockPets.map(p => ({ ...p })));
   const [cardModal, setCardModal] = useState<DigitalCardModalState>({ open: false, petId: null, source: 'customers' });
+  const customerCardRef = useRef<HTMLDivElement>(null);
 
   const getCustomerPets = (userId: string) => customerPets.filter(p => p.ownerId === userId);
   const getCustomerAppointments = (userId: string) => mockAppointments.filter(a => a.userId === userId);
@@ -1291,13 +1229,12 @@ export function ManagerCustomersPage() {
       {/* KPI Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Khách VIP', value: segmentCounts.vip.toString(), icon: '👑' },
-          { label: 'Thân thiết', value: segmentCounts.loyal.toString(), icon: '⭐' },
-          { label: 'Khách mới', value: segmentCounts.new.toString(), icon: '🆕' },
-          { label: 'Tổng LTV', value: formatCurrency(totalLtv), icon: '💰' },
+          { label: 'Khách VIP', value: segmentCounts.vip.toString() },
+          { label: 'Thân thiết', value: segmentCounts.loyal.toString() },
+          { label: 'Khách mới', value: segmentCounts.new.toString() },
+          { label: 'Tổng LTV', value: formatCurrency(totalLtv) },
         ].map(kpi => (
           <div key={kpi.label} className="bg-white border border-[#2d2a26] rounded-2xl p-4">
-            <div className="text-xl mb-2">{kpi.icon}</div>
             <p className="text-xs text-[#7a756e]">{kpi.label}</p>
             <p className="text-lg text-[#2d2a26] mt-0.5" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
               {kpi.value}
@@ -1361,7 +1298,7 @@ export function ManagerCustomersPage() {
                           <span className={`text-[9px] px-1.5 py-0.5 rounded-full border ${tier.className}`} style={{ fontWeight: 600 }}>{tier.label}</span>
                         </div>
                         <div className="flex items-center gap-3 text-xs text-[#7a756e] mt-0.5">
-                          <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{u.phone}</span>
+                          <span>{u.phone}</span>
                           <span>{pets.length} thú cưng</span>
                         </div>
                       </div>
@@ -1369,7 +1306,30 @@ export function ManagerCustomersPage() {
                         <p className="text-xs text-[#7a756e]">LTV</p>
                         <p className="text-sm text-[#6b8f5e]" style={{ fontWeight: 600 }}>{formatCurrency(ltv)}</p>
                       </div>
-                      <ChevronRight className={`w-4 h-4 text-[#7a756e] transition-transform ${isSelected ? 'rotate-90' : ''}`} />
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            onClick={(event) => event.stopPropagation()}
+                            className="p-1.5 rounded-lg border border-[#2d2a26]/20 hover:bg-[#f0ede8] transition-colors"
+                            aria-label="Tùy chọn khách hàng"
+                          >
+                            <MoreHorizontal className="w-4 h-4 text-[#7a756e]" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="border-[#2d2a26]">
+                          <DropdownMenuItem onClick={() => setSelectedId(u.id)}>Xem chi tiết</DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              if (pets.length > 0) {
+                                openCustomerCard(pets[0].id);
+                              }
+                            }}
+                          >
+                            Mở Digital Card
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </motion.div>
                 );
@@ -1400,8 +1360,8 @@ export function ManagerCustomersPage() {
                         </span>
                       </div>
                       <div className="flex items-center gap-4 text-xs text-[#7a756e] mt-1">
-                        <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{selectedCustomer.email}</span>
-                        <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{selectedCustomer.phone}</span>
+                        <span>{selectedCustomer.email}</span>
+                        <span>{selectedCustomer.phone}</span>
                       </div>
                     </div>
                   </div>
@@ -1413,25 +1373,22 @@ export function ManagerCustomersPage() {
 
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-white border border-[#2d2a26] rounded-2xl p-4 text-center">
-                  <DollarSign className="w-5 h-5 text-[#6b8f5e] mx-auto mb-1" />
                   <p className="text-[10px] text-[#7a756e] uppercase tracking-wider">Lifetime Value</p>
                   <p className="text-xl text-[#2d2a26] mt-1" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>{formatCurrency(getCustomerLTV(selectedCustomer.id))}</p>
                 </div>
                 <div className="bg-white border border-[#2d2a26] rounded-2xl p-4 text-center">
-                  <CalendarDays className="w-5 h-5 text-[#c67d5b] mx-auto mb-1" />
                   <p className="text-[10px] text-[#7a756e] uppercase tracking-wider">Lượt ghé thăm</p>
                   <p className="text-xl text-[#2d2a26] mt-1" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>{getCustomerAppointments(selectedCustomer.id).length}</p>
                 </div>
                 <div className="bg-white border border-[#2d2a26] rounded-2xl p-4 text-center">
-                  <Clock className="w-5 h-5 text-[#4a90d9] mx-auto mb-1" />
                   <p className="text-[10px] text-[#7a756e] uppercase tracking-wider">Lần cuối</p>
                   <p className="text-sm text-[#2d2a26] mt-1" style={{ fontWeight: 600 }}>{getCustomerAppointments(selectedCustomer.id).sort((a, b) => b.date.localeCompare(a.date))[0]?.date || '—'}</p>
                 </div>
               </div>
 
               <div className="bg-white border border-[#2d2a26] rounded-2xl p-5">
-                <h3 className="text-sm mb-3 flex items-center gap-2" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
-                  <PawPrint className="w-4 h-4 text-[#6b8f5e]" /> Thú cưng ({getCustomerPets(selectedCustomer.id).length})
+                <h3 className="text-sm mb-3" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
+                  Thú cưng ({getCustomerPets(selectedCustomer.id).length})
                 </h3>
                 <div className="flex gap-3 overflow-x-auto pb-1">
                   {getCustomerPets(selectedCustomer.id).map(pet => (
@@ -1444,10 +1401,9 @@ export function ManagerCustomersPage() {
                       <button
                         type="button"
                         onClick={() => openCustomerCard(pet.id)}
-                        className="w-full mt-1.5 flex items-center justify-center gap-1 py-1 rounded-lg border border-[#2d2a26]/30 text-[9px] text-[#6b8f5e] hover:bg-[#6b8f5e]/10 transition-all"
+                        className="w-full mt-1.5 flex items-center justify-center py-1 rounded-lg border border-[#2d2a26]/30 text-[9px] text-[#6b8f5e] hover:bg-[#6b8f5e]/10 transition-all"
                         style={{ fontWeight: 600 }}
                       >
-                        <CreditCard className="w-3 h-3" />
                         Digital Card
                       </button>
                     </div>
@@ -1459,8 +1415,8 @@ export function ManagerCustomersPage() {
               </div>
 
               <div className="bg-white border border-[#2d2a26] rounded-2xl p-5">
-                <h3 className="text-sm mb-4 flex items-center gap-2" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
-                  <Clock className="w-4 h-4 text-[#c67d5b]" /> Lịch sử hoạt động
+                <h3 className="text-sm mb-4" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
+                  Lịch sử hoạt động
                 </h3>
                 <div className="space-y-0">
                   {getTimeline(selectedCustomer.id).map((item, idx) => {
@@ -1508,13 +1464,18 @@ export function ManagerCustomersPage() {
           </DialogHeader>
           {selectedCardPet ? (
             <>
-              <PetDigitalCard pet={selectedCardPet} className="mx-auto max-w-2xl" />
+              <div ref={customerCardRef} className="mx-auto max-w-2xl">
+                <PetDigitalCard pet={selectedCardPet} />
+              </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs text-[#7a756e]">
                   Cập nhật gần nhất: <span className="text-[#2d2a26]" style={{ fontWeight: 600 }}>{selectedCardPet.lastCheckup}</span>
                 </p>
                 <button
-                  onClick={() => exportPetCardAsPng(selectedCardPet)}
+                  onClick={() => {
+                    if (!customerCardRef.current) return;
+                    void exportPetCardAsPng(customerCardRef.current, selectedCardPet.id);
+                  }}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#6b8f5e] text-white border border-[#2d2a26] text-xs hover:-translate-y-0.5 transition-all"
                   style={{ fontWeight: 600 }}
                 >
