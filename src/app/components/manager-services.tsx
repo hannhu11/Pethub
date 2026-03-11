@@ -399,14 +399,20 @@ export function ManagerPetsPage() {
   const customers = mockUsers.filter(u => u.role === 'customer');
 
   const handleAddPet = () => {
-    let ownerId = '', ownerName = '', ownerPhone = '';
+    let ownerId = '', ownerName = '', ownerPhone = '', ownerEmail = '';
     if (addMode === 'existing' && addForm.existingOwner) {
       const customer = customers.find(c => c.id === addForm.existingOwner);
-      if (customer) { ownerId = customer.id; ownerName = customer.name; ownerPhone = customer.phone; }
+      if (customer) {
+        ownerId = customer.id;
+        ownerName = customer.name;
+        ownerPhone = customer.phone;
+        ownerEmail = customer.email;
+      }
     } else {
       ownerId = `u${Date.now()}`;
       ownerName = addForm.ownerName;
       ownerPhone = addForm.ownerPhone;
+      ownerEmail = addForm.ownerEmail || 'chua-cap-nhat@email.com';
     }
 
     if (!addForm.petName.trim() || !ownerName) return;
@@ -419,12 +425,19 @@ export function ManagerPetsPage() {
       gender: addForm.petGender,
       dob: addForm.petDob || '2025-01-01',
       weight: addForm.petWeight || 'Chưa cân',
+      color: addForm.petSpecies === 'Chó' ? 'Nâu vàng' : 'Xám trắng',
+      microchipId: `MC-${Date.now()}`,
+      bloodType: addForm.petSpecies === 'Chó' ? 'DEA 1.1+' : 'A',
+      neutered: false,
+      vaccinationLevel: 'Chưa cập nhật',
+      lastCheckup: '2026-03-10',
       image: addForm.petSpecies === 'Chó'
-        ? 'https://images.unsplash.com/photo-1609348490161-a879e4327ae9?w=400'
-        : 'https://images.unsplash.com/photo-1707065359514-5aa48a8eebee?w=400',
+        ? mockPets.find((pet) => pet.species === 'Chó')?.image || ''
+        : mockPets.find((pet) => pet.species === 'Mèo')?.image || '',
       ownerId,
       ownerName,
       ownerPhone,
+      ownerEmail,
       hasDigitalCard: false,
     };
 

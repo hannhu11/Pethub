@@ -1,5 +1,16 @@
 // ============ MOCK DATA FOR PETHUB ============
 
+import luckyImage from '../../assets/images/pets/lucky.jpg';
+import mimiImage from '../../assets/images/pets/mimi.jpg';
+import bongImage from '../../assets/images/pets/bong.jpg';
+import snowballImage from '../../assets/images/pets/snowball.jpg';
+import serviceCheckupImage from '../../assets/images/services/checkup.jpg';
+import serviceSpaImage from '../../assets/images/services/spa.jpg';
+import serviceGroomingImage from '../../assets/images/services/grooming.jpg';
+import serviceVaccineImage from '../../assets/images/services/vaccine.jpg';
+import serviceSpecialistImage from '../../assets/images/services/specialist.jpg';
+import serviceBoardingImage from '../../assets/images/services/boarding.jpg';
+
 export interface User {
   id: string;
   name: string;
@@ -17,10 +28,18 @@ export interface Pet {
   gender: string;
   dob: string;
   weight: string;
+  color: string;
+  microchipId: string;
+  bloodType: string;
+  neutered: boolean;
+  vaccinationLevel: string;
+  lastCheckup: string;
+  specialNotes?: string;
   image: string;
   ownerId: string;
   ownerName: string;
   ownerPhone: string;
+  ownerEmail: string;
   hasDigitalCard: boolean;
 }
 
@@ -97,27 +116,39 @@ export const mockUsers: User[] = [
 export const mockPets: Pet[] = [
   {
     id: 'PH-2026-001', name: 'Lucky', species: 'Chó', breed: 'Golden Retriever',
-    gender: 'Đực', dob: '2022-03-15', weight: '28kg',
-    image: 'https://images.unsplash.com/photo-1609348490161-a879e4327ae9?w=400',
-    ownerId: 'u1', ownerName: 'Nguyễn Văn An', ownerPhone: '0901234567', hasDigitalCard: true,
+    gender: 'Đực', dob: '2022-03-15', weight: '28kg', color: 'Vàng kem',
+    microchipId: 'MC-GLD-001-8891', bloodType: 'DEA 1.1+', neutered: true,
+    vaccinationLevel: 'Đầy đủ (7/7)', lastCheckup: '2026-03-08',
+    specialNotes: 'Dị ứng nhẹ với thức ăn nhiều đạm',
+    image: luckyImage,
+    ownerId: 'u1', ownerName: 'Nguyễn Văn An', ownerPhone: '0901234567', ownerEmail: 'an.nguyen@email.com', hasDigitalCard: true,
   },
   {
     id: 'PH-2026-002', name: 'Mimi', species: 'Mèo', breed: 'Anh Lông Ngắn',
-    gender: 'Cái', dob: '2023-07-20', weight: '4.5kg',
-    image: 'https://images.unsplash.com/photo-1707065359514-5aa48a8eebee?w=400',
-    ownerId: 'u1', ownerName: 'Nguyễn Văn An', ownerPhone: '0901234567', hasDigitalCard: true,
+    gender: 'Cái', dob: '2023-07-20', weight: '4.5kg', color: 'Đen tuyền',
+    microchipId: 'MC-CAT-002-1134', bloodType: 'B', neutered: true,
+    vaccinationLevel: 'Đầy đủ (5/5)', lastCheckup: '2026-03-05',
+    specialNotes: 'Nhạy cảm âm thanh lớn',
+    image: mimiImage,
+    ownerId: 'u1', ownerName: 'Nguyễn Văn An', ownerPhone: '0901234567', ownerEmail: 'an.nguyen@email.com', hasDigitalCard: true,
   },
   {
     id: 'PH-2026-003', name: 'Bông', species: 'Chó', breed: 'Corgi',
-    gender: 'Cái', dob: '2024-01-10', weight: '12kg',
-    image: 'https://images.unsplash.com/photo-1659589758609-ca5cddfbfca9?w=400',
-    ownerId: 'u2', ownerName: 'Trần Thị Bình', ownerPhone: '0912345678', hasDigitalCard: true,
+    gender: 'Cái', dob: '2024-01-10', weight: '12kg', color: 'Nâu trắng',
+    microchipId: 'MC-CRG-003-2209', bloodType: 'DEA 1.1-', neutered: false,
+    vaccinationLevel: 'Đầy đủ (6/7)', lastCheckup: '2026-02-28',
+    specialNotes: 'Cần kiểm soát cân nặng',
+    image: bongImage,
+    ownerId: 'u2', ownerName: 'Trần Thị Bình', ownerPhone: '0912345678', ownerEmail: 'binh.tran@email.com', hasDigitalCard: true,
   },
   {
     id: 'PH-2026-004', name: 'Snowball', species: 'Mèo', breed: 'Ba Tư',
-    gender: 'Đực', dob: '2023-11-05', weight: '5kg',
-    image: 'https://images.unsplash.com/photo-1585137173132-cf49e10ad27d?w=400',
-    ownerId: 'u3', ownerName: 'Lê Minh Đức', ownerPhone: '0923456789', hasDigitalCard: false,
+    gender: 'Đực', dob: '2023-11-05', weight: '5kg', color: 'Trắng bạc',
+    microchipId: 'MC-PRS-004-5550', bloodType: 'AB', neutered: false,
+    vaccinationLevel: 'Cơ bản (3/5)', lastCheckup: '2026-02-20',
+    specialNotes: 'Cần chải lông hằng ngày',
+    image: snowballImage,
+    ownerId: 'u3', ownerName: 'Lê Minh Đức', ownerPhone: '0923456789', ownerEmail: 'duc.le@email.com', hasDigitalCard: false,
   },
 ];
 
@@ -126,37 +157,37 @@ export const mockServices: Service[] = [
   {
     id: 's1', name: 'Khám tổng quát', price: 200000,
     description: 'Khám sức khỏe tổng quát, kiểm tra toàn diện cho thú cưng của bạn bao gồm đo nhiệt độ, nghe tim phổi, kiểm tra răng miệng.',
-    icon: 'stethoscope', image: 'https://images.unsplash.com/photo-1625321171045-1fea4ac688e9?w=600',
+    icon: 'stethoscope', image: serviceCheckupImage,
     duration: '30 phút', active: true,
   },
   {
     id: 's2', name: 'Tắm & Spa', price: 150000,
     description: 'Dịch vụ tắm rửa, vệ sinh, spa thư giãn cho thú cưng với sản phẩm chuyên dụng, an toàn.',
-    icon: 'droplets', image: 'https://images.unsplash.com/photo-1699215432275-bf47e63f3bfa?w=600',
+    icon: 'droplets', image: serviceSpaImage,
     duration: '60 phút', active: true,
   },
   {
     id: 's3', name: 'Cắt tỉa lông', price: 250000,
     description: 'Cắt tỉa, tạo kiểu lông theo yêu cầu bởi groomer chuyên nghiệp, giúp thú cưng luôn gọn gàng.',
-    icon: 'scissors', image: 'https://images.unsplash.com/photo-1672931653595-1e2e9d4050ef?w=600',
+    icon: 'scissors', image: serviceGroomingImage,
     duration: '90 phút', active: true,
   },
   {
     id: 's4', name: 'Tiêm phòng', price: 300000,
     description: 'Tiêm phòng các bệnh truyền nhiễm theo phác đồ chuẩn quốc tế, đảm bảo an toàn cho thú cưng.',
-    icon: 'syringe', image: 'https://images.unsplash.com/photo-1770836037793-95bdbf190f71?w=600',
+    icon: 'syringe', image: serviceVaccineImage,
     duration: '15 phút', active: true,
   },
   {
     id: 's5', name: 'Khám chuyên khoa', price: 500000,
     description: 'Khám chuyên sâu các bệnh lý phức tạp với thiết bị y tế hiện đại, tư vấn điều trị chi tiết.',
-    icon: 'heart-pulse', image: 'https://images.unsplash.com/photo-1625321171045-1fea4ac688e9?w=600',
+    icon: 'heart-pulse', image: serviceSpecialistImage,
     duration: '45 phút', active: true,
   },
   {
     id: 's6', name: 'Lưu chuồng', price: 180000,
     description: 'Dịch vụ lưu chuồng, chăm sóc thú cưng khi bạn vắng nhà. Phòng sạch sẽ, an toàn.',
-    icon: 'home', image: 'https://images.unsplash.com/photo-1770836037793-95bdbf190f71?w=600',
+    icon: 'home', image: serviceBoardingImage,
     duration: '1 ngày', active: true,
   },
 ];

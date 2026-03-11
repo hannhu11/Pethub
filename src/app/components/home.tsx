@@ -5,6 +5,7 @@ import {
   CalendarCheck, QrCode, BarChart3, ArrowRight, Star, Check
 } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import heroClinicImage from '../../assets/images/home/hero-clinic.jpg';
 
 const features = [
   { icon: CalendarCheck, title: 'Đặt lịch thông minh', desc: 'Khách hàng đặt lịch online 24/7, tự động phân slot 30 phút, không lo trùng lịch.' },
@@ -53,14 +54,14 @@ export function HomePage() {
               </p>
               <div className="flex flex-wrap gap-4">
                 <Link
-                  to="/services"
+                  to="/login"
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#6b8f5e] text-white hover:-translate-y-1 transition-all border border-[#2d2a26]"
                 >
-                  Khám phá dịch vụ
+                  Đăng nhập để trải nghiệm
                   <ArrowRight className="w-5 h-5" />
                 </Link>
                 <Link
-                  to="/manager"
+                  to="/register"
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white text-[#2d2a26] hover:-translate-y-1 transition-all border border-[#2d2a26]"
                 >
                   Dùng thử miễn phí
@@ -90,7 +91,7 @@ export function HomePage() {
             >
               <div className="relative rounded-3xl overflow-hidden border border-[#2d2a26] aspect-[4/3]">
                 <ImageWithFallback
-                  src="https://images.unsplash.com/photo-1770836037793-95bdbf190f71?w=800"
+                  src={heroClinicImage}
                   alt="PetHub Veterinary Care"
                   className="w-full h-full object-cover"
                 />
@@ -150,10 +151,10 @@ export function HomePage() {
           </div>
           <div className="text-center mt-8">
             <Link
-              to="/services"
+              to="/login"
               className="inline-flex items-center gap-2 text-[#6b8f5e] hover:underline"
             >
-              Xem tất cả dịch vụ <ArrowRight className="w-4 h-4" />
+              Đăng nhập để xem thêm <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>
