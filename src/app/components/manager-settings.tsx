@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { motion } from 'motion/react';
 import {
   User, Building2, CreditCard, BellRing, Save, Check,
@@ -26,6 +26,7 @@ const settingsTabs = [
 type SettingsTabId = (typeof settingsTabs)[number]['id'];
 
 export function ManagerSettingsPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const validTabIds = useMemo(() => settingsTabs.map((tab) => tab.id), []);
   const requestedTab = searchParams.get('tab');
@@ -410,6 +411,8 @@ export function ManagerSettingsPage() {
                     ))}
                   </ul>
                   <button
+                    type='button'
+                    onClick={() => navigate('/manager/settings/upgrade-premium')}
                     className="w-full py-3 rounded-xl bg-[#6b8f5e] text-white text-sm border border-[#2d2a26] hover:-translate-y-1 active:translate-y-0 transition-all cursor-pointer"
                     style={{ fontWeight: 600 }}
                   >

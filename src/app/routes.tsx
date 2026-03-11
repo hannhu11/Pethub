@@ -11,6 +11,7 @@ import { ManagerCatalogPage, ManagerPetsPage, ManagerCustomersPage } from './com
 import { ManagerRemindersPage } from './components/manager-reminders';
 import { ManagerReminderTemplatesPage } from './components/manager-reminder-templates';
 import { ManagerSettingsPage } from './components/manager-settings';
+import { ManagerUpgradePremiumPage } from './components/manager-upgrade-premium';
 import { ManagerPOSPage } from './components/manager-pos';
 import { ManagerInvoicePage } from './components/manager-invoice';
 import { ManagerNotificationsPage } from './components/manager-notifications';
@@ -101,6 +102,7 @@ export const router = createBrowserRouter([
           { path: 'reminders', Component: ManagerRemindersPage, handle: { access: access.manager } },
           { path: 'reminders/templates', Component: ManagerReminderTemplatesPage, handle: { access: access.manager } },
           { path: 'notifications', Component: ManagerNotificationsPage, handle: { access: access.manager } },
+          { path: 'settings/upgrade-premium', Component: ManagerUpgradePremiumPage, handle: { access: access.manager } },
           { path: 'settings', Component: ManagerSettingsPage, handle: { access: access.manager } },
           { path: 'invoice/:invoiceId', Component: ManagerInvoicePage, handle: { access: access.manager } },
         ],
