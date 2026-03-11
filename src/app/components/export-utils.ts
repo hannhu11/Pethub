@@ -89,14 +89,18 @@ export async function downloadElementAsPdf(
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   const imageProps = pdf.getImageProperties(dataUrl);
-  const renderWidth = pageWidth;
-  let renderHeight = (imageProps.height * renderWidth) / imageProps.width;
+  const margin = 8;
+  const maxWidth = pageWidth - margin * 2;
+  const maxHeight = pageHeight - margin * 2;
+  const widthScale = maxWidth / imageProps.width;
+  const heightScale = maxHeight / imageProps.height;
+  const scale = Math.min(widthScale, heightScale);
 
-  if (renderHeight > pageHeight) {
-    renderHeight = pageHeight;
-  }
+  const renderWidth = imageProps.width * scale;
+  const renderHeight = imageProps.height * scale;
+  const offsetX = (pageWidth - renderWidth) / 2;
+  const offsetY = (pageHeight - renderHeight) / 2;
 
-  pdf.addImage(dataUrl, 'PNG', 0, 0, renderWidth, renderHeight);
+  pdf.addImage(dataUrl, 'PNG', offsetX, offsetY, renderWidth, renderHeight);
   pdf.save(options.fileName);
 }
-

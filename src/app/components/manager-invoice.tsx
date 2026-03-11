@@ -1,10 +1,11 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { ArrowLeft, Download, Printer, QrCode } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { getInvoiceById } from './manager-checkout-store';
 import { formatCurrency, mockPets, mockUsers } from './data';
 import { downloadElementAsPdf } from './export-utils';
+import { getClinicSettings, subscribeManagerSettingsUpdates } from './manager-settings-store';
 
 const paymentMethodLabel: Record<string, string> = {
   cash: 'Tiền mặt',
@@ -17,8 +18,15 @@ export function ManagerInvoicePage() {
   const navigate = useNavigate();
   const invoiceRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
+  const [clinic, setClinic] = useState(getClinicSettings());
 
   const invoice = useMemo(() => (invoiceId ? getInvoiceById(invoiceId) : undefined), [invoiceId]);
+
+  useEffect(() => {
+    return subscribeManagerSettingsUpdates(() => {
+      setClinic(getClinicSettings());
+    });
+  }, []);
 
   if (!invoice) {
     return (
@@ -57,8 +65,8 @@ export function ManagerInvoicePage() {
   };
 
   return (
-    <div className='space-y-4'>
-      <div className='flex flex-wrap items-center justify-between gap-3'>
+    <div className='space-y-4 print:space-y-0'>
+      <div className='flex flex-wrap items-center justify-between gap-3 print:hidden'>
         <button
           type='button'
           onClick={() => navigate('/manager/pos')}
@@ -88,14 +96,19 @@ export function ManagerInvoicePage() {
         </div>
       </div>
 
-      <div ref={invoiceRef} className='bg-white border border-[#2d2a26] rounded-2xl p-6 md:p-8 max-w-4xl mx-auto'>
+      <div
+        id='invoice-printable-area'
+        ref={invoiceRef}
+        className='bg-white border border-[#2d2a26] rounded-2xl p-6 md:p-8 max-w-4xl mx-auto print:max-w-none print:mx-0 print:rounded-none print:border-0 print:p-0 print:text-black'
+      >
         <div className='flex items-start justify-between gap-4 border-b border-[#2d2a26]/20 pb-4'>
           <div>
             <p className='text-2xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
               Pet<span className='text-[#c67d5b]'>Hub</span>
             </p>
-            <p className='text-sm text-[#7a756e] mt-1'>PetHub Clinic, TP. Hồ Chí Minh</p>
-            <p className='text-sm text-[#7a756e]'>Hotline: 1900-PETHUB</p>
+            <p className='text-sm text-[#7a756e] mt-1'>{clinic.name}</p>
+            <p className='text-sm text-[#7a756e]'>{clinic.address}</p>
+            <p className='text-sm text-[#7a756e]'>Hotline: {clinic.phone}</p>
           </div>
           <div className='text-right'>
             <p className='text-lg text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
@@ -178,14 +191,13 @@ export function ManagerInvoicePage() {
           </div>
         </div>
 
-        <div className='mt-4 text-xs text-[#7a756e] text-center'>
-          Cảm ơn quý khách đã sử dụng dịch vụ tại PetHub.
+        <div className='mt-4 text-xs text-[#7a756e] text-center print:text-black'>
+          {clinic.invoiceNote}
           <span className='block mt-1'>
-            Xem lại lịch sử tại <Link to='/manager/pos' className='underline text-[#6b8f5e]'>trang POS</Link>
+            Xem lại lịch sử tại <Link to='/manager/pos' className='underline text-[#6b8f5e] print:text-black'>trang POS</Link>
           </span>
         </div>
       </div>
     </div>
   );
 }
-

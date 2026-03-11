@@ -17,9 +17,16 @@ import {
   LogOut,
   Building2,
   Stethoscope,
+  Inbox,
 } from 'lucide-react';
 import { useAuthSession } from '../auth-session';
 import { mockAppointments, mockPets, mockUsers } from './data';
+import { getClinicSettings, getProfileSettings, subscribeManagerSettingsUpdates } from './manager-settings-store';
+import {
+  getNotifications,
+  markNotificationAsRead,
+  subscribeNotificationUpdates,
+} from './manager-notifications-store';
 import {
   CommandDialog,
   CommandEmpty,
@@ -53,13 +60,6 @@ type SidebarItem =
       label: string;
     };
 
-type ManagerNotification = {
-  id: number;
-  text: string;
-  time: string;
-  read: boolean;
-  to: string;
-};
 
 const sidebarItems: SidebarItem[] = [
   { type: 'link', to: '/manager', label: 'Tổng quan', icon: LayoutDashboard, exact: true },
@@ -74,39 +74,6 @@ const sidebarItems: SidebarItem[] = [
   { type: 'link', to: '/manager/reminders', label: 'Nhắc nhở', icon: Zap },
 ];
 
-const managerName = 'Phạm Hương';
-const clinicName = 'PetHub Clinic';
-
-const mockNotifications: ManagerNotification[] = [
-  {
-    id: 1,
-    text: 'Lịch hẹn mới từ Nguyễn Văn An - Lucky',
-    time: '5 phút trước',
-    read: false,
-    to: '/manager/bookings',
-  },
-  {
-    id: 2,
-    text: 'Nhắc nhở: Tiêm phòng cho Mimi hôm nay',
-    time: '30 phút trước',
-    read: false,
-    to: '/manager/reminders',
-  },
-  {
-    id: 3,
-    text: 'Thanh toán #T001 đã hoàn tất - 385,000đ',
-    time: '1 giờ trước',
-    read: true,
-    to: '/manager/pos',
-  },
-  {
-    id: 4,
-    text: 'Khách hàng Trần Thị Bình đánh giá 5 sao',
-    time: '2 giờ trước',
-    read: true,
-    to: '/manager/customers',
-  },
-];
 
 function SidebarNav({
   items,
@@ -153,11 +120,14 @@ export function ManagerLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
+  const [notifications, setNotifications] = useState(getNotifications());
+  const [managerProfile, setManagerProfile] = useState(getProfileSettings());
+  const [clinic, setClinic] = useState(getClinicSettings());
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuthSession();
 
-  const unreadCount = mockNotifications.filter((n) => !n.read).length;
+  const unreadCount = notifications.filter((item) => !item.read).length;
 
   const quickSearchData = useMemo(
     () => ({
@@ -182,6 +152,19 @@ export function ManagerLayout() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
+  useEffect(() => {
+    return subscribeNotificationUpdates(() => {
+      setNotifications(getNotifications());
+    });
+  }, []);
+
+  useEffect(() => {
+    return subscribeManagerSettingsUpdates(() => {
+      setManagerProfile(getProfileSettings());
+      setClinic(getClinicSettings());
+    });
+  }, []);
+
   const isActive = (to: string, exact?: boolean) => {
     if (exact) return location.pathname === to;
     return location.pathname.startsWith(to);
@@ -201,14 +184,15 @@ export function ManagerLayout() {
     navigate(to);
   };
 
-  const handleNotificationClick = (item: ManagerNotification) => {
+  const handleNotificationClick = (id: number, to: string) => {
+    markNotificationAsRead(id);
     setNotifOpen(false);
-    navigate(item.to);
+    navigate(to);
   };
 
   return (
     <div className='min-h-screen flex bg-[#faf9f6]'>
-      <aside className='hidden lg:flex flex-col w-64 bg-[#f5f0eb] border-r border-[#2d2a26]'>
+      <aside className='hidden lg:flex flex-col w-64 bg-[#f5f0eb] border-r border-[#2d2a26] print:hidden'>
         <div className='p-5 border-b border-[#2d2a26]'>
           <Link to='/manager' className='flex items-center gap-2'>
             <div className='w-9 h-9 rounded-xl bg-[#6b8f5e] flex items-center justify-center'>
@@ -247,8 +231,8 @@ export function ManagerLayout() {
                   <span className='text-white text-xs' style={{ fontWeight: 600 }}>PH</span>
                 </div>
                 <div className='min-w-0'>
-                  <p className='text-sm truncate' style={{ fontWeight: 600 }}>{managerName}</p>
-                  <p className='text-xs text-[#7a756e] truncate'>{clinicName}</p>
+                  <p className='text-sm truncate' style={{ fontWeight: 600 }}>{managerProfile.name}</p>
+                  <p className='text-xs text-[#7a756e] truncate'>{clinic.name}</p>
                 </div>
               </button>
             </DropdownMenuTrigger>
@@ -283,7 +267,7 @@ export function ManagerLayout() {
       </aside>
 
       {sidebarOpen && (
-        <div className='fixed inset-0 z-50 lg:hidden'>
+        <div className='fixed inset-0 z-50 lg:hidden print:hidden'>
           <div className='absolute inset-0 bg-black/30' onClick={() => setSidebarOpen(false)} />
           <aside className='relative w-64 h-full bg-[#f5f0eb] border-r border-[#2d2a26] overflow-y-auto'>
             <div className='p-5 flex items-center justify-between border-b border-[#2d2a26]'>
@@ -323,8 +307,8 @@ export function ManagerLayout() {
                   <span className='text-white text-xs' style={{ fontWeight: 600 }}>PH</span>
                 </div>
                 <div>
-                  <p className='text-sm' style={{ fontWeight: 600 }}>{managerName}</p>
-                  <p className='text-xs text-[#7a756e]'>{clinicName}</p>
+                  <p className='text-sm' style={{ fontWeight: 600 }}>{managerProfile.name}</p>
+                  <p className='text-xs text-[#7a756e]'>{clinic.name}</p>
                 </div>
               </button>
               <button
@@ -339,7 +323,7 @@ export function ManagerLayout() {
       )}
 
       <div className='flex-1 flex flex-col min-h-screen'>
-        <header className='h-14 border-b border-[#2d2a26] bg-white flex items-center px-4 sticky top-0 z-40'>
+        <header className='h-14 border-b border-[#2d2a26] bg-white flex items-center px-4 sticky top-0 z-40 print:hidden'>
           <div className='flex items-center gap-2 min-w-0 flex-1'>
             <button className='lg:hidden p-1' onClick={() => setSidebarOpen(true)}>
               <Menu className='w-5 h-5' />
@@ -384,11 +368,11 @@ export function ManagerLayout() {
                 </span>
               </div>
               <div className='max-h-72 overflow-y-auto'>
-                {mockNotifications.map((item) => (
+                {notifications.map((item) => (
                   <button
                     key={item.id}
                     type='button'
-                    onClick={() => handleNotificationClick(item)}
+                    onClick={() => handleNotificationClick(item.id, item.to)}
                     className={`w-full text-left px-4 py-3 border-b border-[#2d2a26]/5 hover:bg-[#faf9f6] transition-colors ${
                       !item.read ? 'bg-[#6b8f5e]/5' : ''
                     }`}
@@ -397,9 +381,10 @@ export function ManagerLayout() {
                       {!item.read && <div className='w-2 h-2 rounded-full bg-[#6b8f5e] mt-1.5 flex-shrink-0' />}
                       <div className={!item.read ? '' : 'pl-4'}>
                         <p className='text-xs text-[#2d2a26]' style={!item.read ? { fontWeight: 500 } : {}}>
-                          {item.text}
+                          {item.title}
                         </p>
-                        <p className='text-[10px] text-[#7a756e] mt-0.5'>{item.time}</p>
+                        <p className='text-[10px] text-[#7a756e] mt-0.5'>{item.createdAt}</p>
+                        <p className='text-[10px] text-[#9b948b] mt-0.5'>{item.body}</p>
                       </div>
                     </div>
                   </button>
@@ -410,7 +395,7 @@ export function ManagerLayout() {
                   type='button'
                   onClick={() => {
                     setNotifOpen(false);
-                    navigate('/manager/settings?tab=notifications');
+                    navigate('/manager/notifications');
                   }}
                   className='w-full py-2 text-xs text-[#6b8f5e] hover:bg-[#6b8f5e]/5 rounded-xl transition-colors'
                   style={{ fontWeight: 500 }}
@@ -430,13 +415,13 @@ export function ManagerLayout() {
                 <span className='text-white text-xs' style={{ fontWeight: 600 }}>PH</span>
               </div>
               <span className='text-sm hidden md:block max-w-[9rem] truncate' style={{ fontWeight: 600 }}>
-                {managerName}
+                {managerProfile.name}
               </span>
             </button>
           </div>
         </header>
 
-        <main className='flex-1 p-4 md:p-6 overflow-auto'>
+        <main className='flex-1 p-4 md:p-6 overflow-auto print:p-0 print:m-0 print:overflow-visible print:bg-white'>
           <Outlet />
         </main>
       </div>
@@ -459,6 +444,10 @@ export function ManagerLayout() {
             <CommandItem onSelect={() => handleCommandNavigate('/manager/settings?tab=profile')}>
               <Settings className='w-4 h-4 text-[#2d2a26]' />
               Hồ sơ quản lý
+            </CommandItem>
+            <CommandItem onSelect={() => handleCommandNavigate('/manager/notifications')}>
+              <Inbox className='w-4 h-4 text-[#6b8f5e]' />
+              Trung tâm thông báo
             </CommandItem>
           </CommandGroup>
 

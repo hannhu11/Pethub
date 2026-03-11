@@ -27,6 +27,7 @@ import {
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { BackButton } from './back-button';
 import { PetDigitalCard } from './pet-digital-card';
+import { PetProfileDetailPanel } from './pet-profile-detail-panel';
 import { downloadElementAsPng } from './export-utils';
 
 export function ProfilePage() {
@@ -232,23 +233,7 @@ export function PetListPage() {
                       <p className='text-sm text-[#7a756e]'>{pet.breed}</p>
                     </div>
                   </div>
-                  <div className='grid grid-cols-2 gap-4'>
-                    {[
-                      { label: 'Loài', value: pet.species },
-                      { label: 'Giống', value: pet.breed },
-                      { label: 'Giới tính', value: pet.gender },
-                      { label: 'Ngày sinh', value: pet.dob },
-                      { label: 'Cân nặng', value: pet.weight },
-                      { label: 'Mã ID', value: pet.id },
-                    ].map((item) => (
-                      <div key={item.label} className='p-3 bg-[#f0ede8] rounded-xl'>
-                        <p className='text-xs text-[#7a756e] mb-1'>{item.label}</p>
-                        <p className='text-sm' style={{ fontWeight: 500 }}>
-                          {item.value}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
+                  <PetProfileDetailPanel pet={pet} />
                 </div>
               ) : (
                 <div className='p-5'>
@@ -388,7 +373,7 @@ export function BookingListPage() {
 export function DigitalCardPage() {
   const { petId } = useParams();
   const pet = mockPets.find((item) => item.id === petId) || mockPets[0];
-  const cardRef = useRef<HTMLDivElement>(null);
+  const cardExportRef = useRef<HTMLDivElement>(null);
 
   return (
     <div className='py-12'>
@@ -401,18 +386,22 @@ export function DigitalCardPage() {
           PETHUB DIGITAL PET CARD
         </h1>
 
-        <div ref={cardRef} className='mx-auto max-w-2xl'>
+        <div className='mx-auto max-w-2xl'>
           <PetDigitalCard pet={pet} />
+        </div>
+        <div className='fixed -left-[9999px] top-0 pointer-events-none'>
+          <div ref={cardExportRef} className='inline-block'>
+            <PetDigitalCard pet={pet} className='w-[760px]' />
+          </div>
         </div>
 
         <div className='max-w-2xl mx-auto mt-4 flex gap-3'>
           <button
             type='button'
             onClick={() => {
-              if (!cardRef.current) return;
-              void downloadElementAsPng(cardRef.current, {
+              if (!cardExportRef.current) return;
+              void downloadElementAsPng(cardExportRef.current, {
                 fileName: `${pet.id.toLowerCase()}-digital-card.png`,
-                width: 1200,
                 backgroundColor: '#1f2327',
               });
             }}

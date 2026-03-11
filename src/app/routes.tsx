@@ -9,10 +9,13 @@ import { ManagerDashboardPage } from './components/manager-dashboard';
 import { ManagerBookingsPage } from './components/manager-bookings';
 import { ManagerCatalogPage, ManagerPetsPage, ManagerCustomersPage } from './components/manager-services';
 import { ManagerRemindersPage } from './components/manager-reminders';
+import { ManagerReminderTemplatesPage } from './components/manager-reminder-templates';
 import { ManagerSettingsPage } from './components/manager-settings';
+import { ManagerUpgradePremiumPage } from './components/manager-upgrade-premium';
 import { ManagerPOSPage } from './components/manager-pos';
 import { ManagerInvoicePage } from './components/manager-invoice';
-import { PublicOnlyGuard, RequireCustomerGuard, RequireManagerGuard } from './auth-session';
+import { ManagerNotificationsPage } from './components/manager-notifications';
+import { RequireCustomerGuard, RequireManagerGuard, useAuthSession } from './auth-session';
 import {
   PricingPage,
   AboutPage,
@@ -34,6 +37,26 @@ function RedirectToHome() {
   return <Navigate to='/' replace />;
 }
 
+function getAuthenticatedDefaultPath(role: 'customer' | 'manager' | null) {
+  return role === 'manager' ? '/manager' : '/customer/dashboard';
+}
+
+function GuestLoginPage() {
+  const { session } = useAuthSession();
+  if (session.isAuthenticated) {
+    return <Navigate to={getAuthenticatedDefaultPath(session.role)} replace />;
+  }
+  return <LoginPage />;
+}
+
+function GuestRegisterPage() {
+  const { session } = useAuthSession();
+  if (session.isAuthenticated) {
+    return <Navigate to={getAuthenticatedDefaultPath(session.role)} replace />;
+  }
+  return <RegisterPage />;
+}
+
 const access = {
   public: 'public',
   customer: 'customer',
@@ -42,25 +65,20 @@ const access = {
 
 export const router = createBrowserRouter([
   {
-    Component: PublicOnlyGuard,
+    path: '/',
+    Component: PublicLayout,
+    handle: { access: access.public },
     children: [
-      {
-        path: '/',
-        Component: PublicLayout,
-        handle: { access: access.public },
-        children: [
-          { index: true, Component: HomePage, handle: { access: access.public } },
-          { path: 'pricing', Component: PricingPage, handle: { access: access.public } },
-          { path: 'about', Component: AboutPage, handle: { access: access.public } },
-          { path: 'blog', Component: BlogPage, handle: { access: access.public } },
-          { path: 'contact', Component: ContactPage, handle: { access: access.public } },
-          { path: 'help', Component: HelpPage, handle: { access: access.public } },
-          { path: 'terms', Component: TermsPage, handle: { access: access.public } },
-          { path: 'privacy', Component: PrivacyPage, handle: { access: access.public } },
-          { path: 'login', Component: LoginPage, handle: { access: access.public } },
-          { path: 'register', Component: RegisterPage, handle: { access: access.public } },
-        ],
-      },
+      { index: true, Component: HomePage, handle: { access: access.public } },
+      { path: 'pricing', Component: PricingPage, handle: { access: access.public } },
+      { path: 'about', Component: AboutPage, handle: { access: access.public } },
+      { path: 'blog', Component: BlogPage, handle: { access: access.public } },
+      { path: 'contact', Component: ContactPage, handle: { access: access.public } },
+      { path: 'help', Component: HelpPage, handle: { access: access.public } },
+      { path: 'terms', Component: TermsPage, handle: { access: access.public } },
+      { path: 'privacy', Component: PrivacyPage, handle: { access: access.public } },
+      { path: 'login', Component: GuestLoginPage, handle: { access: access.public } },
+      { path: 'register', Component: GuestRegisterPage, handle: { access: access.public } },
     ],
   },
   {
@@ -97,11 +115,14 @@ export const router = createBrowserRouter([
           { path: 'pets', Component: ManagerPetsPage, handle: { access: access.manager } },
           { path: 'catalog', Component: ManagerCatalogPage, handle: { access: access.manager } },
           { path: 'reminders', Component: ManagerRemindersPage, handle: { access: access.manager } },
-            { path: 'settings', Component: ManagerSettingsPage, handle: { access: access.manager } },
-            { path: 'invoice/:invoiceId', Component: ManagerInvoicePage, handle: { access: access.manager } },
-          ],
-        },
-      ],
+          { path: 'reminders/templates', Component: ManagerReminderTemplatesPage, handle: { access: access.manager } },
+          { path: 'notifications', Component: ManagerNotificationsPage, handle: { access: access.manager } },
+          { path: 'settings/upgrade-premium', Component: ManagerUpgradePremiumPage, handle: { access: access.manager } },
+          { path: 'settings', Component: ManagerSettingsPage, handle: { access: access.manager } },
+          { path: 'invoice/:invoiceId', Component: ManagerInvoicePage, handle: { access: access.manager } },
+        ],
+      },
+    ],
   },
   {
     path: '*',
