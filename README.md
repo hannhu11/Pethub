@@ -51,6 +51,12 @@ Bring up production stack:
 docker compose -f docker-compose.production.yml -p pethub up -d --build
 ```
 
+Troubleshooting public access on Oracle:
+- If `curl http://127.0.0.1/api/health` works on VPS but `http://<public-ip>/api/health` times out, traffic is blocked before reaching the VM.
+- Check the instance subnet uses the security list you edited.
+- If VNIC has NSG attached, add ingress rules there too (`80`, `443`, source `0.0.0.0/0`).
+- Keep OS firewall open (`iptables INPUT policy ACCEPT` or explicit allow rules).
+
 ## Security baseline
 
 - Never commit `.env*`, Firebase service account JSON, or private keys.
