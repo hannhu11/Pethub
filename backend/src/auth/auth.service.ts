@@ -86,12 +86,11 @@ export class AuthService {
       });
     }
 
-    const inferredRole = this.resolveRoleByEmail(email);
     return this.prisma.user.create({
       data: {
         firebaseUid,
         email,
-        role: inferredRole,
+        role: Role.customer,
         name: displayName ?? email.split('@')[0] ?? 'PetHub User',
         phone,
       },
@@ -148,10 +147,6 @@ export class AuthService {
       where: { id: candidate.id },
       data: { userId: user.id },
     });
-  }
-
-  private resolveRoleByEmail(email: string): Role {
-    return email.endsWith('@manager.pethub.vn') ? Role.manager : Role.customer;
   }
 
   private toAuthUser(user: User): AuthUser {

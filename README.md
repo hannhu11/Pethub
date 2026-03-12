@@ -45,6 +45,7 @@ npm --prefix backend test -- --runInBand
 - Logic audit: `/docs/LOGIC_AUDIT.md`
 - Operations runbook: `/docs/ORACLE_PRODUCTION_RUNBOOK_VN.md`
 - Go-live checklist: `/docs/GO_LIVE_24_7.md`
+- Auth admin guide: `/docs/AUTH_ADMIN_GUIDE.md`
 
 Bring up production stack:
 
