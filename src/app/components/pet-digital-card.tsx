@@ -1,11 +1,11 @@
 import { ShieldCheck } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import type { Pet } from './data';
+import type { PetCardView } from '../types';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { cn } from './ui/utils';
 
 type PetDigitalCardProps = {
-  pet: Pet;
+  pet: PetCardView;
   className?: string;
 };
 
