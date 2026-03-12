@@ -1,8 +1,9 @@
 import { IsDateString, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class CreateAppointmentDto {
+  @IsOptional()
   @IsString()
-  customerId!: string;
+  customerId?: string;
 
   @IsString()
   petId!: string;
