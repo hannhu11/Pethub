@@ -93,6 +93,10 @@ const serviceRevenueRatio = combinedRevenue > 0 ? Math.round((totalServiceRevenu
 const productRevenueRatio = combinedRevenue > 0 ? Math.round((totalProductRevenue / combinedRevenue) * 100) : 0;
 const avgTicketValue = completedBookings.length > 0 ? Math.round(totalServiceRevenue / completedBookings.length) : 0;
 const topServiceRevenue = serviceRevenueByType[0];
+const hasRevenueByMonth = revenueByMonth.length > 0;
+const hasServiceRevenue = serviceRevenueByType.length > 0;
+const hasRevenueByWeek = revenueByWeek.length > 0;
+const hasProductRevenue = productRevenueByType.length > 0;
 
 type KpiCard = {
   icon: typeof DollarSign;
@@ -137,6 +141,14 @@ const kpiCards: KpiCard[] = [
     color: '#b8850a',
   },
 ];
+
+function ChartEmptyState({ message }: { message: string }) {
+  return (
+    <div className='h-full w-full flex items-center justify-center text-sm text-[#7a756e] border border-dashed border-[#2d2a26]/30 rounded-xl bg-[#fcfbf9]'>
+      {message}
+    </div>
+  );
+}
 
 export function ManagerDashboardPage() {
   return (
@@ -188,23 +200,27 @@ export function ManagerDashboardPage() {
             Doanh thu theo tháng
           </h3>
           <div className='h-72'>
-            <ResponsiveContainer width='100%' height='100%'>
-              <BarChart data={revenueByMonth}>
-                <CartesianGrid vertical={false} strokeDasharray='4 4' stroke='#b7afa4' strokeOpacity={0.2} />
-                <XAxis dataKey='month' tick={{ fontSize: 12 }} axisLine={{ stroke: '#6f6961', strokeWidth: 1 }} tickLine={false} />
-                <YAxis
-                  tick={{ fontSize: 12 }}
-                  axisLine={{ stroke: '#6f6961', strokeWidth: 1 }}
-                  tickLine={false}
-                  tickFormatter={(value) => `${(value / 1000000).toFixed(0)}M`}
-                />
-                <Tooltip
-                  formatter={(value: number) => formatCurrency(value)}
-                  contentStyle={{ border: '1px solid #2d2a26', borderRadius: '12px', fontSize: 12 }}
-                />
-                <Bar dataKey='revenue' fill='#4d7a3f' radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {hasRevenueByMonth ? (
+              <ResponsiveContainer width='100%' height='100%' minHeight={280}>
+                <BarChart data={revenueByMonth}>
+                  <CartesianGrid vertical={false} strokeDasharray='4 4' stroke='#b7afa4' strokeOpacity={0.2} />
+                  <XAxis dataKey='month' tick={{ fontSize: 12 }} axisLine={{ stroke: '#6f6961', strokeWidth: 1 }} tickLine={false} />
+                  <YAxis
+                    tick={{ fontSize: 12 }}
+                    axisLine={{ stroke: '#6f6961', strokeWidth: 1 }}
+                    tickLine={false}
+                    tickFormatter={(value) => `${(value / 1000000).toFixed(0)}M`}
+                  />
+                  <Tooltip
+                    formatter={(value: number) => formatCurrency(value)}
+                    contentStyle={{ border: '1px solid #2d2a26', borderRadius: '12px', fontSize: 12 }}
+                  />
+                  <Bar dataKey='revenue' fill='#4d7a3f' radius={[8, 8, 0, 0]} isAnimationActive={false} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <ChartEmptyState message='Chưa có dữ liệu doanh thu theo tháng.' />
+            )}
           </div>
         </div>
 
@@ -213,16 +229,28 @@ export function ManagerDashboardPage() {
             Doanh thu theo dịch vụ
           </h3>
           <div className='relative h-72'>
-            <ResponsiveContainer width='100%' height='100%'>
-              <PieChart>
-                <Pie data={serviceRevenueByType} dataKey='revenue' nameKey='name' innerRadius={62} outerRadius={88} paddingAngle={2}>
-                  {serviceRevenueByType.map((entry) => (
-                    <Cell key={entry.name} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value: number) => formatCurrency(value)} />
-              </PieChart>
-            </ResponsiveContainer>
+            {hasServiceRevenue ? (
+              <ResponsiveContainer width='100%' height='100%' minHeight={280}>
+                <PieChart>
+                  <Pie
+                    data={serviceRevenueByType}
+                    dataKey='revenue'
+                    nameKey='name'
+                    innerRadius={62}
+                    outerRadius={88}
+                    paddingAngle={2}
+                    isAnimationActive={false}
+                  >
+                    {serviceRevenueByType.map((entry) => (
+                      <Cell key={entry.name} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <ChartEmptyState message='Chưa có dữ liệu doanh thu theo dịch vụ.' />
+            )}
             <div className='absolute inset-0 pointer-events-none flex flex-col items-center justify-center'>
               <p className='text-[11px] uppercase tracking-[0.14em] text-[#7a756e]'>Dịch vụ</p>
               <p className='text-sm text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
@@ -252,23 +280,34 @@ export function ManagerDashboardPage() {
             Doanh thu theo ngày trong tuần
           </h3>
           <div className='h-64'>
-            <ResponsiveContainer width='100%' height='100%'>
-              <LineChart data={revenueByWeek}>
-                <CartesianGrid vertical={false} strokeDasharray='4 4' stroke='#b7afa4' strokeOpacity={0.2} />
-                <XAxis dataKey='week' tick={{ fontSize: 12 }} axisLine={{ stroke: '#6f6961', strokeWidth: 1 }} tickLine={false} />
-                <YAxis
-                  tick={{ fontSize: 12 }}
-                  axisLine={{ stroke: '#6f6961', strokeWidth: 1 }}
-                  tickLine={false}
-                  tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`}
-                />
-                <Tooltip
-                  formatter={(value: number) => formatCurrency(value)}
-                  contentStyle={{ border: '1px solid #2d2a26', borderRadius: '12px', fontSize: 12 }}
-                />
-                <Line type='monotone' dataKey='revenue' stroke='#b55e38' strokeWidth={2} dot={{ fill: '#b55e38', r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
+            {hasRevenueByWeek ? (
+              <ResponsiveContainer width='100%' height='100%' minHeight={250}>
+                <LineChart data={revenueByWeek}>
+                  <CartesianGrid vertical={false} strokeDasharray='4 4' stroke='#b7afa4' strokeOpacity={0.2} />
+                  <XAxis dataKey='week' tick={{ fontSize: 12 }} axisLine={{ stroke: '#6f6961', strokeWidth: 1 }} tickLine={false} />
+                  <YAxis
+                    tick={{ fontSize: 12 }}
+                    axisLine={{ stroke: '#6f6961', strokeWidth: 1 }}
+                    tickLine={false}
+                    tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`}
+                  />
+                  <Tooltip
+                    formatter={(value: number) => formatCurrency(value)}
+                    contentStyle={{ border: '1px solid #2d2a26', borderRadius: '12px', fontSize: 12 }}
+                  />
+                  <Line
+                    type='monotone'
+                    dataKey='revenue'
+                    stroke='#b55e38'
+                    strokeWidth={2}
+                    dot={{ fill: '#b55e38', r: 4 }}
+                    isAnimationActive={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <ChartEmptyState message='Chưa có dữ liệu doanh thu theo tuần.' />
+            )}
           </div>
         </div>
 
@@ -279,22 +318,26 @@ export function ManagerDashboardPage() {
               Top sản phẩm bán chạy
             </h3>
             <div className='h-56'>
-              <ResponsiveContainer width='100%' height='100%'>
-                <BarChart data={productRevenueByType} layout='vertical' margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
-                  <CartesianGrid horizontal={false} strokeDasharray='4 4' stroke='#b7afa4' strokeOpacity={0.2} />
-                  <XAxis type='number' tick={{ fontSize: 11 }} axisLine={{ stroke: '#6f6961', strokeWidth: 1 }} tickLine={false} />
-                  <YAxis dataKey='productName' type='category' width={90} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <Tooltip
-                    formatter={(value: number) => formatCurrency(value)}
-                    contentStyle={{ border: '1px solid #2d2a26', borderRadius: '12px', fontSize: 12 }}
-                  />
-                  <Bar dataKey='revenue' radius={[0, 8, 8, 0]}>
-                    {productRevenueByType.map((entry) => (
-                      <Cell key={entry.productName} fill={entry.fill} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              {hasProductRevenue ? (
+                <ResponsiveContainer width='100%' height='100%' minHeight={220}>
+                  <BarChart data={productRevenueByType} layout='vertical' margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
+                    <CartesianGrid horizontal={false} strokeDasharray='4 4' stroke='#b7afa4' strokeOpacity={0.2} />
+                    <XAxis type='number' tick={{ fontSize: 11 }} axisLine={{ stroke: '#6f6961', strokeWidth: 1 }} tickLine={false} />
+                    <YAxis dataKey='productName' type='category' width={90} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <Tooltip
+                      formatter={(value: number) => formatCurrency(value)}
+                      contentStyle={{ border: '1px solid #2d2a26', borderRadius: '12px', fontSize: 12 }}
+                    />
+                    <Bar dataKey='revenue' radius={[0, 8, 8, 0]} isAnimationActive={false}>
+                      {productRevenueByType.map((entry) => (
+                        <Cell key={entry.productName} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <ChartEmptyState message='Chưa có dữ liệu sản phẩm.' />
+              )}
             </div>
           </div>
 
