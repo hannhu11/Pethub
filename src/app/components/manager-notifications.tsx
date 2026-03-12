@@ -17,6 +17,12 @@ export function ManagerNotificationsPage() {
   }, []);
 
   const unreadCount = notifications.filter((item) => !item.read).length;
+  const filterOptions: Array<{ id: NotificationFilter; label: string; count: number }> = [
+    { id: 'all', label: 'Tất cả', count: notifications.length },
+    { id: 'unread', label: 'Chưa đọc', count: unreadCount },
+    { id: 'read', label: 'Đã đọc', count: notifications.length - unreadCount },
+  ];
+  const selectedFilterLabel = filterOptions.find((item) => item.id === filter)?.label ?? 'Tất cả';
 
   const filtered = useMemo(() => {
     if (filter === 'unread') return notifications.filter((item) => !item.read);
@@ -54,15 +60,16 @@ export function ManagerNotificationsPage() {
           <Filter className='w-3.5 h-3.5' />
           Bộ lọc
         </div>
-        {[
-          { id: 'all' as const, label: 'Tất cả', count: notifications.length },
-          { id: 'unread' as const, label: 'Chưa đọc', count: unreadCount },
-          { id: 'read' as const, label: 'Đã đọc', count: notifications.length - unreadCount },
-        ].map((item) => (
+        {filterOptions.map((item) => (
           <button
             key={item.id}
             type='button'
-            onClick={() => setFilter(item.id)}
+            aria-pressed={filter === item.id}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setFilter(item.id);
+            }}
             className={`px-3 py-1.5 rounded-xl text-xs border transition-all ${
               filter === item.id
                 ? 'bg-[#6b8f5e] text-white border-[#2d2a26]'
@@ -73,6 +80,7 @@ export function ManagerNotificationsPage() {
             {item.label} ({item.count})
           </button>
         ))}
+        <span className='ml-auto text-xs text-[#7a756e]'>Đang xem: {selectedFilterLabel}</span>
       </div>
 
       <div className='bg-white border border-[#2d2a26] rounded-2xl overflow-hidden'>
@@ -114,4 +122,3 @@ export function ManagerNotificationsPage() {
     </div>
   );
 }
-

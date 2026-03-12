@@ -107,12 +107,14 @@ function BrandLogo() {
 export function PublicLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
+  const { session } = useAuthSession();
+  const dashboardPath = session.role === 'manager' ? '/manager' : '/customer/dashboard';
 
   const navLinks = [
     { to: '/', label: 'Trang chủ', icon: Home },
     { to: '/pricing', label: 'Bảng giá', icon: BadgeDollarSign },
     { to: '/about', label: 'About Us', icon: Info },
-    { to: '/login', label: 'Đăng nhập', icon: LogIn },
+    ...(session.isAuthenticated ? [] : [{ to: '/login', label: 'Đăng nhập', icon: LogIn }]),
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -143,6 +145,20 @@ export function PublicLayout() {
               ))}
             </div>
 
+            {session.isAuthenticated ? (
+              <div className='hidden md:flex items-center gap-2'>
+                <div className='px-3 py-1.5 rounded-xl border border-[#2d2a26] bg-white text-sm text-[#2d2a26]'>
+                  {session.userName || 'Tài khoản PetHub'}
+                </div>
+                <Link
+                  to={dashboardPath}
+                  className='inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[#2d2a26] bg-[#6b8f5e] text-white hover:-translate-y-0.5 transition-all text-sm'
+                >
+                  Vào bảng điều khiển
+                </Link>
+              </div>
+            ) : null}
+
             <button className='md:hidden p-2' onClick={() => setMenuOpen((open) => !open)}>
               {menuOpen ? <X className='w-6 h-6' /> : <Menu className='w-6 h-6' />}
             </button>
@@ -162,6 +178,15 @@ export function PublicLayout() {
                 {link.label}
               </Link>
             ))}
+            {session.isAuthenticated ? (
+              <Link
+                to={dashboardPath}
+                onClick={() => setMenuOpen(false)}
+                className='flex items-center justify-center gap-3 px-6 py-3 bg-[#6b8f5e] text-white hover:opacity-90 transition-opacity'
+              >
+                Vào bảng điều khiển
+              </Link>
+            ) : null}
           </div>
         )}
       </nav>
