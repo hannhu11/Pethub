@@ -4,12 +4,13 @@ import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
   sendPasswordResetEmail,
+  signInWithPopup,
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
   type User as FirebaseUser,
 } from 'firebase/auth';
-import { firebaseAuth } from './lib/firebase';
+import { firebaseAuth, googleProvider } from './lib/firebase';
 import { extractApiError, setApiAccessToken } from './lib/api-client';
 import { getAuthMe, syncFirebaseUser } from './lib/pethub-api';
 import type { AuthRole, AuthUser, SessionState } from './types';
@@ -34,6 +35,7 @@ type UpdateProfileInput = {
 type AuthContextValue = {
   session: SessionState;
   login: (input: LoginInput) => Promise<AuthUser>;
+  loginWithGoogle: () => Promise<AuthUser>;
   register: (input: RegisterInput) => Promise<AuthUser>;
   logout: () => Promise<void>;
   sendResetPasswordEmail: (email: string) => Promise<void>;
@@ -69,6 +71,20 @@ function toSession(user: AuthUser): SessionState {
     user,
     error: null,
   };
+}
+
+function normalizeAuthMessage(message: string) {
+  const lower = message.toLowerCase();
+  if (
+    lower.includes('status code 502') ||
+    lower.includes('status code 503') ||
+    lower.includes('status code 500') ||
+    lower.includes('firebase admin credentials missing') ||
+    lower.includes('network error')
+  ) {
+    return 'Lỗi máy chủ: Không thể đồng bộ tài khoản. Vui lòng thử lại.';
+  }
+  return message;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -137,13 +153,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(nextSession);
         return authUser;
       } catch (error) {
-        const message = extractApiError(error);
+        const message = normalizeAuthMessage(extractApiError(error));
         setSession({ ...unauthenticatedSession, error: message });
         throw new Error(message);
       }
     },
     [hydrateUser],
   );
+
+  const loginWithGoogle = useCallback(async () => {
+    setSession((previous) => ({ ...previous, status: 'loading', error: null }));
+    try {
+      const credential = await signInWithPopup(firebaseAuth, googleProvider);
+      const authUser = await hydrateUser(credential.user);
+      const nextSession = toSession(authUser);
+      setSession(nextSession);
+      return authUser;
+    } catch (error) {
+      const message = normalizeAuthMessage(extractApiError(error));
+      setSession({ ...unauthenticatedSession, error: message });
+      throw new Error(message);
+    }
+  }, [hydrateUser]);
 
   const register = useCallback(
     async ({ email, password, name, phone }: RegisterInput) => {
@@ -158,7 +189,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(nextSession);
         return authUser;
       } catch (error) {
-        const message = extractApiError(error);
+        const message = normalizeAuthMessage(extractApiError(error));
         setSession({ ...unauthenticatedSession, error: message });
         throw new Error(message);
       }
@@ -205,12 +236,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       session,
       login,
+      loginWithGoogle,
       register,
       logout,
       sendResetPasswordEmail,
       updateSessionProfile,
     }),
-    [login, logout, register, sendResetPasswordEmail, session, updateSessionProfile],
+    [login, loginWithGoogle, logout, register, sendResetPasswordEmail, session, updateSessionProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

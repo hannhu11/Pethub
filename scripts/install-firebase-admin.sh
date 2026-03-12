@@ -11,6 +11,7 @@ PROJECT_ROOT="${PROJECT_ROOT:-/home/ubuntu/pethub}"
 ENV_FILE="${PROJECT_ROOT}/.env.production"
 SECRETS_DIR="${PROJECT_ROOT}/secrets"
 TARGET_JSON="${SECRETS_DIR}/firebase-admin.json"
+CONTAINER_FIREBASE_PATH="${CONTAINER_FIREBASE_PATH:-/run/secrets/firebase-admin.json}"
 
 if [[ ! -f "$SOURCE_JSON" ]]; then
   echo "Input file not found: $SOURCE_JSON"
@@ -38,12 +39,21 @@ PY
 
 mkdir -p "$SECRETS_DIR"
 chmod 700 "$SECRETS_DIR"
-install -m 600 "$SOURCE_JSON" "$TARGET_JSON"
+
+SOURCE_REALPATH="$(realpath "$SOURCE_JSON")"
+TARGET_REALPATH="$(realpath -m "$TARGET_JSON")"
+
+if [[ "$SOURCE_REALPATH" == "$TARGET_REALPATH" ]]; then
+  chmod 600 "$TARGET_JSON"
+  echo "Source JSON is already in secrets path; skipping copy."
+else
+  install -m 600 "$SOURCE_JSON" "$TARGET_JSON"
+fi
 
 if grep -q '^FIREBASE_SERVICE_ACCOUNT_PATH=' "$ENV_FILE"; then
-  sed -i "s|^FIREBASE_SERVICE_ACCOUNT_PATH=.*|FIREBASE_SERVICE_ACCOUNT_PATH=${TARGET_JSON}|" "$ENV_FILE"
+  sed -i "s|^FIREBASE_SERVICE_ACCOUNT_PATH=.*|FIREBASE_SERVICE_ACCOUNT_PATH=${CONTAINER_FIREBASE_PATH}|" "$ENV_FILE"
 else
-  echo "FIREBASE_SERVICE_ACCOUNT_PATH=${TARGET_JSON}" >> "$ENV_FILE"
+  echo "FIREBASE_SERVICE_ACCOUNT_PATH=${CONTAINER_FIREBASE_PATH}" >> "$ENV_FILE"
 fi
 
 cd "$PROJECT_ROOT"
