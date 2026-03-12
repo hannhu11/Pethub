@@ -12,8 +12,13 @@ PetHub includes:
 
 ```bash
 npm i
+cp .env.example .env
 npm run dev
 ```
+
+Required frontend env:
+- `VITE_API_BASE_URL`
+- `VITE_FIREBASE_*` (web app config from Firebase Console)
 
 ### Backend
 

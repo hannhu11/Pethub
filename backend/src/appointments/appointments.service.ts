@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -48,6 +49,29 @@ export class AppointmentsService {
 
   async create(dto: CreateAppointmentDto, currentUser: AuthUser) {
     const slot = new Date(dto.appointmentAt);
+    const customerId = await this.resolveCustomerId(currentUser, dto.customerId);
+    const [pet, service] = await Promise.all([
+      this.prisma.pet.findUnique({
+        where: { id: dto.petId },
+        select: { id: true, customerId: true },
+      }),
+      this.prisma.service.findUnique({
+        where: { id: dto.serviceId },
+        select: { id: true },
+      }),
+    ]);
+
+    if (!pet) {
+      throw new NotFoundException('Pet not found');
+    }
+
+    if (pet.customerId !== customerId) {
+      throw new ForbiddenException('Pet does not belong to the selected customer profile');
+    }
+
+    if (!service) {
+      throw new NotFoundException('Service not found');
+    }
 
     return this.prisma.$transaction(async (tx) => {
       const collision = await tx.appointment.findFirst({
@@ -65,7 +89,7 @@ export class AppointmentsService {
 
       const appointment = await tx.appointment.create({
         data: {
-          customerId: dto.customerId,
+          customerId,
           petId: dto.petId,
           serviceId: dto.serviceId,
           appointmentAt: slot,
@@ -91,6 +115,10 @@ export class AppointmentsService {
   }
 
   async updateStatus(id: string, dto: UpdateAppointmentStatusDto, currentUser: AuthUser) {
+    if (currentUser.role !== 'manager') {
+      throw new ForbiddenException('Only manager can update appointment workflow status');
+    }
+
     const current = await this.prisma.appointment.findUnique({ where: { id } });
     if (!current) {
       throw new NotFoundException('Appointment not found');
@@ -127,6 +155,58 @@ export class AppointmentsService {
     };
   }
 
+  async cancel(id: string, currentUser: AuthUser) {
+    const current = await this.prisma.appointment.findUnique({ where: { id } });
+    if (!current) {
+      throw new NotFoundException('Appointment not found');
+    }
+
+    if (current.status === AppointmentStatus.completed) {
+      throw new BadRequestException('Cannot cancel completed appointment');
+    }
+
+    if (current.status === AppointmentStatus.cancelled) {
+      return {
+        appointment: await this.prisma.appointment.findUnique({
+          where: { id },
+          include: { customer: true, pet: true, service: true },
+        }),
+      };
+    }
+
+    if (currentUser.role === 'customer') {
+      const customer = await this.prisma.customer.findUnique({
+        where: { userId: currentUser.userId },
+        select: { id: true },
+      });
+
+      if (!customer || customer.id !== current.customerId) {
+        throw new ForbiddenException('You can only cancel your own appointment');
+      }
+    }
+
+    const appointment = await this.prisma.appointment.update({
+      where: { id },
+      data: {
+        status: AppointmentStatus.cancelled,
+        managerId: currentUser.role === 'manager' ? currentUser.userId : current.managerId,
+      },
+      include: {
+        customer: true,
+        pet: true,
+        service: true,
+      },
+    });
+
+    this.realtimeService.emitAppointmentUpdated({
+      type: 'status',
+      appointmentId: id,
+      status: AppointmentStatus.cancelled,
+    });
+
+    return { appointment };
+  }
+
   private canTransition(from: AppointmentStatus, to: AppointmentStatus): boolean {
     if (from === to) {
       return true;
@@ -140,5 +220,24 @@ export class AppointmentsService {
     };
 
     return transitions[from].includes(to);
+  }
+
+  private async resolveCustomerId(currentUser: AuthUser, requestedCustomerId?: string): Promise<string> {
+    if (currentUser.role === 'manager') {
+      if (!requestedCustomerId) {
+        throw new BadRequestException('customerId is required for manager booking creation');
+      }
+      return requestedCustomerId;
+    }
+
+    const customer = await this.prisma.customer.findUnique({
+      where: { userId: currentUser.userId },
+      select: { id: true },
+    });
+    if (!customer) {
+      throw new ForbiddenException('Customer profile not found for current account');
+    }
+
+    return customer.id;
   }
 }

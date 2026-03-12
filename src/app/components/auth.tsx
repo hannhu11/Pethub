@@ -1,6 +1,19 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
-import { PawPrint, Mail, Lock, User, Building2, Eye, EyeOff, ArrowLeft, ShieldCheck, SendHorizontal, CheckCircle2 } from 'lucide-react';
+import {
+  PawPrint,
+  Mail,
+  Lock,
+  User,
+  Building2,
+  Eye,
+  EyeOff,
+  ArrowLeft,
+  ShieldCheck,
+  SendHorizontal,
+  CheckCircle2,
+  LoaderCircle,
+} from 'lucide-react';
 import { useAuthSession } from '../auth-session';
 import type { AuthRole, ForgotPasswordState } from '../types';
 import { LEGAL_ROUTES } from '../constants/legal';
@@ -98,47 +111,66 @@ function LegalConsent({ mode }: { mode: 'login' | 'register' }) {
 }
 
 export function LoginPage() {
-  const [role, setRole] = useState<AuthRole>('customer');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
   const [forgot, setForgot] = useState<ForgotPasswordState>(defaultForgotState);
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuthSession();
+  const { login, sendResetPasswordEmail } = useAuthSession();
 
-  const redirectTo = resolveDefaultPath(role);
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const fallbackName = role === 'manager' ? 'Phạm Hương' : 'Nguyễn Văn An';
-    login(role, fallbackName);
+    setFormError('');
+    setSubmitting(true);
 
-    const fromState = location.state as { from?: { pathname?: string } } | null;
-    const fromPath = fromState?.from?.pathname;
+    try {
+      const authUser = await login({ email, password });
+      const fromState = location.state as { from?: { pathname?: string } } | null;
+      const fromPath = fromState?.from?.pathname;
+      const redirectTo = resolveDefaultPath(authUser.role);
 
-    if (fromPath && fromPath.startsWith(role === 'manager' ? '/manager' : '/customer')) {
-      navigate(fromPath, { replace: true });
-      return;
+      if (fromPath && fromPath.startsWith(authUser.role === 'manager' ? '/manager' : '/customer')) {
+        navigate(fromPath, { replace: true });
+      } else {
+        navigate(redirectTo, { replace: true });
+      }
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Đăng nhập thất bại.');
+    } finally {
+      setSubmitting(false);
     }
-
-    navigate(redirectTo, { replace: true });
   };
 
-  const handleForgotSubmit = (e: React.FormEvent) => {
+  const handleForgotSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setForgot((prev) => ({ ...prev, submitting: true }));
-    window.setTimeout(() => {
-      setForgot((prev) => ({ ...prev, submitting: false, sent: true }));
-    }, 700);
-  };
-
-  const handleForgotResend = () => {
-    if (!forgot.email) {
+    if (!forgot.email.trim()) {
       return;
     }
     setForgot((prev) => ({ ...prev, submitting: true }));
-    window.setTimeout(() => {
+    try {
+      await sendResetPasswordEmail(forgot.email.trim());
       setForgot((prev) => ({ ...prev, submitting: false, sent: true }));
-    }, 700);
+    } catch (error) {
+      setForgot((prev) => ({ ...prev, submitting: false }));
+      setFormError(error instanceof Error ? error.message : 'Không gửi được email khôi phục.');
+    }
+  };
+
+  const handleForgotResend = async () => {
+    if (!forgot.email.trim()) {
+      return;
+    }
+    setForgot((prev) => ({ ...prev, submitting: true }));
+    try {
+      await sendResetPasswordEmail(forgot.email.trim());
+      setForgot((prev) => ({ ...prev, submitting: false, sent: true }));
+    } catch (error) {
+      setForgot((prev) => ({ ...prev, submitting: false }));
+      setFormError(error instanceof Error ? error.message : 'Không gửi lại được email.');
+    }
   };
 
   return (
@@ -150,38 +182,16 @@ export function LoginPage() {
     >
       <form onSubmit={handleSubmit} className='space-y-5'>
         <div>
-          <label className='text-sm text-[#2d2a26] block mb-2' style={{ fontWeight: 700 }}>Đăng nhập với vai trò</label>
-          <div className='grid grid-cols-2 gap-2'>
-            <button
-              type='button'
-              onClick={() => setRole('customer')}
-              className={`p-3 border rounded-xl text-left transition-all ${
-                role === 'customer' ? 'border-[#c67d5b] bg-[#c67d5b]/10' : 'border-[#2d2a26]/25 bg-white'
-              }`}
-            >
-              <p className='text-sm text-[#2d2a26]' style={{ fontWeight: 700 }}>Khách hàng</p>
-              <p className='text-xs text-[#7a756e]'>Đặt lịch & quản lý thú cưng</p>
-            </button>
-            <button
-              type='button'
-              onClick={() => setRole('manager')}
-              className={`p-3 border rounded-xl text-left transition-all ${
-                role === 'manager' ? 'border-[#6b8f5e] bg-[#6b8f5e]/10' : 'border-[#2d2a26]/25 bg-white'
-              }`}
-            >
-              <p className='text-sm text-[#2d2a26]' style={{ fontWeight: 700 }}>Quản lý</p>
-              <p className='text-xs text-[#7a756e]'>Vận hành cửa hàng</p>
-            </button>
-          </div>
-        </div>
-
-        <div>
           <label className='text-sm text-[#2d2a26] mb-2 block' style={{ fontWeight: 700 }}>Email</label>
           <div className='relative'>
             <Mail className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#7a756e]' />
             <input
               type='email'
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
               placeholder='your@email.com'
+              autoComplete='email'
+              required
               className='w-full pl-10 pr-4 py-3 border border-[#2d2a26] rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]'
             />
           </div>
@@ -193,7 +203,11 @@ export function LoginPage() {
             <Lock className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#7a756e]' />
             <input
               type={showPass ? 'text' : 'password'}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
               placeholder='••••••••'
+              autoComplete='current-password'
+              required
               className='w-full pl-10 pr-12 py-3 border border-[#2d2a26] rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]'
             />
             <button type='button' onClick={() => setShowPass((v) => !v)} className='absolute right-3 top-1/2 -translate-y-1/2'>
@@ -202,25 +216,33 @@ export function LoginPage() {
           </div>
         </div>
 
-        <div className='flex items-center justify-between text-sm'>
-          <label className='flex items-center gap-2 text-[#7a756e]'>
-            <input type='checkbox' className='accent-[#6b8f5e]' />
-            Ghi nhớ đăng nhập
-          </label>
+        <div className='flex items-center justify-end text-sm'>
           <button
             type='button'
-            onClick={() => setForgot({ ...defaultForgotState, open: true })}
+            onClick={() => setForgot({ ...defaultForgotState, open: true, email })}
             className='text-[#c67d5b] underline underline-offset-2 decoration-[#c67d5b]/50'
           >
             Quên mật khẩu?
           </button>
         </div>
 
+        {formError ? (
+          <div className='rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700'>{formError}</div>
+        ) : null}
+
         <button
           type='submit'
-          className='w-full py-3 bg-[#6b8f5e] text-white rounded-xl border border-[#2d2a26] hover:-translate-y-0.5 active:translate-y-[2px] transition-transform'
+          disabled={submitting}
+          className='w-full py-3 bg-[#6b8f5e] text-white rounded-xl border border-[#2d2a26] hover:-translate-y-0.5 active:translate-y-[2px] transition-transform disabled:opacity-70 disabled:cursor-not-allowed'
         >
-          Đăng nhập
+          {submitting ? (
+            <span className='inline-flex items-center gap-2'>
+              <LoaderCircle className='w-4 h-4 animate-spin' />
+              Đang đăng nhập...
+            </span>
+          ) : (
+            'Đăng nhập'
+          )}
         </button>
       </form>
 
@@ -318,11 +340,44 @@ export function LoginPage() {
 export function RegisterPage() {
   const [showPass, setShowPass] = useState(false);
   const [showConfirmPass, setShowConfirmPass] = useState(false);
+  const [name, setName] = useState('');
+  const [clinicName, setClinicName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
   const navigate = useNavigate();
+  const { register } = useAuthSession();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    navigate('/login', { replace: true });
+    setFormError('');
+
+    if (password.length < 8) {
+      setFormError('Mật khẩu cần tối thiểu 8 ký tự.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setFormError('Mật khẩu xác nhận chưa khớp.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const authUser = await register({
+        email,
+        password,
+        name: name || clinicName || email.split('@')[0] || 'PetHub User',
+        phone,
+      });
+      navigate(resolveDefaultPath(authUser.role), { replace: true });
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Đăng ký thất bại.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -337,7 +392,13 @@ export function RegisterPage() {
           <label className='text-sm text-[#2d2a26] mb-2 block' style={{ fontWeight: 700 }}>Họ và tên</label>
           <div className='relative'>
             <User className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#7a756e]' />
-            <input type='text' placeholder='Nguyễn Văn A' className='w-full pl-10 pr-4 py-3 border border-[#2d2a26] rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]' />
+            <input
+              type='text'
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder='Nguyễn Văn A'
+              className='w-full pl-10 pr-4 py-3 border border-[#2d2a26] rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]'
+            />
           </div>
         </div>
 
@@ -345,15 +406,40 @@ export function RegisterPage() {
           <label className='text-sm text-[#2d2a26] mb-2 block' style={{ fontWeight: 700 }}>Tên cửa hàng / phòng khám</label>
           <div className='relative'>
             <Building2 className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#7a756e]' />
-            <input type='text' placeholder='Happy Pets Clinic' className='w-full pl-10 pr-4 py-3 border border-[#2d2a26] rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]' />
+            <input
+              type='text'
+              value={clinicName}
+              onChange={(event) => setClinicName(event.target.value)}
+              placeholder='Happy Pets Clinic'
+              className='w-full pl-10 pr-4 py-3 border border-[#2d2a26] rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]'
+            />
           </div>
+        </div>
+
+        <div>
+          <label className='text-sm text-[#2d2a26] mb-2 block' style={{ fontWeight: 700 }}>Số điện thoại</label>
+          <input
+            type='tel'
+            value={phone}
+            onChange={(event) => setPhone(event.target.value)}
+            placeholder='0901234567'
+            className='w-full px-4 py-3 border border-[#2d2a26] rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]'
+          />
         </div>
 
         <div>
           <label className='text-sm text-[#2d2a26] mb-2 block' style={{ fontWeight: 700 }}>Email</label>
           <div className='relative'>
             <Mail className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#7a756e]' />
-            <input type='email' placeholder='your@email.com' className='w-full pl-10 pr-4 py-3 border border-[#2d2a26] rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]' />
+            <input
+              type='email'
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder='your@email.com'
+              autoComplete='email'
+              required
+              className='w-full pl-10 pr-4 py-3 border border-[#2d2a26] rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]'
+            />
           </div>
         </div>
 
@@ -361,7 +447,15 @@ export function RegisterPage() {
           <label className='text-sm text-[#2d2a26] mb-2 block' style={{ fontWeight: 700 }}>Mật khẩu</label>
           <div className='relative'>
             <Lock className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#7a756e]' />
-            <input type={showPass ? 'text' : 'password'} placeholder='Tối thiểu 8 ký tự' className='w-full pl-10 pr-12 py-3 border border-[#2d2a26] rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]' />
+            <input
+              type={showPass ? 'text' : 'password'}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder='Tối thiểu 8 ký tự'
+              autoComplete='new-password'
+              required
+              className='w-full pl-10 pr-12 py-3 border border-[#2d2a26] rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]'
+            />
             <button type='button' onClick={() => setShowPass((v) => !v)} className='absolute right-3 top-1/2 -translate-y-1/2'>
               {showPass ? <EyeOff className='w-5 h-5 text-[#7a756e]' /> : <Eye className='w-5 h-5 text-[#7a756e]' />}
             </button>
@@ -372,18 +466,38 @@ export function RegisterPage() {
           <label className='text-sm text-[#2d2a26] mb-2 block' style={{ fontWeight: 700 }}>Xác nhận mật khẩu</label>
           <div className='relative'>
             <Lock className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#7a756e]' />
-            <input type={showConfirmPass ? 'text' : 'password'} placeholder='Nhập lại mật khẩu' className='w-full pl-10 pr-12 py-3 border border-[#2d2a26] rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]' />
+            <input
+              type={showConfirmPass ? 'text' : 'password'}
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              placeholder='Nhập lại mật khẩu'
+              autoComplete='new-password'
+              required
+              className='w-full pl-10 pr-12 py-3 border border-[#2d2a26] rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]'
+            />
             <button type='button' onClick={() => setShowConfirmPass((v) => !v)} className='absolute right-3 top-1/2 -translate-y-1/2'>
               {showConfirmPass ? <EyeOff className='w-5 h-5 text-[#7a756e]' /> : <Eye className='w-5 h-5 text-[#7a756e]' />}
             </button>
           </div>
         </div>
 
+        {formError ? (
+          <div className='rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700'>{formError}</div>
+        ) : null}
+
         <button
           type='submit'
-          className='w-full py-3 bg-[#6b8f5e] text-white rounded-xl border border-[#2d2a26] hover:-translate-y-0.5 active:translate-y-[2px] transition-transform'
+          disabled={submitting}
+          className='w-full py-3 bg-[#6b8f5e] text-white rounded-xl border border-[#2d2a26] hover:-translate-y-0.5 active:translate-y-[2px] transition-transform disabled:opacity-70 disabled:cursor-not-allowed'
         >
-          Tạo tài khoản
+          {submitting ? (
+            <span className='inline-flex items-center gap-2'>
+              <LoaderCircle className='w-4 h-4 animate-spin' />
+              Đang tạo tài khoản...
+            </span>
+          ) : (
+            'Tạo tài khoản'
+          )}
         </button>
       </form>
 

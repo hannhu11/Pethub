@@ -1,20 +1,43 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { CalendarDays, Search } from 'lucide-react';
-import { mockAppointments, getStatusColor, getStatusLabel, type Appointment } from './data';
-import { getAppointmentCheckoutState, subscribeCheckoutUpdates } from './manager-checkout-store';
+import type { ApiAppointment, AppointmentStatus } from '../types';
+import { extractApiError } from '../lib/api-client';
+import { getStatusColor, getStatusLabel, toDateLabel, toTimeLabel } from '../lib/format';
+import { cancelAppointment, listAppointments, updateAppointmentStatus } from '../lib/pethub-api';
 
-type BookingFilter = 'all' | Appointment['status'];
+type BookingFilter = 'all' | AppointmentStatus;
 
 export function ManagerBookingsPage() {
   const navigate = useNavigate();
-  const [bookings, setBookings] = useState<Appointment[]>(mockAppointments);
+  const [bookings, setBookings] = useState<ApiAppointment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [filter, setFilter] = useState<BookingFilter>('all');
   const [search, setSearch] = useState('');
-  const [checkoutTick, setCheckoutTick] = useState(0);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  useEffect(() => subscribeCheckoutUpdates(() => setCheckoutTick((value) => value + 1)), []);
+  const loadBookings = useMemo(
+    () => async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const data = await listAppointments();
+        setBookings(data);
+      } catch (apiError) {
+        setError(extractApiError(apiError));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    void loadBookings();
+  }, [loadBookings]);
 
   const filtered = bookings.filter((booking) => {
     if (filter !== 'all' && booking.status !== filter) return false;
@@ -23,23 +46,51 @@ export function ManagerBookingsPage() {
     if (!keyword) return true;
 
     return (
-      booking.userName.toLowerCase().includes(keyword) ||
-      booking.petName.toLowerCase().includes(keyword) ||
-      booking.serviceName.toLowerCase().includes(keyword) ||
-      booking.userPhone.includes(keyword)
+      booking.customer?.name?.toLowerCase().includes(keyword) ||
+      booking.pet?.name?.toLowerCase().includes(keyword) ||
+      booking.service?.name?.toLowerCase().includes(keyword) ||
+      booking.customer?.phone?.includes(keyword)
     );
   });
 
-  const updateStatus = (id: string, status: Appointment['status']) => {
-    setBookings((previous) => previous.map((booking) => (booking.id === id ? { ...booking, status } : booking)));
+  const applyUpdatedAppointment = (appointment: ApiAppointment) => {
+    setBookings((previous) =>
+      previous.map((booking) => (booking.id === appointment.id ? appointment : booking)),
+    );
+  };
+
+  const updateStatus = async (id: string, status: AppointmentStatus) => {
+    setError('');
+    setSuccess('');
+    setUpdatingId(id);
+    try {
+      const response = await updateAppointmentStatus(id, status);
+      applyUpdatedAppointment(response.appointment);
+      setSuccess('Cập nhật trạng thái lịch hẹn thành công.');
+    } catch (apiError) {
+      setError(extractApiError(apiError));
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const cancelByManager = async (id: string) => {
+    setError('');
+    setSuccess('');
+    setUpdatingId(id);
+    try {
+      const updated = await cancelAppointment(id);
+      applyUpdatedAppointment(updated);
+      setSuccess('Đã hủy lịch hẹn.');
+    } catch (apiError) {
+      setError(extractApiError(apiError));
+    } finally {
+      setUpdatingId(null);
+    }
   };
 
   const openCheckout = (appointmentId: string) => {
     navigate(`/manager/pos?appointmentId=${appointmentId}`);
-  };
-
-  const viewInvoice = (invoiceId: string) => {
-    navigate(`/manager/invoice/${invoiceId}`);
   };
 
   const statusFilters: Array<{ key: BookingFilter; label: string; count: number }> = [
@@ -49,12 +100,6 @@ export function ManagerBookingsPage() {
     { key: 'completed', label: 'Hoàn thành', count: bookings.filter((booking) => booking.status === 'completed').length },
     { key: 'cancelled', label: 'Đã hủy', count: bookings.filter((booking) => booking.status === 'cancelled').length },
   ];
-
-  // Re-read checkout state every render tick to reflect updates from POS/invoice flow.
-  const checkoutStateOf = (appointmentId: string) => {
-    void checkoutTick;
-    return getAppointmentCheckoutState(appointmentId);
-  };
 
   return (
     <div className='space-y-6'>
@@ -73,6 +118,13 @@ export function ManagerBookingsPage() {
         </div>
       </div>
 
+      {error ? (
+        <div className='rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-700'>{error}</div>
+      ) : null}
+      {success ? (
+        <div className='rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-700'>{success}</div>
+      ) : null}
+
       <div className='flex flex-wrap gap-2'>
         {statusFilters.map((item) => (
           <button
@@ -90,7 +142,7 @@ export function ManagerBookingsPage() {
 
       <div className='bg-white border border-[#2d2a26] rounded-2xl overflow-hidden'>
         <div className='overflow-x-auto'>
-          <table className='w-full text-sm'>
+          <table className='w-full text-sm min-w-[980px]'>
             <thead>
               <tr className='border-b border-[#2d2a26]'>
                 {['Giờ', 'Ngày', 'Khách hàng', 'SĐT', 'Thú cưng', 'Dịch vụ', 'Trạng thái', 'Thanh toán', 'Hành động'].map((header) => (
@@ -102,25 +154,30 @@ export function ManagerBookingsPage() {
             </thead>
             <tbody>
               {filtered.map((booking, index) => {
-                const checkoutState = checkoutStateOf(booking.id);
-                const paidLabel = checkoutState.paid ? 'Đã thanh toán' : 'Chưa thanh toán';
+                const busy = updatingId === booking.id;
+                const paymentLabel =
+                  booking.paymentStatus === 'paid'
+                    ? 'Đã thanh toán'
+                    : booking.paymentStatus === 'refunded'
+                      ? 'Đã hoàn tiền'
+                      : 'Chưa thanh toán';
 
                 return (
                   <motion.tr
                     key={booking.id}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: index * 0.03 }}
+                    transition={{ delay: index * 0.02 }}
                     className='border-b border-[#2d2a26]/10 hover:bg-[#faf9f6]'
                   >
                     <td className='py-3 px-3' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
-                      {booking.time}
+                      {toTimeLabel(booking.appointmentAt)}
                     </td>
-                    <td className='py-3 px-3 text-[#7a756e]'>{booking.date}</td>
-                    <td className='py-3 px-3'>{booking.userName}</td>
-                    <td className='py-3 px-3 text-[#7a756e]'>{booking.userPhone}</td>
-                    <td className='py-3 px-3'>{booking.petName}</td>
-                    <td className='py-3 px-3'>{booking.serviceName}</td>
+                    <td className='py-3 px-3 text-[#7a756e]'>{toDateLabel(booking.appointmentAt)}</td>
+                    <td className='py-3 px-3'>{booking.customer?.name || 'Khách hàng'}</td>
+                    <td className='py-3 px-3 text-[#7a756e]'>{booking.customer?.phone || '--'}</td>
+                    <td className='py-3 px-3'>{booking.pet?.name || 'Thú cưng'}</td>
+                    <td className='py-3 px-3'>{booking.service?.name || 'Dịch vụ'}</td>
                     <td className='py-3 px-3'>
                       <span className={`inline-block text-xs px-3 py-1 rounded-lg border whitespace-nowrap ${getStatusColor(booking.status)}`}>
                         {getStatusLabel(booking.status)}
@@ -129,51 +186,55 @@ export function ManagerBookingsPage() {
                     <td className='py-3 px-3'>
                       <span
                         className={`inline-block text-xs px-3 py-1 rounded-lg border whitespace-nowrap ${
-                          checkoutState.paid
+                          booking.paymentStatus === 'paid'
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
                             : 'bg-[#f5f0eb] text-[#7a756e] border-[#2d2a26]/15'
                         }`}
                       >
-                        {paidLabel}
+                        {paymentLabel}
                       </span>
                     </td>
                     <td className='py-3 px-3'>
                       <div className='flex flex-wrap gap-1.5'>
-                        {booking.status === 'pending' && (
+                        {booking.status === 'pending' ? (
                           <>
                             <button
-                              onClick={() => updateStatus(booking.id, 'confirmed')}
-                              className='px-2.5 py-1 rounded-lg text-xs border border-[#6b8f5e]/30 bg-[#6b8f5e]/10 text-[#6b8f5e] hover:bg-[#6b8f5e]/20 transition-colors'
+                              disabled={busy}
+                              onClick={() => void updateStatus(booking.id, 'confirmed')}
+                              className='px-2.5 py-1 rounded-lg text-xs border border-[#6b8f5e]/30 bg-[#6b8f5e]/10 text-[#6b8f5e] hover:bg-[#6b8f5e]/20 transition-colors disabled:opacity-50'
                             >
                               Xác nhận
                             </button>
                             <button
-                              onClick={() => updateStatus(booking.id, 'cancelled')}
-                              className='px-2.5 py-1 rounded-lg text-xs border border-red-300 bg-red-50 text-red-600 hover:bg-red-100 transition-colors'
+                              disabled={busy}
+                              onClick={() => void cancelByManager(booking.id)}
+                              className='px-2.5 py-1 rounded-lg text-xs border border-red-300 bg-red-50 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50'
                             >
                               Hủy
                             </button>
                           </>
-                        )}
+                        ) : null}
 
-                        {booking.status === 'confirmed' && (
+                        {booking.status === 'confirmed' ? (
                           <>
                             <button
-                              onClick={() => updateStatus(booking.id, 'completed')}
-                              className='px-2.5 py-1 rounded-lg text-xs border border-[#2d2a26]/20 bg-white text-[#2d2a26] hover:bg-[#f0ede8] transition-colors'
+                              disabled={busy}
+                              onClick={() => void updateStatus(booking.id, 'completed')}
+                              className='px-2.5 py-1 rounded-lg text-xs border border-[#2d2a26]/20 bg-white text-[#2d2a26] hover:bg-[#f0ede8] transition-colors disabled:opacity-50'
                             >
                               Hoàn tất khám
                             </button>
                             <button
-                              onClick={() => updateStatus(booking.id, 'cancelled')}
-                              className='px-2.5 py-1 rounded-lg text-xs border border-red-300 bg-red-50 text-red-600 hover:bg-red-100 transition-colors'
+                              disabled={busy}
+                              onClick={() => void cancelByManager(booking.id)}
+                              className='px-2.5 py-1 rounded-lg text-xs border border-red-300 bg-red-50 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50'
                             >
                               Hủy
                             </button>
                           </>
-                        )}
+                        ) : null}
 
-                        {booking.status === 'completed' && !checkoutState.paid && (
+                        {booking.status === 'completed' && booking.paymentStatus !== 'paid' ? (
                           <button
                             onClick={() => openCheckout(booking.id)}
                             className='px-2.5 py-1 rounded-lg text-xs border border-[#2d2a26] bg-[#6b8f5e] text-white hover:-translate-y-0.5 transition-all'
@@ -181,16 +242,11 @@ export function ManagerBookingsPage() {
                           >
                             Chuyển sang POS
                           </button>
-                        )}
+                        ) : null}
 
-                        {booking.status === 'completed' && checkoutState.paid && checkoutState.invoiceId && (
-                          <button
-                            onClick={() => viewInvoice(checkoutState.invoiceId!)}
-                            className='px-2.5 py-1 rounded-lg text-xs border border-[#2d2a26]/20 bg-white text-[#2d2a26] hover:bg-[#f0ede8] transition-colors'
-                          >
-                            Xem hóa đơn
-                          </button>
-                        )}
+                        {booking.status === 'cancelled' || (booking.status === 'completed' && booking.paymentStatus === 'paid') ? (
+                          <span className='text-xs text-[#7a756e]'>-</span>
+                        ) : null}
                       </div>
                     </td>
                   </motion.tr>
@@ -200,14 +256,17 @@ export function ManagerBookingsPage() {
           </table>
         </div>
 
-        {filtered.length === 0 && (
+        {loading ? (
+          <div className='text-center py-8 text-sm text-[#7a756e]'>Đang tải lịch hẹn...</div>
+        ) : null}
+
+        {!loading && filtered.length === 0 ? (
           <div className='text-center py-12 text-[#7a756e]'>
             <CalendarDays className='w-12 h-12 mx-auto mb-3 opacity-30' />
             <p>Không có lịch hẹn phù hợp</p>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );
 }
-

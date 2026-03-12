@@ -2,10 +2,22 @@ export type AuthRole = 'customer' | 'manager';
 
 export type RouteAccess = 'public' | 'customer' | 'manager';
 
+export interface AuthUser {
+  userId: string;
+  firebaseUid: string;
+  email: string;
+  name: string;
+  role: AuthRole;
+  phone?: string;
+}
+
 export interface SessionState {
+  status: 'loading' | 'authenticated' | 'unauthenticated';
   isAuthenticated: boolean;
   role: AuthRole | null;
   userName: string;
+  user: AuthUser | null;
+  error: string | null;
 }
 
 export interface BookingDraft {
@@ -126,4 +138,100 @@ export interface AppointmentCheckoutState {
   appointmentId: string;
   paid: boolean;
   invoiceId?: string;
+}
+
+export type AppointmentStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled';
+
+export type PaymentStatus = 'unpaid' | 'paid' | 'refunded';
+
+export interface ApiService {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  durationMin: number;
+  price: number | string;
+  isActive: boolean;
+}
+
+export interface ApiCustomerSummary {
+  id: string;
+  name: string;
+  phone: string;
+  email: string | null;
+}
+
+export interface ApiPet {
+  id: string;
+  customerId: string;
+  imageUrl: string | null;
+  name: string;
+  species: string;
+  breed: string | null;
+  gender: string | null;
+  dateOfBirth: string | null;
+  weightKg: number | string | null;
+  coatColor: string | null;
+  bloodType: string | null;
+  neutered: 'yes' | 'no' | 'none' | null;
+  microchipId: string | null;
+  specialNotes: string | null;
+  lastCheckupAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  customer?: ApiCustomerSummary | null;
+}
+
+export interface ApiAppointment {
+  id: string;
+  customerId: string;
+  petId: string;
+  serviceId: string;
+  managerId: string | null;
+  appointmentAt: string;
+  note: string | null;
+  status: AppointmentStatus;
+  paymentStatus: PaymentStatus;
+  paidAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  customer?: ApiCustomerSummary | null;
+  pet?: ApiPet | null;
+  service?: ApiService | null;
+}
+
+export interface ApiCustomer {
+  id: string;
+  userId: string | null;
+  name: string;
+  phone: string;
+  email: string | null;
+  segment: CustomerSegment;
+  totalSpent: number | string;
+  totalVisits: number;
+  lastVisitAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  pets?: ApiPet[];
+  appointments?: ApiAppointment[];
+}
+
+export interface PetCardView {
+  id: string;
+  name: string;
+  species: string;
+  breed: string;
+  gender: string;
+  dob: string;
+  weight: string;
+  color: string;
+  microchipId: string;
+  bloodType: string;
+  neutered: boolean | null;
+  specialNotes?: string;
+  image: string;
+  ownerName: string;
+  ownerPhone: string;
+  ownerEmail: string;
+  lastCheckup: string;
 }

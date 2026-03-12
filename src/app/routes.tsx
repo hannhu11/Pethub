@@ -7,7 +7,8 @@ import { ProfilePage, PetListPage, DigitalCardPage } from './components/customer
 import { ManagerLayout } from './components/manager-layout';
 import { ManagerDashboardPage } from './components/manager-dashboard';
 import { ManagerBookingsPage } from './components/manager-bookings';
-import { ManagerCatalogPage, ManagerPetsPage, ManagerCustomersPage } from './components/manager-services';
+import { ManagerCatalogPage } from './components/manager-services';
+import { ManagerCustomersPage, ManagerPetsPage } from './components/manager-crm';
 import { ManagerRemindersPage } from './components/manager-reminders';
 import { ManagerReminderTemplatesPage } from './components/manager-reminder-templates';
 import { ManagerSettingsPage } from './components/manager-settings';
