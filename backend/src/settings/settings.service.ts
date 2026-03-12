@@ -158,7 +158,12 @@ export class SettingsService {
     }
 
     if (!user.passwordHash) {
-      const fallback = process.env.DEFAULT_SENSITIVE_PASSWORD ?? 'admin12345';
+      const fallback = process.env.DEFAULT_SENSITIVE_PASSWORD;
+      if (!fallback || fallback.trim().length < 12) {
+        throw new ForbiddenException(
+          'Sensitive password is not configured. Set DEFAULT_SENSITIVE_PASSWORD (>=12 chars).',
+        );
+      }
       if (password !== fallback) {
         throw new ForbiddenException('Invalid confirmation password');
       }

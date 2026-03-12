@@ -46,8 +46,9 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-replace_me}
-      CORS_ORIGIN: https://app.example.com
-      AUTH_MOCK_ENABLED: "false"
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://app.example.com}
+      AUTH_MOCK_ENABLED: ${AUTH_MOCK_ENABLED:-false}
+      DEFAULT_SENSITIVE_PASSWORD: ${DEFAULT_SENSITIVE_PASSWORD:-}
       FIREBASE_SERVICE_ACCOUNT_JSON: ${FIREBASE_SERVICE_ACCOUNT_JSON:-}
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
       FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL:-}
@@ -75,14 +76,14 @@ services:
       dockerfile: Dockerfile
     container_name: pethub-worker
     restart: always
-    command: sh -c "PORT=4010 node dist/main.js"
+    command: sh -c "PORT=4010 node dist/src/main.js"
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://pethub:${POSTGRES_PASSWORD:-replace_me}@postgres:5432/pethub?schema=public
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-replace_me}
-      AUTH_MOCK_ENABLED: "false"
+      AUTH_MOCK_ENABLED: ${AUTH_MOCK_ENABLED:-false}
       FIREBASE_SERVICE_ACCOUNT_JSON: ${FIREBASE_SERVICE_ACCOUNT_JSON:-}
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
       FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL:-}
@@ -115,7 +116,7 @@ services:
     volumes:
       - ./docker/nginx/pethub.conf:/etc/nginx/conf.d/default.conf:ro
     ports:
-      - "8088:80"
+      - "80:80"
     networks:
       - pethub_net
 
