@@ -51,6 +51,13 @@ Bring up production stack:
 docker compose -f docker-compose.production.yml -p pethub up -d --build
 ```
 
+## Security baseline
+
+- Never commit `.env*`, Firebase service account JSON, or private keys.
+- Rotate all previously exposed keys before go-live.
+- Set `AUTH_MOCK_ENABLED=false` in production.
+- Set `DEFAULT_SENSITIVE_PASSWORD` to a strong value (minimum 12 chars) if password hash is not initialized.
+
 ## 4) Production architecture
 
 - `app.<domain>` -> frontend container
