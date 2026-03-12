@@ -341,7 +341,6 @@ export function RegisterPage() {
   const [showPass, setShowPass] = useState(false);
   const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [name, setName] = useState('');
-  const [clinicName, setClinicName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -369,7 +368,7 @@ export function RegisterPage() {
       const authUser = await register({
         email,
         password,
-        name: name || clinicName || email.split('@')[0] || 'PetHub User',
+        name: name || email.split('@')[0] || 'PetHub User',
         phone,
       });
       navigate(resolveDefaultPath(authUser.role), { replace: true });
@@ -402,18 +401,14 @@ export function RegisterPage() {
           </div>
         </div>
 
-        <div>
-          <label className='text-sm text-[#2d2a26] mb-2 block' style={{ fontWeight: 700 }}>Tên cửa hàng / phòng khám</label>
-          <div className='relative'>
-            <Building2 className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#7a756e]' />
-            <input
-              type='text'
-              value={clinicName}
-              onChange={(event) => setClinicName(event.target.value)}
-              placeholder='Happy Pets Clinic'
-              className='w-full pl-10 pr-4 py-3 border border-[#2d2a26] rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]'
-            />
+        <div className='rounded-xl border border-[#2d2a26]/20 bg-[#6b8f5e]/10 px-3 py-2 text-xs text-[#2d2a26]'>
+          <div className='inline-flex items-center gap-2' style={{ fontWeight: 600 }}>
+            <Building2 className='w-4 h-4 text-[#6b8f5e]' />
+            Tài khoản đăng ký mới mặc định là khách hàng.
           </div>
+          <p className='mt-1 text-[#6f6961]'>
+            Tài khoản quản lý được cấp riêng bởi admin hệ thống.
+          </p>
         </div>
 
         <div>
