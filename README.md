@@ -44,6 +44,7 @@ npm --prefix backend test -- --runInBand
 - Nginx route template: `/docker/nginx/pethub.conf`
 - Logic audit: `/docs/LOGIC_AUDIT.md`
 - Operations runbook: `/docs/ORACLE_PRODUCTION_RUNBOOK_VN.md`
+- Go-live checklist: `/docs/GO_LIVE_24_7.md`
 
 Bring up production stack:
 
@@ -56,6 +57,7 @@ Troubleshooting public access on Oracle:
 - Check the instance subnet uses the security list you edited.
 - If VNIC has NSG attached, add ingress rules there too (`80`, `443`, source `0.0.0.0/0`).
 - Keep OS firewall open (`iptables INPUT policy ACCEPT` or explicit allow rules).
+- `4000` does not need to be public; keep it internal behind Nginx.
 
 ## Security baseline
 
