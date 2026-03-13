@@ -4,6 +4,7 @@ import { Calendar, ChevronRight, Download, Eye, FileText, Mail, PawPrint, Phone,
 import { useAuthSession } from '../auth-session';
 import { extractApiError } from '../lib/api-client';
 import {
+  createPet,
   getPetDigitalCard,
   listMedicalRecords,
   listPets,
@@ -15,7 +16,7 @@ import { BackButton } from './back-button';
 import { PetDigitalCard } from './pet-digital-card';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { downloadElementAsPng } from './export-utils';
-import type { Pet as DigitalPet } from './data';
+import type { Pet as DigitalPet } from './pet-types';
 
 function formatDateLabel(value: string | Date | null | undefined) {
   if (!value) {
@@ -54,6 +55,26 @@ function mapDigitalCardToView(card: ApiDigitalCard): DigitalPet {
     hasDigitalCard: true,
   };
 }
+
+type CustomerPetCreateForm = {
+  name: string;
+  species: string;
+  breed: string;
+  gender: string;
+  dateOfBirth: string;
+  weightKg: string;
+  specialNotes: string;
+};
+
+const emptyCustomerPetCreateForm: CustomerPetCreateForm = {
+  name: '',
+  species: 'Chó',
+  breed: '',
+  gender: '',
+  dateOfBirth: '',
+  weightKg: '',
+  specialNotes: '',
+};
 
 export function ProfilePage() {
   const { session, updateSessionProfile } = useAuthSession();
@@ -214,7 +235,11 @@ export function PetListPage() {
   const [selectedPet, setSelectedPet] = useState<ApiPet | null>(null);
   const [records, setRecords] = useState<ApiMedicalRecord[]>([]);
   const [loadingRecords, setLoadingRecords] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [savingPet, setSavingPet] = useState(false);
+  const [createForm, setCreateForm] = useState<CustomerPetCreateForm>(emptyCustomerPetCreateForm);
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -259,14 +284,57 @@ export function PetListPage() {
     }
   };
 
+  const handleCreatePet = async () => {
+    if (!createForm.name.trim()) {
+      setError('Vui lòng nhập tên thú cưng.');
+      return;
+    }
+
+    setSavingPet(true);
+    setError('');
+    setMessage('');
+    try {
+      const created = await createPet({
+        name: createForm.name.trim(),
+        species: createForm.species.trim() || 'Chó',
+        breed: createForm.breed.trim() || undefined,
+        gender: createForm.gender.trim() || undefined,
+        dateOfBirth: createForm.dateOfBirth || undefined,
+        weightKg: createForm.weightKg ? Number(createForm.weightKg) : undefined,
+        specialNotes: createForm.specialNotes.trim() || undefined,
+      });
+      setPets((prev) => [created, ...prev]);
+      setShowCreateForm(false);
+      setCreateForm(emptyCustomerPetCreateForm);
+      setMessage('Đã thêm thú cưng thành công.');
+    } catch (apiError) {
+      setError(extractApiError(apiError));
+    } finally {
+      setSavingPet(false);
+    }
+  };
+
   return (
     <div className='py-12'>
       <div className='max-w-5xl mx-auto px-4'>
-        <h1 className='text-2xl text-[#2d2a26] mb-8' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
-          Thú cưng của tôi
-        </h1>
+        <div className='mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3'>
+          <h1 className='text-2xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            Thú cưng của tôi
+          </h1>
+          <button
+            type='button'
+            onClick={() => setShowCreateForm(true)}
+            className='inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#2d2a26] bg-[#6b8f5e] text-white'
+          >
+            <PawPrint className='w-4 h-4' />
+            Thêm thú cưng
+          </button>
+        </div>
 
         {error ? <div className='mb-4 rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-700'>{error}</div> : null}
+        {message ? (
+          <div className='mb-4 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-700'>{message}</div>
+        ) : null}
 
         <div className='grid md:grid-cols-2 gap-6'>
           {pets.map((pet) => (
@@ -304,7 +372,11 @@ export function PetListPage() {
         </div>
 
         {loading ? <p className='text-sm text-[#7a756e] mt-4'>Đang tải thú cưng...</p> : null}
-        {!loading && pets.length === 0 ? <p className='text-sm text-[#7a756e] mt-4'>Bạn chưa có thú cưng nào.</p> : null}
+        {!loading && pets.length === 0 ? (
+          <div className='text-sm text-[#7a756e] mt-4 rounded-xl border border-[#2d2a26]/20 bg-white p-4'>
+            Bạn chưa có thú cưng nào. Hãy thêm thú cưng để có thể đặt lịch dịch vụ.
+          </div>
+        ) : null}
 
         {selectedPet ? (
           <div className='fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4' onClick={() => setSelectedPet(null)}>
@@ -335,6 +407,81 @@ export function PetListPage() {
                     </div>
                   ))}
                 </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {showCreateForm ? (
+          <div className='fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4' onClick={() => !savingPet && setShowCreateForm(false)}>
+            <div className='w-full max-w-xl bg-[#faf9f6] border border-[#2d2a26] rounded-2xl p-5 space-y-3' onClick={(event) => event.stopPropagation()}>
+              <h2 className='text-lg text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                Thêm thú cưng mới
+              </h2>
+              <div className='grid sm:grid-cols-2 gap-3'>
+                <input
+                  value={createForm.name}
+                  onChange={(event) => setCreateForm((prev) => ({ ...prev, name: event.target.value }))}
+                  placeholder='Tên thú cưng'
+                  className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
+                />
+                <input
+                  value={createForm.species}
+                  onChange={(event) => setCreateForm((prev) => ({ ...prev, species: event.target.value }))}
+                  placeholder='Loài (Chó/Mèo/...)'
+                  className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
+                />
+                <input
+                  value={createForm.breed}
+                  onChange={(event) => setCreateForm((prev) => ({ ...prev, breed: event.target.value }))}
+                  placeholder='Giống'
+                  className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
+                />
+                <input
+                  value={createForm.gender}
+                  onChange={(event) => setCreateForm((prev) => ({ ...prev, gender: event.target.value }))}
+                  placeholder='Giới tính'
+                  className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
+                />
+                <input
+                  type='date'
+                  value={createForm.dateOfBirth}
+                  onChange={(event) => setCreateForm((prev) => ({ ...prev, dateOfBirth: event.target.value }))}
+                  className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
+                />
+                <input
+                  type='number'
+                  min={0}
+                  value={createForm.weightKg}
+                  onChange={(event) => setCreateForm((prev) => ({ ...prev, weightKg: event.target.value }))}
+                  placeholder='Cân nặng (kg)'
+                  className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
+                />
+              </div>
+              <textarea
+                rows={3}
+                value={createForm.specialNotes}
+                onChange={(event) => setCreateForm((prev) => ({ ...prev, specialNotes: event.target.value }))}
+                placeholder='Ghi chú'
+                className='w-full p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white resize-none'
+              />
+              <div className='grid grid-cols-2 gap-2'>
+                <button
+                  type='button'
+                  onClick={() => setShowCreateForm(false)}
+                  disabled={savingPet}
+                  className='py-3 rounded-xl border border-[#2d2a26]/30 bg-white text-sm disabled:opacity-60'
+                >
+                  Hủy
+                </button>
+                <button
+                  type='button'
+                  onClick={() => void handleCreatePet()}
+                  disabled={savingPet}
+                  className='py-3 rounded-xl bg-[#6b8f5e] text-white border border-[#2d2a26] text-sm disabled:opacity-60'
+                >
+                  {savingPet ? 'Đang lưu...' : 'Lưu thú cưng'}
+                </button>
               </div>
             </div>
           </div>

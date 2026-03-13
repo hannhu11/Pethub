@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router';
 import {
   PawPrint,
@@ -20,13 +20,17 @@ import {
   Inbox,
 } from 'lucide-react';
 import { useAuthSession } from '../auth-session';
-import { mockAppointments, mockPets, mockUsers } from './data';
 import { getClinicSettings, getProfileSettings, subscribeManagerSettingsUpdates } from './manager-settings-store';
 import {
-  getNotifications,
+  listAppointments,
+  listCustomers,
+  listNotifications,
+  listPets,
   markNotificationAsRead,
-  subscribeNotificationUpdates,
-} from './manager-notifications-store';
+  type ApiNotification,
+} from '../lib/pethub-api';
+import type { ApiAppointment, ApiCustomer, ApiPet } from '../types';
+import { extractApiError } from '../lib/api-client';
 import {
   CommandDialog,
   CommandEmpty,
@@ -74,6 +78,23 @@ const sidebarItems: SidebarItem[] = [
   { type: 'link', to: '/manager/reminders', label: 'Nhắc nhở', icon: Zap },
 ];
 
+function formatTimestamp(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString('vi-VN');
+}
+
+function initialsFromName(name: string) {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part[0]?.toUpperCase())
+    .join('')
+    .slice(0, 2) || 'PH';
+}
+
 
 function SidebarNav({
   items,
@@ -120,23 +141,23 @@ export function ManagerLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
-  const [notifications, setNotifications] = useState(getNotifications());
+  const [notifications, setNotifications] = useState<ApiNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [quickSearchData, setQuickSearchData] = useState<{
+    pets: ApiPet[];
+    customers: ApiCustomer[];
+    appointments: ApiAppointment[];
+  }>({
+    pets: [],
+    customers: [],
+    appointments: [],
+  });
   const [managerProfile, setManagerProfile] = useState(getProfileSettings());
   const [clinic, setClinic] = useState(getClinicSettings());
+  const [loadError, setLoadError] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuthSession();
-
-  const unreadCount = notifications.filter((item) => !item.read).length;
-
-  const quickSearchData = useMemo(
-    () => ({
-      pets: mockPets.slice(0, 6),
-      customers: mockUsers.filter((u) => u.role === 'customer').slice(0, 6),
-      appointments: mockAppointments.slice(0, 6),
-    }),
-    [],
-  );
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -153,9 +174,45 @@ export function ManagerLayout() {
   }, []);
 
   useEffect(() => {
-    return subscribeNotificationUpdates(() => {
-      setNotifications(getNotifications());
-    });
+    let mounted = true;
+    const run = async (silent = false) => {
+      if (!silent) {
+        setLoadError('');
+      }
+      try {
+        const [notificationData, customers, pets, appointments] = await Promise.all([
+          listNotifications('all'),
+          listCustomers(),
+          listPets(),
+          listAppointments(),
+        ]);
+        if (!mounted) {
+          return;
+        }
+        setNotifications(notificationData.items.slice(0, 20));
+        setUnreadCount(notificationData.unread);
+        setQuickSearchData({
+          pets: pets.slice(0, 12),
+          customers: customers.slice(0, 12),
+          appointments: appointments.slice(0, 12),
+        });
+      } catch (apiError) {
+        if (!mounted || silent) {
+          return;
+        }
+        setLoadError(extractApiError(apiError));
+      }
+    };
+
+    void run(false);
+    const timer = window.setInterval(() => {
+      void run(true);
+    }, 15000);
+
+    return () => {
+      mounted = false;
+      window.clearInterval(timer);
+    };
   }, []);
 
   useEffect(() => {
@@ -184,10 +241,17 @@ export function ManagerLayout() {
     navigate(to);
   };
 
-  const handleNotificationClick = (id: number, to: string) => {
-    markNotificationAsRead(id);
+  const handleNotificationClick = async (notification: ApiNotification) => {
+    if (!notification.read) {
+      try {
+        const data = await markNotificationAsRead(notification.id);
+        setUnreadCount(data.unread);
+      } catch {
+        // Keep navigation even when mark-read fails.
+      }
+    }
     setNotifOpen(false);
-    navigate(to);
+    navigate(notification.linkTo || '/manager');
   };
 
   return (
@@ -228,7 +292,7 @@ export function ManagerLayout() {
             <DropdownMenuTrigger asChild>
               <button className='w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-[#2d2a26]/20 bg-white hover:-translate-y-0.5 transition-all text-left'>
                 <div className='w-8 h-8 rounded-full bg-[#c67d5b] flex items-center justify-center border border-[#2d2a26]/20'>
-                  <span className='text-white text-xs' style={{ fontWeight: 600 }}>PH</span>
+                  <span className='text-white text-xs' style={{ fontWeight: 600 }}>{initialsFromName(managerProfile.name)}</span>
                 </div>
                 <div className='min-w-0'>
                   <p className='text-sm truncate' style={{ fontWeight: 600 }}>{managerProfile.name}</p>
@@ -304,7 +368,7 @@ export function ManagerLayout() {
                 className='w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-[#2d2a26]/20 bg-white text-left'
               >
                 <div className='w-8 h-8 rounded-full bg-[#c67d5b] flex items-center justify-center border border-[#2d2a26]/20'>
-                  <span className='text-white text-xs' style={{ fontWeight: 600 }}>PH</span>
+                  <span className='text-white text-xs' style={{ fontWeight: 600 }}>{initialsFromName(managerProfile.name)}</span>
                 </div>
                 <div>
                   <p className='text-sm' style={{ fontWeight: 600 }}>{managerProfile.name}</p>
@@ -372,7 +436,7 @@ export function ManagerLayout() {
                   <button
                     key={item.id}
                     type='button'
-                    onClick={() => handleNotificationClick(item.id, item.to)}
+                    onClick={() => void handleNotificationClick(item)}
                     className={`w-full text-left px-4 py-3 border-b border-[#2d2a26]/5 hover:bg-[#faf9f6] transition-colors ${
                       !item.read ? 'bg-[#6b8f5e]/5' : ''
                     }`}
@@ -383,7 +447,7 @@ export function ManagerLayout() {
                         <p className='text-xs text-[#2d2a26]' style={!item.read ? { fontWeight: 500 } : {}}>
                           {item.title}
                         </p>
-                        <p className='text-[10px] text-[#7a756e] mt-0.5'>{item.createdAt}</p>
+                        <p className='text-[10px] text-[#7a756e] mt-0.5'>{formatTimestamp(item.createdAt)}</p>
                         <p className='text-[10px] text-[#9b948b] mt-0.5'>{item.body}</p>
                       </div>
                     </div>
@@ -412,7 +476,7 @@ export function ManagerLayout() {
               className='flex items-center gap-2 px-2 py-1 rounded-xl border border-[#2d2a26]/15 hover:bg-[#f0ede8] transition-all'
             >
               <div className='w-7 h-7 rounded-full bg-[#c67d5b] flex items-center justify-center border border-[#2d2a26]/20'>
-                <span className='text-white text-xs' style={{ fontWeight: 600 }}>PH</span>
+                <span className='text-white text-xs' style={{ fontWeight: 600 }}>{initialsFromName(managerProfile.name)}</span>
               </div>
               <span className='text-sm hidden md:block max-w-[9rem] truncate' style={{ fontWeight: 600 }}>
                 {managerProfile.name}
@@ -422,6 +486,9 @@ export function ManagerLayout() {
         </header>
 
         <main className='flex-1 p-4 md:p-6 overflow-auto print:p-0 print:m-0 print:overflow-visible print:bg-white'>
+          {loadError ? (
+            <div className='mb-4 rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-700'>{loadError}</div>
+          ) : null}
           <Outlet />
         </main>
       </div>
@@ -457,7 +524,7 @@ export function ManagerLayout() {
             {quickSearchData.pets.map((pet) => (
               <CommandItem key={pet.id} onSelect={() => handleCommandNavigate('/manager/pets')}>
                 <PawPrint className='w-4 h-4 text-[#6b8f5e]' />
-                {pet.name} • {pet.breed}
+                {pet.name} • {pet.breed || pet.species}
                 <CommandShortcut>{pet.id}</CommandShortcut>
               </CommandItem>
             ))}
@@ -481,8 +548,8 @@ export function ManagerLayout() {
             {quickSearchData.appointments.map((booking) => (
               <CommandItem key={booking.id} onSelect={() => handleCommandNavigate('/manager/bookings')}>
                 <Stethoscope className='w-4 h-4 text-[#c67d5b]' />
-                {booking.petName} • {booking.serviceName}
-                <CommandShortcut>{booking.time}</CommandShortcut>
+                {(booking.pet?.name || 'Thú cưng')} • {(booking.service?.name || 'Dịch vụ')}
+                <CommandShortcut>{new Date(booking.appointmentAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</CommandShortcut>
               </CommandItem>
             ))}
           </CommandGroup>

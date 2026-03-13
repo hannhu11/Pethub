@@ -212,3 +212,64 @@
 
 - Security note:
   - No new secrets/keys were added to repository files in this hotfix.
+
+## Stabilization Continuation 2026-03-14 (De-mock hard cleanup + VPS redeploy)
+- Trigger from latest QA:
+  - Charts missing in manager overview.
+  - POS/service/product options not syncing.
+  - Manager pets flow error: `customerId is required for manager pet operation`.
+  - Reminder/notification screens still showing legacy sample data.
+  - payOS dashboard webhook validation still reporting 400 in some attempts.
+
+- Backend fixes:
+  - `backend/src/pets/pets.service.ts`
+    - Manager `GET /api/pets` no longer requires `customerId`.
+    - Optional `customerId` (when provided) is validated against current clinic.
+  - `backend/src/analytics/analytics.service.ts`
+    - Extended overview response with chart-ready aggregates:
+      - `monthlyRevenue`
+      - `serviceRevenue`
+      - `topServiceRevenue` from same aggregate source (for consistency).
+  - `backend/src/payments/dto/payos-webhook.dto.ts`
+    - Added DTO type transforms for webhook payload normalization.
+  - `backend/src/payments/payments.service.ts`
+    - More tolerant webhook flow:
+      - probe payloads acknowledged (`200`)
+      - invalid/unknown payloads return `ignored` (acknowledged) instead of hard-fail
+      - signature verification kept for real matched transactions.
+
+- Frontend sync/de-mock fixes:
+  - Rewired manager pages to real APIs (catalog, dashboard charts, bookings, reminders, notifications, POS, invoice).
+  - Added POS prefill from appointment (`/manager/pos?appointmentId=...`).
+  - Added customer-side pet creation modal in dashboard flow (blank DB friendly).
+  - Appointment UX fallback improved for no services / no pets.
+  - Removed remaining mock dataset files from runtime:
+    - deleted `src/app/components/data.ts`
+    - deleted `src/app/components/manager-reminders-store.ts`
+    - deleted `src/app/components/manager-notifications-store.ts`
+    - added `src/app/components/pet-types.ts` to keep shared `Pet` type without mock payloads.
+
+- Seed policy hardening:
+  - Replaced `backend/prisma/seed.ts` with production-safe behavior:
+    - default `SEED_MODE=empty` => no sample data inserted.
+    - `SEED_MODE=demo` currently reset-only (no hardcoded demo customers/pets/services).
+  - Goal: prevent accidental re-seeding of fake customers/services/reminders in future deployments.
+
+- Verification (local):
+  - Frontend build: pass (`npm run build`)
+  - Backend build: pass (`backend npm run build`)
+  - Backend tests: pass (`backend npm test -- --runInBand`)
+
+- VPS deployment (before git push):
+  - Synced changed files to `/home/ubuntu/pethub`.
+  - Removed deleted mock files from VPS source tree.
+  - Rebuilt/restarted stack:
+    - `api`, `worker`, `web`, `nginx`.
+  - Health checks:
+    - `GET /api/health` => `200`
+    - `GET /api/payments/payos/webhook` => `200`
+    - `POST /api/payments/payos/webhook` with empty JSON probe => `200`.
+
+- Security note:
+  - No secrets committed.
+  - No env values written into tracked files.

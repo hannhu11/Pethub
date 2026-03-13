@@ -8,6 +8,7 @@ import type {
   AuthUser,
   CustomerSegment,
   OnboardingState,
+  ReminderStatus,
 } from '../types';
 
 type SyncFirebasePayload = {
@@ -95,6 +96,18 @@ export interface PosCheckoutResponse {
   };
 }
 
+export interface PosPrefillResponse {
+  appointment: ApiAppointment | null;
+  suggestedItems?: Array<{
+    itemType: 'service' | 'product';
+    serviceId?: string;
+    productId?: string;
+    name: string;
+    qty: number;
+    unitPrice: number;
+  }>;
+}
+
 export interface AnalyticsOverviewResponse {
   range: {
     from: string | null;
@@ -112,6 +125,17 @@ export interface AnalyticsOverviewResponse {
     serviceName: string;
     revenue: number;
   } | null;
+  monthlyRevenue: Array<{
+    key: string;
+    month: string;
+    paidRevenue: number;
+    paidInvoices: number;
+  }>;
+  serviceRevenue: Array<{
+    serviceId: string;
+    serviceName: string;
+    revenue: number;
+  }>;
 }
 
 export interface AnalyticsLtvSummaryResponse {
@@ -133,10 +157,133 @@ export interface InvoiceDetailsResponse {
   invoice: {
     id: string;
     invoiceNo: string;
+    issuedAt: string;
+    paymentMethod: 'cash' | 'transfer' | 'card' | 'payos' | 'momo' | 'zalopay';
     paymentStatus: 'unpaid' | 'paid' | 'refunded';
+    subtotal: number | string;
+    taxPercent: number | string;
+    taxAmount: number | string;
     grandTotal: number | string;
     customerId: string;
+    customer: {
+      id: string;
+      name: string;
+      phone: string;
+      email: string | null;
+    };
+    appointment: {
+      id: string;
+      pet: {
+        id: string;
+        name: string;
+        species: string;
+        breed: string | null;
+      } | null;
+    } | null;
+    items: Array<{
+      id: string;
+      itemType: 'service' | 'product';
+      name: string;
+      qty: number;
+      unitPrice: number | string;
+      total: number | string;
+    }>;
   };
+  clinic: {
+    clinicName: string;
+    phone: string;
+    address: string;
+    invoiceNote: string | null;
+  } | null;
+}
+
+export interface UpsertCatalogServicePayload {
+  code: string;
+  name: string;
+  description?: string;
+  durationMin: number;
+  price: number;
+}
+
+export interface UpsertCatalogProductPayload {
+  sku: string;
+  name: string;
+  category?: string;
+  description?: string;
+  price: number;
+  stock: number;
+}
+
+export interface ApiReminder {
+  id: string;
+  clinicId: string;
+  customerId: string;
+  petId: string;
+  channel: 'email' | 'sms';
+  templateName: string | null;
+  message: string;
+  scheduledAt: string | null;
+  sentAt: string | null;
+  failedReason: string | null;
+  status: ReminderStatus;
+  createdAt: string;
+  updatedAt: string;
+  customer: {
+    id: string;
+    name: string;
+    phone: string;
+    email: string | null;
+  };
+  pet: {
+    id: string;
+    name: string;
+    species: string;
+    breed: string | null;
+  };
+}
+
+export interface ApiReminderMetrics {
+  sent: number;
+  failed: number;
+  scheduled: number;
+  cancelled: number;
+  successRate: number;
+}
+
+export interface ApiRemindersListResponse {
+  items: ApiReminder[];
+  metrics: ApiReminderMetrics;
+}
+
+export interface CreateReminderFromTemplatePayload {
+  templateId?: string;
+  templateName?: string;
+  customerId: string;
+  petId: string;
+  channel: 'email' | 'sms';
+  scheduleAt?: string;
+  sendNow?: boolean;
+  overrideMessage?: string;
+}
+
+export interface ApiNotification {
+  id: string;
+  clinicId: string;
+  userId: string | null;
+  customerId: string | null;
+  target: 'customer' | 'manager' | 'all';
+  title: string;
+  body: string;
+  linkTo: string | null;
+  read: boolean;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface ApiNotificationsListResponse {
+  items: ApiNotification[];
+  unread: number;
+  filter: 'all' | 'unread' | 'read';
 }
 
 export interface ApiMedicalRecord {
@@ -219,6 +366,16 @@ export async function listCatalogProducts(): Promise<ApiProduct[]> {
   return data;
 }
 
+export async function upsertCatalogService(payload: UpsertCatalogServicePayload): Promise<ApiService> {
+  const { data } = await apiClient.post<ApiService>('/catalog/services', payload);
+  return data;
+}
+
+export async function upsertCatalogProduct(payload: UpsertCatalogProductPayload): Promise<ApiProduct> {
+  const { data } = await apiClient.post<ApiProduct>('/catalog/products', payload);
+  return data;
+}
+
 export async function listCustomers(segment?: CustomerSegment): Promise<ApiCustomer[]> {
   const { data } = await apiClient.get<ApiCustomer[]>('/customers', {
     params: segment ? { segment } : undefined,
@@ -298,6 +455,13 @@ export async function checkoutPos(payload: PosCheckoutPayload): Promise<PosCheck
   return data;
 }
 
+export async function getPosPrefill(appointmentId: string): Promise<PosPrefillResponse> {
+  const { data } = await apiClient.get<PosPrefillResponse>('/pos/prefill', {
+    params: { appointmentId },
+  });
+  return data;
+}
+
 export async function getAnalyticsOverview(query?: {
   from?: string;
   to?: string;
@@ -315,5 +479,47 @@ export async function getAnalyticsCustomerLtvSummary(): Promise<AnalyticsLtvSumm
 
 export async function getInvoiceById(id: string): Promise<InvoiceDetailsResponse> {
   const { data } = await apiClient.get<InvoiceDetailsResponse>(`/invoices/${id}`);
+  return data;
+}
+
+export async function listManagerReminders(status?: ReminderStatus): Promise<ApiRemindersListResponse> {
+  const { data } = await apiClient.get<ApiRemindersListResponse>('/reminders', {
+    params: status ? { status } : undefined,
+  });
+  return data;
+}
+
+export async function createReminderFromTemplate(
+  payload: CreateReminderFromTemplatePayload,
+): Promise<{ reminder: ApiReminder }> {
+  const { data } = await apiClient.post<{ reminder: ApiReminder }>('/reminders/from-template', payload);
+  return data;
+}
+
+export async function cancelReminder(id: string): Promise<{ reminder: ApiReminder }> {
+  const { data } = await apiClient.patch<{ reminder: ApiReminder }>(`/reminders/${id}/cancel`);
+  return data;
+}
+
+export async function listNotifications(
+  filter: 'all' | 'unread' | 'read' = 'all',
+): Promise<ApiNotificationsListResponse> {
+  const { data } = await apiClient.get<ApiNotificationsListResponse>('/notifications', {
+    params: { filter },
+  });
+  return data;
+}
+
+export async function markNotificationAsRead(id: string): Promise<{ item: ApiNotification; unread: number }> {
+  const { data } = await apiClient.patch<{ item: ApiNotification; unread: number }>(
+    `/notifications/${id}/read`,
+  );
+  return data;
+}
+
+export async function markAllNotificationsAsRead(): Promise<{ updated: number; unread: number }> {
+  const { data } = await apiClient.patch<{ updated: number; unread: number }>(
+    '/notifications/read-all',
+  );
   return data;
 }

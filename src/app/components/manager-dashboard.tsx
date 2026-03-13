@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import { AlertTriangle, DollarSign, FileText, Stethoscope, Users } from 'lucide-react';
+import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import {
   getAnalyticsCustomerLtvSummary,
   getAnalyticsOverview,
@@ -22,6 +23,8 @@ type KpiCard = {
   color: string;
 };
 
+const serviceChartColors = ['#6b8f5e', '#4a90d9', '#c67d5b', '#b8850a', '#6587a8', '#8f6b5e', '#3d7c72', '#7a6ca9'];
+
 export function ManagerDashboardPage() {
   const [overview, setOverview] = useState<AnalyticsOverviewResponse | null>(null);
   const [ltvSummary, setLtvSummary] = useState<AnalyticsLtvSummaryResponse | null>(null);
@@ -31,9 +34,11 @@ export function ManagerDashboardPage() {
   useEffect(() => {
     let mounted = true;
 
-    const run = async () => {
-      setLoading(true);
-      setError('');
+    const run = async (silent = false) => {
+      if (!silent) {
+        setLoading(true);
+        setError('');
+      }
 
       const now = new Date();
       const from = new Date(now);
@@ -55,20 +60,25 @@ export function ManagerDashboardPage() {
         setOverview(overviewData);
         setLtvSummary(ltvData);
       } catch (apiError) {
-        if (mounted) {
+        if (mounted && !silent) {
           setError(extractApiError(apiError));
         }
       } finally {
-        if (mounted) {
+        if (mounted && !silent) {
           setLoading(false);
         }
       }
     };
 
-    void run();
+    void run(false);
+
+    const timer = window.setInterval(() => {
+      void run(true);
+    }, 30000);
 
     return () => {
       mounted = false;
+      window.clearInterval(timer);
     };
   }, []);
 
@@ -77,6 +87,14 @@ export function ManagerDashboardPage() {
     () => (ltvSummary?.items ?? []).reduce((acc, item) => acc + Number(item.totalSpent ?? 0), 0),
     [ltvSummary?.items],
   );
+
+  const monthlyRevenue = overview?.monthlyRevenue ?? [];
+  const serviceRevenue = overview?.serviceRevenue ?? [];
+
+  const serviceRevenueChartData = serviceRevenue.slice(0, 6).map((item, index) => ({
+    ...item,
+    fill: serviceChartColors[index % serviceChartColors.length],
+  }));
 
   const kpiCards: KpiCard[] = [
     {
@@ -143,6 +161,70 @@ export function ManagerDashboardPage() {
             <p className='text-xs text-[#7a756e] mt-2'>{card.hint}</p>
           </motion.div>
         ))}
+      </div>
+
+      <div className='grid grid-cols-1 xl:grid-cols-3 gap-6'>
+        <div className='xl:col-span-2 bg-white border border-[#2d2a26] rounded-2xl p-5'>
+          <h3 className='text-base mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            Doanh thu theo tháng
+          </h3>
+          <div className='h-64'>
+            {monthlyRevenue.length === 0 ? (
+              <div className='h-full rounded-xl border border-dashed border-[#2d2a26]/25 flex items-center justify-center text-sm text-[#7a756e]'>
+                Chưa có dữ liệu doanh thu để hiển thị biểu đồ.
+              </div>
+            ) : (
+              <ResponsiveContainer width='100%' height='100%'>
+                <BarChart data={monthlyRevenue}>
+                  <XAxis dataKey='month' stroke='#7a756e' fontSize={12} />
+                  <YAxis stroke='#7a756e' fontSize={12} tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k`} />
+                  <Tooltip
+                    formatter={(value: number) => formatCurrency(value)}
+                    labelFormatter={(label) => `Tháng ${label.replace('Th', '')}`}
+                  />
+                  <Bar dataKey='paidRevenue' fill='#6b8f5e' radius={[10, 10, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+
+        <div className='bg-white border border-[#2d2a26] rounded-2xl p-5'>
+          <h3 className='text-base mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            Doanh thu theo dịch vụ
+          </h3>
+          <div className='h-64'>
+            {serviceRevenueChartData.length === 0 ? (
+              <div className='h-full rounded-xl border border-dashed border-[#2d2a26]/25 flex items-center justify-center text-sm text-[#7a756e]'>
+                Chưa có dịch vụ phát sinh doanh thu.
+              </div>
+            ) : (
+              <ResponsiveContainer width='100%' height='100%'>
+                <PieChart>
+                  <Pie data={serviceRevenueChartData} dataKey='revenue' nameKey='serviceName' cx='50%' cy='50%' innerRadius={56} outerRadius={90}>
+                    {serviceRevenueChartData.map((entry) => (
+                      <Cell key={entry.serviceId} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+          <div className='mt-2 space-y-1'>
+            {serviceRevenueChartData.slice(0, 4).map((item) => (
+              <div key={item.serviceId} className='flex items-center justify-between text-xs'>
+                <span className='inline-flex items-center gap-2 text-[#2d2a26] min-w-0'>
+                  <span className='w-2.5 h-2.5 rounded-full' style={{ backgroundColor: item.fill }} />
+                  <span className='truncate'>{item.serviceName}</span>
+                </span>
+                <span className='text-[#6b8f5e]' style={{ fontWeight: 700 }}>
+                  {formatCurrency(item.revenue)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>

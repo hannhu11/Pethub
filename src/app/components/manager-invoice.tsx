@@ -1,34 +1,91 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
-import { ArrowLeft, Download, Printer, QrCode } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
-import { getInvoiceById } from './manager-checkout-store';
-import { formatCurrency, mockPets, mockUsers } from './data';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router';
+import { ArrowLeft, Download, Printer } from 'lucide-react';
+import { extractApiError } from '../lib/api-client';
 import { downloadElementAsPdf } from './export-utils';
-import { getClinicSettings, subscribeManagerSettingsUpdates } from './manager-settings-store';
+import { getInvoiceById, type InvoiceDetailsResponse } from '../lib/pethub-api';
 
 const paymentMethodLabel: Record<string, string> = {
   cash: 'Tiền mặt',
   transfer: 'Chuyển khoản',
   card: 'Thẻ',
+  payos: 'payOS',
+  momo: 'MoMo',
+  zalopay: 'ZaloPay',
 };
+
+function formatCurrency(value: number | string) {
+  const normalized = Number(value ?? 0);
+  return `${Math.round(normalized).toLocaleString('vi-VN')} ₫`;
+}
+
+function formatDateTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString('vi-VN');
+}
 
 export function ManagerInvoicePage() {
   const { invoiceId } = useParams();
   const navigate = useNavigate();
   const invoiceRef = useRef<HTMLDivElement>(null);
+  const [payload, setPayload] = useState<InvoiceDetailsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
-  const [clinic, setClinic] = useState(getClinicSettings());
-
-  const invoice = useMemo(() => (invoiceId ? getInvoiceById(invoiceId) : undefined), [invoiceId]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    return subscribeManagerSettingsUpdates(() => {
-      setClinic(getClinicSettings());
-    });
-  }, []);
+    let mounted = true;
+    const run = async () => {
+      if (!invoiceId) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      setError('');
+      try {
+        const data = await getInvoiceById(invoiceId);
+        if (mounted) {
+          setPayload(data);
+        }
+      } catch (apiError) {
+        if (mounted) {
+          setError(extractApiError(apiError));
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+    void run();
+    return () => {
+      mounted = false;
+    };
+  }, [invoiceId]);
 
-  if (!invoice) {
+  const invoice = payload?.invoice;
+  const clinic = payload?.clinic;
+
+  const handleDownloadPdf = async () => {
+    if (!invoiceRef.current || downloading || !invoice) return;
+    setDownloading(true);
+    try {
+      await downloadElementAsPdf(invoiceRef.current, {
+        fileName: `${invoice.invoiceNo.toLowerCase()}.pdf`,
+      });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  if (loading) {
+    return <div className='text-sm text-[#7a756e]'>Đang tải hóa đơn...</div>;
+  }
+
+  if (error || !invoice) {
     return (
       <div className='space-y-4'>
         <button
@@ -43,26 +100,11 @@ export function ManagerInvoicePage() {
           <h1 className='text-2xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
             Không tìm thấy hóa đơn
           </h1>
-          <p className='text-sm text-[#7a756e] mt-2'>Mã hóa đơn không tồn tại hoặc đã bị xóa khỏi bộ nhớ mock.</p>
+          <p className='text-sm text-[#7a756e] mt-2'>{error || 'Hóa đơn không tồn tại hoặc không thuộc clinic hiện tại.'}</p>
         </div>
       </div>
     );
   }
-
-  const customer = mockUsers.find((user) => user.id === invoice.customerId);
-  const pet = mockPets.find((item) => item.id === invoice.petId);
-
-  const handleDownloadPdf = async () => {
-    if (!invoiceRef.current || downloading) return;
-    setDownloading(true);
-    try {
-      await downloadElementAsPdf(invoiceRef.current, {
-        fileName: `${invoice.id.toLowerCase()}.pdf`,
-      });
-    } finally {
-      setDownloading(false);
-    }
-  };
 
   return (
     <div className='space-y-4 print:space-y-0'>
@@ -86,7 +128,7 @@ export function ManagerInvoicePage() {
           </button>
           <button
             type='button'
-            onClick={handleDownloadPdf}
+            onClick={() => void handleDownloadPdf()}
             disabled={downloading}
             className='inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[#2d2a26] bg-[#6b8f5e] text-white hover:-translate-y-0.5 disabled:opacity-70 disabled:hover:translate-y-0 transition-all text-sm'
           >
@@ -106,31 +148,39 @@ export function ManagerInvoicePage() {
             <p className='text-2xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
               Pet<span className='text-[#c67d5b]'>Hub</span>
             </p>
-            <p className='text-sm text-[#7a756e] mt-1'>{clinic.name}</p>
-            <p className='text-sm text-[#7a756e]'>{clinic.address}</p>
-            <p className='text-sm text-[#7a756e]'>Hotline: {clinic.phone}</p>
+            <p className='text-sm text-[#7a756e] mt-1'>{clinic?.clinicName || 'PetHub Clinic'}</p>
+            <p className='text-sm text-[#7a756e]'>{clinic?.address || 'Địa chỉ chưa cập nhật'}</p>
+            <p className='text-sm text-[#7a756e]'>Hotline: {clinic?.phone || 'N/A'}</p>
           </div>
           <div className='text-right'>
             <p className='text-lg text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
               HÓA ĐƠN THANH TOÁN
             </p>
-            <p className='text-sm text-[#7a756e] mt-1'>Mã: {invoice.id}</p>
-            <p className='text-sm text-[#7a756e]'>Ngày: {invoice.createdAt}</p>
+            <p className='text-sm text-[#7a756e] mt-1'>Mã: {invoice.invoiceNo}</p>
+            <p className='text-sm text-[#7a756e]'>Ngày: {formatDateTime(invoice.issuedAt)}</p>
           </div>
         </div>
 
         <div className='grid md:grid-cols-2 gap-4 mt-4'>
           <div className='border border-[#2d2a26]/20 rounded-xl p-4'>
             <p className='text-xs uppercase tracking-wider text-[#7a756e]'>Khách hàng</p>
-            <p className='text-base text-[#2d2a26] mt-1' style={{ fontWeight: 600 }}>{customer?.name ?? 'Khách lẻ'}</p>
-            <p className='text-sm text-[#7a756e]'>{customer?.phone ?? 'Chưa có SĐT'}</p>
-            <p className='text-sm text-[#7a756e]'>{customer?.email ?? 'Chưa có email'}</p>
+            <p className='text-base text-[#2d2a26] mt-1' style={{ fontWeight: 600 }}>{invoice.customer.name}</p>
+            <p className='text-sm text-[#7a756e]'>{invoice.customer.phone}</p>
+            <p className='text-sm text-[#7a756e]'>{invoice.customer.email || 'Chưa có email'}</p>
           </div>
           <div className='border border-[#2d2a26]/20 rounded-xl p-4'>
             <p className='text-xs uppercase tracking-wider text-[#7a756e]'>Thú cưng</p>
-            <p className='text-base text-[#2d2a26] mt-1' style={{ fontWeight: 600 }}>{pet?.name ?? '—'}</p>
-            <p className='text-sm text-[#7a756e]'>{pet ? `${pet.species} • ${pet.breed}` : 'Không có thông tin thú cưng'}</p>
-            <p className='text-sm text-[#7a756e]'>Thanh toán: {paymentMethodLabel[invoice.paymentMethod] ?? invoice.paymentMethod}</p>
+            <p className='text-base text-[#2d2a26] mt-1' style={{ fontWeight: 600 }}>
+              {invoice.appointment?.pet?.name || '—'}
+            </p>
+            <p className='text-sm text-[#7a756e]'>
+              {invoice.appointment?.pet
+                ? `${invoice.appointment.pet.species} • ${invoice.appointment.pet.breed || 'Chưa rõ'}`
+                : 'Không có thông tin thú cưng'}
+            </p>
+            <p className='text-sm text-[#7a756e]'>
+              Thanh toán: {paymentMethodLabel[invoice.paymentMethod] || invoice.paymentMethod}
+            </p>
           </div>
         </div>
 
@@ -147,9 +197,9 @@ export function ManagerInvoicePage() {
             </thead>
             <tbody>
               {invoice.items.map((item) => (
-                <tr key={`${item.type}-${item.name}`} className='border-b last:border-b-0 border-[#2d2a26]/10'>
+                <tr key={item.id} className='border-b last:border-b-0 border-[#2d2a26]/10'>
                   <td className='px-3 py-2'>{item.name}</td>
-                  <td className='px-3 py-2'>{item.type === 'service' ? 'Dịch vụ' : 'Sản phẩm'}</td>
+                  <td className='px-3 py-2'>{item.itemType === 'service' ? 'Dịch vụ' : 'Sản phẩm'}</td>
                   <td className='px-3 py-2 text-right'>{item.qty}</td>
                   <td className='px-3 py-2 text-right'>{formatCurrency(item.unitPrice)}</td>
                   <td className='px-3 py-2 text-right'>{formatCurrency(item.total)}</td>
@@ -159,43 +209,25 @@ export function ManagerInvoicePage() {
           </table>
         </div>
 
-        <div className='mt-4 grid md:grid-cols-2 gap-4 items-end'>
-          <div className='border border-[#2d2a26]/20 rounded-xl p-4 flex flex-col items-center gap-2'>
-            <div className='w-28 h-28 bg-white border border-[#2d2a26]/20 rounded-lg p-2'>
-              <QRCodeSVG
-                value={`BANK_TRANSFER|INVOICE:${invoice.id}|TOTAL:${invoice.grandTotal}`}
-                size={96}
-                level='M'
-              />
-            </div>
-            <p className='text-xs text-[#7a756e] flex items-center gap-1'>
-              <QrCode className='w-3.5 h-3.5' />
-              Quét mã để chuyển khoản
-            </p>
+        <div className='mt-4 border border-[#2d2a26]/20 rounded-xl p-4 space-y-2 max-w-sm ml-auto'>
+          <div className='flex justify-between text-sm'>
+            <span className='text-[#7a756e]'>Tạm tính</span>
+            <span>{formatCurrency(invoice.subtotal)}</span>
           </div>
-          <div className='border border-[#2d2a26]/20 rounded-xl p-4 space-y-2'>
-            <div className='flex justify-between text-sm'>
-              <span className='text-[#7a756e]'>Tạm tính</span>
-              <span>{formatCurrency(invoice.subtotal)}</span>
-            </div>
-            <div className='flex justify-between text-sm'>
-              <span className='text-[#7a756e]'>VAT (8%)</span>
-              <span>{formatCurrency(invoice.tax)}</span>
-            </div>
-            <div className='border-t border-[#2d2a26]/20 pt-2 flex justify-between text-lg'>
-              <span style={{ fontWeight: 600 }}>Tổng cộng</span>
-              <span className='text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
-                {formatCurrency(invoice.grandTotal)}
-              </span>
-            </div>
+          <div className='flex justify-between text-sm'>
+            <span className='text-[#7a756e]'>VAT ({Number(invoice.taxPercent)}%)</span>
+            <span>{formatCurrency(invoice.taxAmount)}</span>
+          </div>
+          <div className='border-t border-[#2d2a26]/20 pt-2 flex justify-between text-lg'>
+            <span style={{ fontWeight: 600 }}>Tổng cộng</span>
+            <span className='text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+              {formatCurrency(invoice.grandTotal)}
+            </span>
           </div>
         </div>
 
         <div className='mt-4 text-xs text-[#7a756e] text-center print:text-black'>
-          {clinic.invoiceNote}
-          <span className='block mt-1'>
-            Xem lại lịch sử tại <Link to='/manager/pos' className='underline text-[#6b8f5e] print:text-black'>trang POS</Link>
-          </span>
+          {clinic?.invoiceNote || 'Cảm ơn quý khách đã sử dụng dịch vụ tại PetHub!'}
         </div>
       </div>
     </div>

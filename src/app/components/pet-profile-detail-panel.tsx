@@ -1,4 +1,4 @@
-import type { Pet } from './data';
+import type { Pet } from './pet-types';
 
 type PetProfileDetailPanelProps = {
   pet: Pet;

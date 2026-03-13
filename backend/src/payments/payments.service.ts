@@ -114,7 +114,13 @@ export class PaymentsService {
     }
 
     const payload = this.extractWebhookPayload(dto);
-    this.verifyWebhookSignature(dto);
+    if (!payload) {
+      return {
+        success: true,
+        ignored: true,
+        reason: 'invalid_payload',
+      };
+    }
 
     const txn = await this.prisma.paymentTransaction.findUnique({
       where: { providerRef: payload.orderCode },
@@ -131,6 +137,8 @@ export class PaymentsService {
         orderCode: payload.orderCode,
       };
     }
+
+    this.verifyWebhookSignature(dto);
 
     const expectedAmount = Math.round(Number(txn.amount ?? 0));
     if (expectedAmount > 0 && Math.round(payload.amount) !== expectedAmount) {
@@ -317,26 +325,36 @@ export class PaymentsService {
     }
   }
 
-  private extractWebhookPayload(dto: PayosWebhookDto): {
-    orderCode: string;
-    status: string;
-    amount: number;
-  } {
-    const orderCode = `${dto.data?.orderCode ?? dto.orderCode ?? ''}`.trim();
-    const status = `${dto.data?.status ?? dto.status ?? ''}`.trim();
-    const amount = Number(dto.data?.amount ?? dto.amount ?? 0);
+  private extractWebhookPayload(dto: PayosWebhookDto):
+    | {
+        orderCode: string;
+        status: string;
+        amount: number;
+      }
+    | null {
+    const rawOrderCode = dto.data?.orderCode ?? dto.orderCode ?? '';
+    const rawStatus = dto.data?.status ?? dto.status ?? '';
+    const rawAmount = dto.data?.amount ?? dto.amount ?? 0;
+
+    const orderCode = `${rawOrderCode}`.trim();
+    const status = `${rawStatus}`.trim();
+    const amount = Number(rawAmount);
 
     if (!orderCode || !status || !Number.isFinite(amount) || amount <= 0) {
-      throw new BadRequestException('Invalid payOS webhook payload');
+      return null;
     }
 
     return { orderCode, status, amount };
   }
 
   private isWebhookConnectivityProbe(dto: PayosWebhookDto): boolean {
-    const orderCode = `${dto.data?.orderCode ?? dto.orderCode ?? ''}`.trim();
-    const status = `${dto.data?.status ?? dto.status ?? ''}`.trim();
-    const amount = Number(dto.data?.amount ?? dto.amount ?? 0);
+    const rawOrderCode = dto.data?.orderCode ?? dto.orderCode ?? '';
+    const rawStatus = dto.data?.status ?? dto.status ?? '';
+    const rawAmount = dto.data?.amount ?? dto.amount ?? 0;
+
+    const orderCode = `${rawOrderCode}`.trim();
+    const status = `${rawStatus}`.trim();
+    const amount = Number(rawAmount);
 
     return !orderCode && !status && (!Number.isFinite(amount) || amount <= 0);
   }

@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Banknote, CreditCard, QrCode, Receipt, Search, ShoppingBag, Stethoscope, Trash2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { useSearchParams } from 'react-router';
 import {
   checkoutPos,
+  getPosPrefill,
   getInvoiceById,
   listCatalogProducts,
   listCatalogServices,
@@ -43,6 +45,7 @@ function resolveQrValue(result: PosCheckoutResponse | null): string | null {
 }
 
 export function ManagerPOSPage() {
+  const [searchParams] = useSearchParams();
   const [tab, setTab] = useState<CatalogTab>('service');
   const [search, setSearch] = useState('');
   const [customers, setCustomers] = useState<ApiCustomer[]>([]);
@@ -59,6 +62,7 @@ export function ManagerPOSPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const appointmentId = searchParams.get('appointmentId')?.trim() || '';
 
   useEffect(() => {
     let mounted = true;
@@ -96,6 +100,49 @@ export function ManagerPOSPage() {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!appointmentId) {
+      return;
+    }
+    let mounted = true;
+    const run = async () => {
+      try {
+        const prefill = await getPosPrefill(appointmentId);
+        if (!mounted || !prefill.appointment) {
+          return;
+        }
+
+        setSelectedCustomerId(prefill.appointment.customerId);
+        setSelectedPetId(prefill.appointment.petId);
+        if ((prefill.suggestedItems?.length ?? 0) > 0) {
+          setCart((prev) => {
+            if (prev.length > 0) {
+              return prev;
+            }
+            return (prefill.suggestedItems ?? []).map((item) => ({
+              key: `${item.itemType}-${item.serviceId || item.productId || item.name}`,
+              itemType: item.itemType,
+              id: item.serviceId || item.productId || item.name,
+              name: item.name,
+              unitPrice: Number(item.unitPrice ?? 0),
+              qty: item.qty,
+            }));
+          });
+        }
+        setMessage('Đã nạp dữ liệu lịch hẹn cần checkout từ màn quản lý lịch hẹn.');
+      } catch (apiError) {
+        if (mounted) {
+          setError(extractApiError(apiError));
+        }
+      }
+    };
+
+    void run();
+    return () => {
+      mounted = false;
+    };
+  }, [appointmentId]);
 
   useEffect(() => {
     let mounted = true;
@@ -349,6 +396,13 @@ export function ManagerPOSPage() {
               </button>
             ))}
           </div>
+          {!loading && visibleItems.length === 0 ? (
+            <div className='rounded-xl border border-[#2d2a26]/20 bg-white p-4 text-sm text-[#7a756e]'>
+              {tab === 'service'
+                ? 'Chưa có dịch vụ backend thật trong catalog. Vui lòng vào mục Sản phẩm & Dịch vụ để thêm dịch vụ.'
+                : 'Chưa có sản phẩm backend thật trong catalog.'}
+            </div>
+          ) : null}
           {loading ? <p className='text-sm text-[#7a756e]'>Đang tải dữ liệu POS...</p> : null}
         </div>
 
@@ -383,6 +437,7 @@ export function ManagerPOSPage() {
                 <select
                   value={selectedPetId}
                   onChange={(event) => setSelectedPetId(event.target.value)}
+                  disabled={pets.length === 0}
                   className='w-full mt-1 p-2.5 rounded-xl border border-[#2d2a26] text-sm bg-white'
                 >
                   <option value=''>-- Chọn thú cưng --</option>
@@ -392,6 +447,9 @@ export function ManagerPOSPage() {
                     </option>
                   ))}
                 </select>
+                {!selectedCustomerId ? (
+                  <p className='text-xs text-[#7a756e] mt-1'>Chọn khách hàng để tải danh sách thú cưng.</p>
+                ) : null}
               </div>
             </div>
 
