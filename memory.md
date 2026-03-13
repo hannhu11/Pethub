@@ -273,3 +273,26 @@
 - Security note:
   - No secrets committed.
   - No env values written into tracked files.
+
+## VPS Data Reset Snapshot 2026-03-14 (Post-deploy cleanup)
+- Action executed on VPS after redeploy:
+  - Ran destructive wipe script in `api` container:
+    - `WIPE_DB_CONFIRM=WIPE_PETHUB_PRODUCTION_DB node /app/dist/prisma/wipe-production-db.js`
+  - Bootstrap restored minimal runtime baseline:
+    - default clinic (`slug=default`)
+    - manager account: `mnu3032004@gmail.com` (role `manager`)
+- Verified DB counts after bootstrap:
+  - `users=1`
+  - `customers=0`
+  - `pets=0`
+  - `appointments=0`
+  - `invoices=0`
+  - `services=0`
+  - `products=0`
+  - `reminders=0`
+  - `notifications=0`
+  - `clinics=1`
+- Endpoint health after reset:
+  - `GET /api/health` => `200`
+  - `GET /api/payments/payos/webhook` => `200`
+  - `POST /api/payments/payos/webhook` with `{}` => `200`
