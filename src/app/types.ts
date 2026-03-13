@@ -12,12 +12,19 @@ export interface AuthUser {
   phone?: string;
 }
 
+export interface OnboardingState {
+  required: boolean;
+  missingFields: string[];
+  nextStep: string | null;
+}
+
 export interface SessionState {
   status: 'loading' | 'authenticated' | 'unauthenticated';
   isAuthenticated: boolean;
   role: AuthRole | null;
   userName: string;
   user: AuthUser | null;
+  onboarding: OnboardingState | null;
   error: string | null;
 }
 

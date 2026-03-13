@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router';
 import {
   createUserWithEmailAndPassword,
@@ -12,7 +12,7 @@ import {
 } from 'firebase/auth';
 import { firebaseAuth, googleProvider } from './lib/firebase';
 import { setApiAccessToken } from './lib/api-client';
-import { getAuthMe, syncFirebaseUser } from './lib/pethub-api';
+import { completeOnboarding, syncFirebaseUser, type AuthSessionPayload } from './lib/pethub-api';
 import { toFriendlyAuthError } from './lib/auth-errors';
 import type { AuthRole, AuthUser, SessionState } from './types';
 
@@ -49,6 +49,7 @@ const unauthenticatedSession: SessionState = {
   role: null,
   userName: '',
   user: null,
+  onboarding: null,
   error: null,
 };
 
@@ -63,13 +64,15 @@ function getDefaultRoute(role: AuthRole | null) {
   return role === 'manager' ? '/manager' : '/customer/dashboard';
 }
 
-function toSession(user: AuthUser): SessionState {
+function toSession(payload: AuthSessionPayload): SessionState {
+  const user = payload.user;
   return {
     status: 'authenticated',
     isAuthenticated: true,
     role: user.role,
     userName: user.name,
     user,
+    onboarding: payload.onboarding,
     error: null,
   };
 }
@@ -90,22 +93,40 @@ function resolveClinicSlug(): string | undefined {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<SessionState>(loadingSession);
+  const syncInFlightRef = useRef<Promise<AuthSessionPayload> | null>(null);
+  const syncInFlightUidRef = useRef<string | null>(null);
 
   const hydrateUser = useCallback(
     async (firebaseUser: FirebaseUser, profileOverride?: { name?: string; phone?: string }) => {
-      const idToken = await firebaseUser.getIdToken(true);
+      if (syncInFlightRef.current && syncInFlightUidRef.current === firebaseUser.uid) {
+        return syncInFlightRef.current;
+      }
+
+      const idToken = await firebaseUser.getIdToken();
       setApiAccessToken(idToken);
+
+      const syncTask = (async () => {
+        try {
+          const clinicSlug = resolveClinicSlug();
+          return await syncFirebaseUser({
+            idToken,
+            name: profileOverride?.name ?? firebaseUser.displayName ?? undefined,
+            phone: profileOverride?.phone ?? firebaseUser.phoneNumber ?? undefined,
+            clinicSlug,
+          });
+        } catch (error) {
+          throw new Error(toFriendlyAuthError(error, 'sync'));
+        }
+      })();
+
+      syncInFlightRef.current = syncTask;
+      syncInFlightUidRef.current = firebaseUser.uid;
+
       try {
-        const clinicSlug = resolveClinicSlug();
-        await syncFirebaseUser({
-          idToken,
-          name: profileOverride?.name ?? firebaseUser.displayName ?? undefined,
-          phone: profileOverride?.phone ?? firebaseUser.phoneNumber ?? undefined,
-          clinicSlug,
-        });
-        return getAuthMe();
-      } catch (error) {
-        throw new Error(toFriendlyAuthError(error, 'sync'));
+        return await syncTask;
+      } finally {
+        syncInFlightRef.current = null;
+        syncInFlightUidRef.current = null;
       }
     },
     [],
@@ -128,9 +149,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession((previous) => ({ ...previous, status: 'loading', error: null }));
 
       try {
-        const authUser = await hydrateUser(firebaseUser);
+        const payload = await hydrateUser(firebaseUser);
         if (mounted) {
-          setSession(toSession(authUser));
+          setSession(toSession(payload));
         }
       } catch (error) {
         if (!mounted) {
@@ -153,10 +174,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession((previous) => ({ ...previous, status: 'loading', error: null }));
       try {
         const credential = await signInWithEmailAndPassword(firebaseAuth, email.trim(), password);
-        const authUser = await hydrateUser(credential.user);
-        const nextSession = toSession(authUser);
+        const payload = await hydrateUser(credential.user);
+        const nextSession = toSession(payload);
         setSession(nextSession);
-        return authUser;
+        return payload.user;
       } catch (error) {
         const message = toFriendlyAuthError(error, 'login');
         setSession({ ...unauthenticatedSession, error: message });
@@ -170,10 +191,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSession((previous) => ({ ...previous, status: 'loading', error: null }));
     try {
       const credential = await signInWithPopup(firebaseAuth, googleProvider);
-      const authUser = await hydrateUser(credential.user);
-      const nextSession = toSession(authUser);
+      const payload = await hydrateUser(credential.user);
+      const nextSession = toSession(payload);
       setSession(nextSession);
-      return authUser;
+      return payload.user;
     } catch (error) {
       const message = toFriendlyAuthError(error, 'google-login');
       setSession({ ...unauthenticatedSession, error: message });
@@ -189,10 +210,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (name.trim().length > 0) {
           await updateProfile(credential.user, { displayName: name.trim() });
         }
-        const authUser = await hydrateUser(credential.user, { name, phone });
-        const nextSession = toSession(authUser);
+        const payload = await hydrateUser(credential.user, { name, phone });
+        const nextSession = toSession(payload);
         setSession(nextSession);
-        return authUser;
+        return payload.user;
       } catch (error) {
         const message = toFriendlyAuthError(error, 'register');
         setSession({ ...unauthenticatedSession, error: message });
@@ -227,17 +248,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await updateProfile(firebaseUser, { displayName: name.trim() });
       }
 
-      const idToken = await firebaseUser.getIdToken(true);
+      const idToken = await firebaseUser.getIdToken();
       setApiAccessToken(idToken);
       try {
-        await syncFirebaseUser({
+        const clinicSlug = resolveClinicSlug();
+        let payload = await syncFirebaseUser({
           idToken,
           name: name.trim(),
           phone: phone?.trim() || undefined,
+          clinicSlug,
         });
-        const authUser = await getAuthMe();
-        setSession(toSession(authUser));
-        return authUser;
+
+        if (payload.onboarding.required) {
+          payload = await completeOnboarding({
+            name: name.trim(),
+            phone: phone?.trim() || '',
+            clinicSlug,
+          });
+        }
+
+        setSession(toSession(payload));
+        return payload.user;
       } catch (error) {
         throw new Error(toFriendlyAuthError(error, 'profile-update'));
       }
@@ -285,6 +316,9 @@ export function PublicOnlyGuard() {
     return <FullScreenLoading />;
   }
   if (session.isAuthenticated) {
+    if (session.onboarding?.required && session.onboarding.nextStep) {
+      return <Navigate to={session.onboarding.nextStep} replace />;
+    }
     return <Navigate to={getDefaultRoute(session.role)} replace />;
   }
   return <Outlet />;
@@ -304,6 +338,13 @@ export function RequireCustomerGuard() {
 
   if (session.role !== 'customer') {
     return <Navigate to={getDefaultRoute(session.role)} replace />;
+  }
+
+  if (session.onboarding?.required && session.onboarding.nextStep) {
+    const [targetPath] = session.onboarding.nextStep.split('?');
+    if (location.pathname !== targetPath) {
+      return <Navigate to={session.onboarding.nextStep} replace />;
+    }
   }
 
   return <Outlet />;

@@ -20,7 +20,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
-    "prisma:seed": "prisma db seed"
+    "prisma:seed": "prisma db seed",
+    "prisma:wipe": "ts-node --transpile-only prisma/wipe-production-db.ts"
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.4",

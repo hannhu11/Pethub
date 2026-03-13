@@ -119,3 +119,52 @@
 - Operational note:
   - For file bind mounts, replacing host config file can require container recreate.
   - Applied with `docker compose ... up -d --force-recreate nginx` to ensure new nginx config is mounted.
+
+## Stabilization Batch 2026-03-13 (Race fix + de-mock + production wipe)
+- Trigger:
+  - User reported slow login, Google onboarding skip, profile mismatch, dashboard/LTV mismatch, POS QR not working, and requested full purge of sample data.
+
+- Root causes confirmed:
+  - Frontend auth issued duplicate `/auth/sync-firebase` calls (login action + auth state listener), causing occasional race and `firebaseUid` unique conflict under concurrency.
+  - Several critical UI routes were still using hardcoded mock data (customer profile/overview/appointments/pets, manager dashboard, manager POS, and manager customer route mapping).
+  - VPS `.env.production` had missing payOS keys, so transfer/QR flow could not create real payOS checkout links.
+
+- Code changes completed:
+  - Backend auth race hardening:
+    - `backend/src/auth/auth.service.ts`
+    - replaced non-atomic find/create path with idempotent upsert + `P2002` fallback reconciliation by `(firebaseUid OR clinicId+email)`.
+    - onboarding next step normalized to existing route: `/customer/profile?...`.
+  - Frontend auth/session + onboarding enforcement:
+    - `src/app/auth-session.tsx`
+    - added in-flight sync dedupe per `firebaseUid`.
+    - removed forced token refresh on every sync (`getIdToken()` instead of `getIdToken(true)`).
+    - session now stores `onboarding`, guards redirect customer to required profile completion step.
+  - API contracts updated:
+    - `src/app/types.ts`
+    - `src/app/lib/pethub-api.ts`
+    - auth payload now includes onboarding; added analytics/POS/invoice/medical/digital-card API clients.
+  - De-mock critical pages:
+    - `src/app/components/customer-dashboard.tsx` rewritten to use real session + API for profile, pets, medical records, digital card.
+    - `src/app/components/customer-overview.tsx` rewritten to use real pets/appointments.
+    - `src/app/components/customer-appointments.tsx` rewritten to real create/list/cancel appointment APIs.
+    - `src/app/components/manager-dashboard.tsx` rewritten to analytics endpoints and LTV cross-check from same backend source.
+    - `src/app/components/manager-pos.tsx` rewritten to real POS checkout + payOS QR + invoice payment polling.
+    - `src/app/routes.tsx` switched manager customer/pet routes to API-backed `manager-crm` pages.
+  - Added destructive wipe utility:
+    - `backend/prisma/wipe-production-db.ts`
+    - `backend/package.json` script: `prisma:wipe`.
+
+- VPS operational actions executed before Git push:
+  - Uploaded patched files directly to VPS source path `/home/ubuntu/pethub`.
+  - Updated payOS env keys in VPS `.env.production` (server-only, not in git).
+  - Rebuilt and restarted containers:
+    - `api`, `worker`, `web`, `nginx`.
+  - Performed full production DB purge (sample + user data) via Prisma transaction script run in `api` container.
+  - Verified post-wipe counts:
+    - users/customers/pets/appointments/invoices/clinics = `0`.
+
+- Security / secret handling:
+  - No secrets committed to repository.
+  - payOS keys only injected on VPS `.env.production`.
+  - Keep webhook URL registration in payOS dashboard pointed to:
+    - `http://140.245.119.189/api/payments/payos/webhook`

@@ -41,22 +41,13 @@ export class AuthService {
       const email = decoded.email ?? `${decoded.uid}@pethub.vn`;
       const normalizedPhone = dto.phone?.trim() ?? decoded.phone_number?.trim() ?? '';
       const displayName = dto.name?.trim() || decoded.name?.trim() || null;
-
-      const userByUid = await this.prisma.user.findUnique({
-        where: { firebaseUid: decoded.uid },
+      const user = await this.upsertUserForSync({
+        firebaseUid: decoded.uid,
+        clinicId,
+        email,
+        phone: normalizedPhone,
+        displayName,
       });
-
-      const user = userByUid
-        ? await this.prisma.user.update({
-            where: { id: userByUid.id },
-            data: {
-              clinicId: clinicId ?? userByUid.clinicId,
-              email,
-              name: displayName ?? userByUid.name,
-              phone: normalizedPhone || userByUid.phone,
-            },
-          })
-        : await this.upsertByEmailFallback(decoded.uid, email, normalizedPhone, displayName, clinicId);
 
       await this.upsertCustomerProfile(user);
 
@@ -154,42 +145,66 @@ export class AuthService {
     return this.toAuthUser(user);
   }
 
-  private async upsertByEmailFallback(
-    firebaseUid: string,
-    email: string,
-    phone: string,
-    displayName: string | null,
-    clinicId: string,
-  ): Promise<User> {
-    const userByEmail = await this.prisma.user.findFirst({
-      where: {
-        email,
-        clinicId,
-      },
-      orderBy: { createdAt: 'asc' },
-    });
+  private async upsertUserForSync(input: {
+    firebaseUid: string;
+    clinicId: string;
+    email: string;
+    phone: string;
+    displayName: string | null;
+  }): Promise<User> {
+    const safeName = input.displayName ?? input.email.split('@')[0] ?? 'PetHub User';
 
-    if (userByEmail) {
+    try {
+      return await this.prisma.user.upsert({
+        where: { firebaseUid: input.firebaseUid },
+        update: {
+          clinicId: input.clinicId,
+          email: input.email,
+          name: input.displayName ?? undefined,
+          phone: input.phone || undefined,
+        },
+        create: {
+          clinicId: input.clinicId,
+          firebaseUid: input.firebaseUid,
+          email: input.email,
+          role: Role.customer,
+          name: safeName,
+          phone: input.phone,
+        },
+      });
+    } catch (error) {
+      if (!this.isUniqueConstraintError(error)) {
+        throw error;
+      }
+
+      const existing = await this.prisma.user.findFirst({
+        where: {
+          OR: [
+            { firebaseUid: input.firebaseUid },
+            {
+              clinicId: input.clinicId,
+              email: input.email,
+            },
+          ],
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      if (!existing) {
+        throw error;
+      }
+
       return this.prisma.user.update({
-        where: { id: userByEmail.id },
+        where: { id: existing.id },
         data: {
-          firebaseUid,
-          name: displayName ?? userByEmail.name,
-          phone: phone || userByEmail.phone,
+          firebaseUid: input.firebaseUid,
+          clinicId: input.clinicId,
+          email: input.email,
+          name: input.displayName ?? existing.name,
+          phone: input.phone || existing.phone,
         },
       });
     }
-
-    return this.prisma.user.create({
-      data: {
-        clinicId,
-        firebaseUid,
-        email,
-        role: Role.customer,
-        name: displayName ?? email.split('@')[0] ?? 'PetHub User',
-        phone,
-      },
-    });
   }
 
   private async resolveUserByUidOrEmail(firebaseUid: string, email: string): Promise<User | null> {
@@ -299,8 +314,8 @@ export class AuthService {
     const requiresOnboarding = user.role === Role.customer && missingFields.length > 0;
     const nextStep = requiresOnboarding
       ? signInProvider === 'google.com'
-        ? '/customer/onboarding/google'
-        : '/customer/onboarding/profile'
+        ? '/customer/profile?onboarding=google'
+        : '/customer/profile?onboarding=required'
       : null;
 
     return {
@@ -396,5 +411,14 @@ export class AuthService {
     }
 
     return false;
+  }
+
+  private isUniqueConstraintError(error: unknown): boolean {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      (error as { code?: string }).code === 'P2002'
+    );
   }
 }
