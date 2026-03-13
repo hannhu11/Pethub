@@ -22,11 +22,17 @@ export class AppointmentsService {
 
   async list(currentUser: AuthUser, query: AppointmentQueryDto) {
     const where: Prisma.AppointmentWhereInput = {
+      clinicId: currentUser.clinicId,
       ...(query.status ? { status: query.status } : {}),
     };
 
     if (currentUser.role === 'customer') {
-      const customer = await this.prisma.customer.findUnique({ where: { userId: currentUser.userId } });
+      const customer = await this.prisma.customer.findFirst({
+        where: {
+          clinicId: currentUser.clinicId,
+          userId: currentUser.userId,
+        },
+      });
       if (!customer) {
         return [];
       }
@@ -51,12 +57,18 @@ export class AppointmentsService {
     const slot = new Date(dto.appointmentAt);
     const customerId = await this.resolveCustomerId(currentUser, dto.customerId);
     const [pet, service] = await Promise.all([
-      this.prisma.pet.findUnique({
-        where: { id: dto.petId },
-        select: { id: true, customerId: true },
+      this.prisma.pet.findFirst({
+        where: {
+          id: dto.petId,
+          clinicId: currentUser.clinicId,
+        },
+        select: { id: true, customerId: true, clinicId: true },
       }),
-      this.prisma.service.findUnique({
-        where: { id: dto.serviceId },
+      this.prisma.service.findFirst({
+        where: {
+          id: dto.serviceId,
+          clinicId: currentUser.clinicId,
+        },
         select: { id: true },
       }),
     ]);
@@ -76,6 +88,7 @@ export class AppointmentsService {
     return this.prisma.$transaction(async (tx) => {
       const collision = await tx.appointment.findFirst({
         where: {
+          clinicId: currentUser.clinicId,
           appointmentAt: slot,
           status: {
             in: [AppointmentStatus.pending, AppointmentStatus.confirmed],
@@ -89,6 +102,7 @@ export class AppointmentsService {
 
       const appointment = await tx.appointment.create({
         data: {
+          clinicId: currentUser.clinicId,
           customerId,
           petId: dto.petId,
           serviceId: dto.serviceId,
@@ -119,7 +133,12 @@ export class AppointmentsService {
       throw new ForbiddenException('Only manager can update appointment workflow status');
     }
 
-    const current = await this.prisma.appointment.findUnique({ where: { id } });
+    const current = await this.prisma.appointment.findFirst({
+      where: {
+        id,
+        clinicId: currentUser.clinicId,
+      },
+    });
     if (!current) {
       throw new NotFoundException('Appointment not found');
     }
@@ -128,17 +147,25 @@ export class AppointmentsService {
       throw new BadRequestException(`Invalid status transition: ${current.status} -> ${dto.status}`);
     }
 
-    const updated = await this.prisma.appointment.update({
-      where: { id },
-      data: {
-        status: dto.status,
-        managerId: currentUser.role === 'manager' ? currentUser.userId : current.managerId,
-      },
-      include: {
-        customer: true,
-        pet: true,
-        service: true,
-      },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.appointment.update({
+        where: { id },
+        data: {
+          status: dto.status,
+          managerId: currentUser.userId,
+        },
+        include: {
+          customer: true,
+          pet: true,
+          service: true,
+        },
+      });
+
+      if (dto.status === AppointmentStatus.completed) {
+        await this.upsertMedicalRecordFromCompletedAppointment(tx, result.id, currentUser.userId);
+      }
+
+      return result;
     });
 
     this.realtimeService.emitAppointmentUpdated({
@@ -156,7 +183,12 @@ export class AppointmentsService {
   }
 
   async cancel(id: string, currentUser: AuthUser) {
-    const current = await this.prisma.appointment.findUnique({ where: { id } });
+    const current = await this.prisma.appointment.findFirst({
+      where: {
+        id,
+        clinicId: currentUser.clinicId,
+      },
+    });
     if (!current) {
       throw new NotFoundException('Appointment not found');
     }
@@ -227,11 +259,24 @@ export class AppointmentsService {
       if (!requestedCustomerId) {
         throw new BadRequestException('customerId is required for manager booking creation');
       }
+      const customer = await this.prisma.customer.findFirst({
+        where: {
+          id: requestedCustomerId,
+          clinicId: currentUser.clinicId,
+        },
+        select: { id: true },
+      });
+      if (!customer) {
+        throw new NotFoundException('Customer not found in current clinic');
+      }
       return requestedCustomerId;
     }
 
-    const customer = await this.prisma.customer.findUnique({
-      where: { userId: currentUser.userId },
+    const customer = await this.prisma.customer.findFirst({
+      where: {
+        userId: currentUser.userId,
+        clinicId: currentUser.clinicId,
+      },
       select: { id: true },
     });
     if (!customer) {
@@ -239,5 +284,56 @@ export class AppointmentsService {
     }
 
     return customer.id;
+  }
+
+  private async upsertMedicalRecordFromCompletedAppointment(
+    tx: Prisma.TransactionClient,
+    appointmentId: string,
+    managerId: string,
+  ) {
+    const appointment = await tx.appointment.findUnique({
+      where: { id: appointmentId },
+      include: {
+        service: true,
+      },
+    });
+
+    if (!appointment || appointment.status !== AppointmentStatus.completed) {
+      return;
+    }
+
+    const recordedAt = appointment.paidAt ?? new Date();
+    const diagnosis = `Hoàn tất dịch vụ: ${appointment.service.name}`;
+    const treatment = appointment.note?.trim()
+      ? `Theo ghi chú cuộc hẹn: ${appointment.note.trim()}`
+      : `Thực hiện dịch vụ ${appointment.service.name} theo lịch hẹn.`;
+
+    await tx.medicalRecord.upsert({
+      where: { appointmentId: appointment.id },
+      create: {
+        clinicId: appointment.clinicId,
+        petId: appointment.petId,
+        customerId: appointment.customerId,
+        appointmentId: appointment.id,
+        doctorName: 'Manager',
+        diagnosis,
+        treatment,
+        notes: appointment.note ?? null,
+        recordedAt,
+        createdById: managerId,
+      },
+      update: {
+        diagnosis,
+        treatment,
+        notes: appointment.note ?? null,
+        recordedAt,
+        createdById: managerId,
+      },
+    });
+
+    await tx.pet.update({
+      where: { id: appointment.petId },
+      data: { lastCheckupAt: recordedAt },
+    });
   }
 }
