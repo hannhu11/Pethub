@@ -111,6 +111,11 @@
     - added `proxy_connect_timeout`, `proxy_send_timeout`, `proxy_read_timeout` to 60s for `/api`.
   - `src/app/lib/api-client.ts`
     - reduced axios timeout to `15000ms` for faster frontend fail feedback.
+  - `docker/nginx/web-spa.conf`
+    - enabled gzip compression for static assets.
+    - enabled gzip for proxied traffic via `gzip_proxied any`.
+    - added cache headers for `/assets` (`immutable`, 7 days).
+    - added `no-store` for SPA shell route to avoid stale HTML.
 - Operational note:
   - For file bind mounts, replacing host config file can require container recreate.
   - Applied with `docker compose ... up -d --force-recreate nginx` to ensure new nginx config is mounted.
