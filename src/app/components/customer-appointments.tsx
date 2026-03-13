@@ -1,20 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { CalendarDays, Clock3, PawPrint, Stethoscope, PlusCircle } from 'lucide-react';
-import type { ApiAppointment, ApiPet, ApiService, BookingDraft, CancelDialogState } from '../types';
-import { extractApiError } from '../lib/api-client';
 import {
-  TIME_SLOTS,
-  combineDateAndTime,
   formatCurrency,
   getStatusColor,
   getStatusLabel,
-  isUpcoming,
-  toDateInputValue,
-  toDateLabel,
-  toTimeLabel,
-} from '../lib/format';
-import { cancelAppointment, createAppointment, listAppointments, listCatalogServices, listPets } from '../lib/pethub-api';
+  mockAppointments,
+  mockPets,
+  mockServices,
+  timeSlots,
+  type Appointment,
+} from './data';
+import type { BookingDraft, CancelDialogState } from '../types';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,19 +23,19 @@ import {
   AlertDialogTitle,
 } from './ui/alert-dialog';
 
-const today = toDateInputValue(new Date());
+const today = '2026-03-11';
+
+function isUpcoming(date: string) {
+  return date >= today;
+}
 
 export function CustomerAppointmentsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialServiceId = searchParams.get('serviceId') || undefined;
 
-  const [appointments, setAppointments] = useState<ApiAppointment[]>([]);
-  const [services, setServices] = useState<ApiService[]>([]);
-  const [pets, setPets] = useState<ApiPet[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [appointments, setAppointments] = useState<Appointment[]>(() =>
+    mockAppointments.filter((item) => item.userId === 'u1'),
+  );
   const [filter, setFilter] = useState<'upcoming' | 'past' | 'all'>('upcoming');
   const [draft, setDraft] = useState<BookingDraft>({
     serviceId: initialServiceId,
@@ -46,56 +43,20 @@ export function CustomerAppointmentsPage() {
   });
   const [cancelDialog, setCancelDialog] = useState<CancelDialogState>({ open: false, appointmentId: null });
 
-  useEffect(() => {
-    let mounted = true;
-    const run = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const [appointmentData, petData, serviceData] = await Promise.all([
-          listAppointments(),
-          listPets(),
-          listCatalogServices(),
-        ]);
-        if (!mounted) {
-          return;
-        }
-        setAppointments(appointmentData);
-        setPets(petData);
-        setServices(serviceData);
-      } catch (apiError) {
-        if (mounted) {
-          setError(extractApiError(apiError));
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    void run();
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  const selectedService = services.find((service) => service.id === draft.serviceId);
-  const selectedPet = pets.find((pet) => pet.id === draft.petId);
+  const customerPets = useMemo(() => mockPets.filter((pet) => pet.ownerId === 'u1'), []);
+  const selectedService = mockServices.find((service) => service.id === draft.serviceId);
+  const selectedPet = customerPets.find((pet) => pet.id === draft.petId);
 
   const filteredAppointments = useMemo(() => {
-    const sorted = [...appointments].sort(
-      (a, b) => new Date(b.appointmentAt).getTime() - new Date(a.appointmentAt).getTime(),
-    );
     if (filter === 'all') {
-      return sorted;
+      return appointments;
     }
 
     if (filter === 'upcoming') {
-      return sorted.filter((item) => isUpcoming(item.appointmentAt));
+      return appointments.filter((item) => isUpcoming(item.date));
     }
 
-    return sorted.filter((item) => !isUpcoming(item.appointmentAt));
+    return appointments.filter((item) => !isUpcoming(item.date));
   }, [appointments, filter]);
 
   const appointmentToCancel = useMemo(
@@ -112,30 +73,30 @@ export function CustomerAppointmentsPage() {
 
   const canSubmit = Boolean(draft.serviceId && draft.petId && draft.date && draft.time);
 
-  const handleSubmit = async () => {
-    if (!canSubmit || !selectedService || !selectedPet || !draft.date || !draft.time) {
+  const handleSubmit = () => {
+    if (!canSubmit || !selectedService || !selectedPet) {
       return;
     }
 
-    setSubmitting(true);
-    setError('');
-    setSuccess('');
-    try {
-      const created = await createAppointment({
-        petId: selectedPet.id,
-        serviceId: selectedService.id,
-        appointmentAt: combineDateAndTime(draft.date, draft.time),
-        note: draft.note?.trim() || undefined,
-      });
-      setAppointments((prev) => [created, ...prev]);
-      resetDraft();
-      setFilter('upcoming');
-      setSuccess('Đặt lịch thành công. Lịch hẹn đã được lưu vào hệ thống.');
-    } catch (apiError) {
-      setError(extractApiError(apiError));
-    } finally {
-      setSubmitting(false);
-    }
+    const created: Appointment = {
+      id: `a-new-${Date.now()}`,
+      petId: selectedPet.id,
+      petName: selectedPet.name,
+      userId: 'u1',
+      userName: 'Nguyễn Văn An',
+      userPhone: '0901234567',
+      serviceId: selectedService.id,
+      serviceName: selectedService.name,
+      servicePrice: selectedService.price,
+      date: draft.date || today,
+      time: draft.time || '08:00',
+      status: 'pending',
+      note: draft.note,
+    };
+
+    setAppointments((prev) => [created, ...prev]);
+    resetDraft();
+    setFilter('upcoming');
   };
 
   const openCancelDialog = (appointmentId: string) => {
@@ -146,21 +107,18 @@ export function CustomerAppointmentsPage() {
     setCancelDialog({ open: false, appointmentId: null });
   };
 
-  const confirmCancel = async () => {
+  const confirmCancel = () => {
     if (!cancelDialog.appointmentId) {
       return;
     }
 
-    setError('');
-    setSuccess('');
-    try {
-      const updated = await cancelAppointment(cancelDialog.appointmentId);
-      setAppointments((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
-      setSuccess('Đã hủy lịch hẹn.');
-      closeCancelDialog();
-    } catch (apiError) {
-      setError(extractApiError(apiError));
-    }
+    setAppointments((prev) =>
+      prev.map((appointment) =>
+        appointment.id === cancelDialog.appointmentId ? { ...appointment, status: 'cancelled' } : appointment,
+      ),
+    );
+
+    closeCancelDialog();
   };
 
   return (
@@ -170,13 +128,6 @@ export function CustomerAppointmentsPage() {
           Lịch hẹn của tôi
         </h1>
 
-        {error ? (
-          <div className='rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-700 mb-6'>{error}</div>
-        ) : null}
-        {success ? (
-          <div className='rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-700 mb-6'>{success}</div>
-        ) : null}
-
         <section className='bg-white border border-[#2d2a26] rounded-2xl p-5 md:p-6 mb-8'>
           <div className='flex items-center gap-2 mb-4'>
             <PlusCircle className='w-5 h-5 text-[#6b8f5e]' />
@@ -184,10 +135,6 @@ export function CustomerAppointmentsPage() {
               Đặt lịch mới
             </h2>
           </div>
-
-          {loading ? (
-            <p className='text-sm text-[#7a756e]'>Đang tải danh sách dịch vụ và thú cưng...</p>
-          ) : null}
 
           <div className='grid md:grid-cols-2 gap-4'>
             <div>
@@ -197,11 +144,11 @@ export function CustomerAppointmentsPage() {
               </label>
               <select
                 value={draft.serviceId || ''}
-                onChange={(e) => setDraft((prev) => ({ ...prev, serviceId: e.target.value || undefined }))}
+                onChange={(e) => setDraft((prev) => ({ ...prev, serviceId: e.target.value }))}
                 className='w-full p-3 border border-[#2d2a26] rounded-xl bg-[#faf9f6] focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]'
               >
                 <option value=''>-- Chọn dịch vụ --</option>
-                {services.map((service) => (
+                {mockServices.map((service) => (
                   <option key={service.id} value={service.id}>
                     {service.name} ({formatCurrency(service.price)})
                   </option>
@@ -216,13 +163,13 @@ export function CustomerAppointmentsPage() {
               </label>
               <select
                 value={draft.petId || ''}
-                onChange={(e) => setDraft((prev) => ({ ...prev, petId: e.target.value || undefined }))}
+                onChange={(e) => setDraft((prev) => ({ ...prev, petId: e.target.value }))}
                 className='w-full p-3 border border-[#2d2a26] rounded-xl bg-[#faf9f6] focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]'
               >
                 <option value=''>-- Chọn thú cưng --</option>
-                {pets.map((pet) => (
+                {customerPets.map((pet) => (
                   <option key={pet.id} value={pet.id}>
-                    {pet.name} ({pet.breed || 'Chưa cập nhật giống'})
+                    {pet.name} ({pet.breed})
                   </option>
                 ))}
               </select>
@@ -248,7 +195,7 @@ export function CustomerAppointmentsPage() {
                 Khung giờ (30 phút)
               </label>
               <div className='grid grid-cols-4 sm:grid-cols-6 gap-2'>
-                {TIME_SLOTS.map((slot) => {
+                {timeSlots.map((slot) => {
                   const isSelected = draft.time === slot;
                   return (
                     <button
@@ -305,10 +252,10 @@ export function CustomerAppointmentsPage() {
             <button
               type='button'
               onClick={handleSubmit}
-              disabled={!canSubmit || submitting}
+              disabled={!canSubmit}
               className='px-6 py-3 rounded-xl bg-[#6b8f5e] text-white border border-[#2d2a26] disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-[2px] transition-transform'
             >
-              {submitting ? 'Đang xử lý...' : 'Xác nhận đặt lịch'}
+              Xác nhận đặt lịch
             </button>
             <button
               type='button'
@@ -360,22 +307,22 @@ export function CustomerAppointmentsPage() {
               <tbody>
                 {filteredAppointments.map((item) => {
                   const canCancel =
-                    isUpcoming(item.appointmentAt) &&
+                    isUpcoming(item.date) &&
                     (item.status === 'pending' || item.status === 'confirmed');
 
                   return (
                     <tr key={item.id} className='border-b border-[#2d2a26]/10'>
-                      <td className='py-3 px-2'>{toDateLabel(item.appointmentAt)}</td>
-                      <td className='py-3 px-2' style={{ fontWeight: 600 }}>{toTimeLabel(item.appointmentAt)}</td>
-                      <td className='py-3 px-2'>{item.service?.name || 'Dịch vụ'}</td>
-                      <td className='py-3 px-2'>{item.pet?.name || 'Thú cưng'}</td>
+                      <td className='py-3 px-2'>{item.date}</td>
+                      <td className='py-3 px-2' style={{ fontWeight: 600 }}>{item.time}</td>
+                      <td className='py-3 px-2'>{item.serviceName}</td>
+                      <td className='py-3 px-2'>{item.petName}</td>
                       <td className='py-3 px-2'>
                         <span className={`inline-flex px-3 py-1 rounded-xl border text-xs ${getStatusColor(item.status)}`}>
                           {getStatusLabel(item.status)}
                         </span>
                       </td>
                       <td className='py-3 px-2 text-right text-[#6b8f5e]' style={{ fontWeight: 700 }}>
-                        {formatCurrency(item.service?.price)}
+                        {formatCurrency(item.servicePrice)}
                       </td>
                       <td className='py-3 px-2 text-right'>
                         {canCancel ? (
@@ -396,9 +343,7 @@ export function CustomerAppointmentsPage() {
             </table>
           </div>
 
-          {!loading && filteredAppointments.length === 0 ? (
-            <p className='text-sm text-[#7a756e] py-6'>Không có lịch hẹn phù hợp bộ lọc hiện tại.</p>
-          ) : null}
+          {filteredAppointments.length === 0 && <p className='text-sm text-[#7a756e] py-6'>Không có lịch hẹn phù hợp bộ lọc hiện tại.</p>}
         </section>
       </div>
 
@@ -413,9 +358,9 @@ export function CustomerAppointmentsPage() {
 
           {appointmentToCancel && (
             <div className='p-3 rounded-xl border border-[#2d2a26]/20 bg-[#f0ede8] text-sm'>
-              <p><span className='text-[#7a756e]'>Dịch vụ:</span> {appointmentToCancel.service?.name || 'Dịch vụ'}</p>
-              <p><span className='text-[#7a756e]'>Ngày:</span> {toDateLabel(appointmentToCancel.appointmentAt)}</p>
-              <p><span className='text-[#7a756e]'>Giờ:</span> {toTimeLabel(appointmentToCancel.appointmentAt)}</p>
+              <p><span className='text-[#7a756e]'>Dịch vụ:</span> {appointmentToCancel.serviceName}</p>
+              <p><span className='text-[#7a756e]'>Ngày:</span> {appointmentToCancel.date}</p>
+              <p><span className='text-[#7a756e]'>Giờ:</span> {appointmentToCancel.time}</p>
             </div>
           )}
 
