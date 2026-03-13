@@ -3,6 +3,8 @@ import { UsersService } from './users.service';
 import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import type { AuthUser } from '../common/interfaces/auth-user.interface';
 
 @Controller('users')
 @UseGuards(FirebaseAuthGuard, RolesGuard)
@@ -11,7 +13,10 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get()
-  async list() {
-    return this.usersService.list();
+  async list(@CurrentUser() user: AuthUser | null) {
+    if (!user) {
+      return [];
+    }
+    return this.usersService.list(user);
   }
 }

@@ -1,5 +1,13 @@
 import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient, AppointmentStatus, CustomerSegment, PaymentStatus, Role } from '@prisma/client';
+import {
+  PrismaClient,
+  AppointmentStatus,
+  CustomerSegment,
+  PaymentStatus,
+  Role,
+  PaymentMethod,
+  InvoiceItemType,
+} from '@prisma/client';
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -12,6 +20,8 @@ const prisma = new PrismaClient({
 
 async function resetDatabase() {
   await prisma.auditLog.deleteMany();
+  await prisma.digitalCardEvent.deleteMany();
+  await prisma.medicalRecord.deleteMany();
   await prisma.paymentTransaction.deleteMany();
   await prisma.reminder.deleteMany();
   await prisma.notification.deleteMany();
@@ -26,13 +36,24 @@ async function resetDatabase() {
   await prisma.reminderTemplate.deleteMany();
   await prisma.clinicSettings.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.clinic.deleteMany();
 }
 
 async function main() {
   await resetDatabase();
 
+  const clinic = await prisma.clinic.create({
+    data: {
+      slug: 'pet-hub-clinic',
+      name: 'PetHub Clinic',
+      phone: '028-1234-5678',
+      address: '123 Nguyễn Huệ, Q.1, TP.HCM',
+    },
+  });
+
   const manager = await prisma.user.create({
     data: {
+      clinicId: clinic.id,
       firebaseUid: 'mock-admin-uid',
       role: Role.manager,
       name: 'Phạm Hương',
@@ -43,6 +64,7 @@ async function main() {
 
   const customerUserA = await prisma.user.create({
     data: {
+      clinicId: clinic.id,
       firebaseUid: 'mock-customer-nguyenvanan-uid',
       role: Role.customer,
       name: 'Nguyễn Văn An',
@@ -53,6 +75,7 @@ async function main() {
 
   const customerUserB = await prisma.user.create({
     data: {
+      clinicId: clinic.id,
       firebaseUid: 'mock-customer-tranthibinh-uid',
       role: Role.customer,
       name: 'Trần Thị Bình',
@@ -63,10 +86,11 @@ async function main() {
 
   await prisma.clinicSettings.create({
     data: {
-      clinicName: 'PetHub Clinic',
+      clinicId: clinic.id,
+      clinicName: clinic.name,
       taxId: '0123456789',
-      phone: '028-1234-5678',
-      address: '123 Nguyễn Huệ, Q.1, TP.HCM',
+      phone: clinic.phone ?? '028-1234-5678',
+      address: clinic.address ?? 'TP.HCM',
       invoiceNote: 'Cảm ơn quý khách đã sử dụng dịch vụ tại PetHub!',
       updatedById: manager.id,
     },
@@ -74,6 +98,7 @@ async function main() {
 
   const customerA = await prisma.customer.create({
     data: {
+      clinicId: clinic.id,
       userId: customerUserA.id,
       name: customerUserA.name,
       phone: customerUserA.phone,
@@ -87,6 +112,7 @@ async function main() {
 
   const customerB = await prisma.customer.create({
     data: {
+      clinicId: clinic.id,
       userId: customerUserB.id,
       name: customerUserB.name,
       phone: customerUserB.phone,
@@ -101,6 +127,7 @@ async function main() {
   const [serviceCheckup, serviceSpa, serviceTrim, serviceVaccine] = await Promise.all([
     prisma.service.create({
       data: {
+        clinicId: clinic.id,
         code: 'SRV-CHECKUP',
         name: 'Khám tổng quát',
         description: 'Kiểm tra tổng quát, đo nhiệt độ, nghe tim phổi và tư vấn',
@@ -110,6 +137,7 @@ async function main() {
     }),
     prisma.service.create({
       data: {
+        clinicId: clinic.id,
         code: 'SRV-SPA',
         name: 'Tắm & Spa',
         description: 'Tắm, sấy và vệ sinh chuyên sâu',
@@ -119,6 +147,7 @@ async function main() {
     }),
     prisma.service.create({
       data: {
+        clinicId: clinic.id,
         code: 'SRV-TRIM',
         name: 'Cắt tỉa lông',
         description: 'Cắt tỉa theo giống và yêu cầu',
@@ -128,6 +157,7 @@ async function main() {
     }),
     prisma.service.create({
       data: {
+        clinicId: clinic.id,
         code: 'SRV-VACCINE',
         name: 'Tiêm phòng',
         description: 'Tiêm phòng bệnh truyền nhiễm theo lịch',
@@ -137,31 +167,33 @@ async function main() {
     }),
   ]);
 
-  await Promise.all([
-    prisma.product.create({
-      data: {
-        sku: 'PRD-FOOD-DOG-2KG',
-        name: 'Hạt cho chó 2kg',
-        category: 'Thức ăn',
-        description: 'Hạt dinh dưỡng tổng hợp cho chó trưởng thành',
-        price: 320_000,
-        stock: 120,
-      },
-    }),
-    prisma.product.create({
-      data: {
-        sku: 'PRD-COLLAR-BASIC',
-        name: 'Vòng cổ cơ bản',
-        category: 'Phụ kiện',
-        description: 'Vòng cổ dây mềm cho chó mèo',
-        price: 120_000,
-        stock: 80,
-      },
-    }),
-  ]);
+  const productFood = await prisma.product.create({
+    data: {
+      clinicId: clinic.id,
+      sku: 'PRD-FOOD-DOG-2KG',
+      name: 'Hạt cho chó 2kg',
+      category: 'Thức ăn',
+      description: 'Hạt dinh dưỡng tổng hợp cho chó trưởng thành',
+      price: 320_000,
+      stock: 120,
+    },
+  });
+
+  await prisma.product.create({
+    data: {
+      clinicId: clinic.id,
+      sku: 'PRD-COLLAR-BASIC',
+      name: 'Vòng cổ cơ bản',
+      category: 'Phụ kiện',
+      description: 'Vòng cổ dây mềm cho chó mèo',
+      price: 120_000,
+      stock: 80,
+    },
+  });
 
   const petLucky = await prisma.pet.create({
     data: {
+      clinicId: clinic.id,
       customerId: customerA.id,
       name: 'Lucky',
       species: 'Chó',
@@ -181,6 +213,7 @@ async function main() {
 
   const petMimi = await prisma.pet.create({
     data: {
+      clinicId: clinic.id,
       customerId: customerA.id,
       name: 'Mimi',
       species: 'Mèo',
@@ -200,6 +233,7 @@ async function main() {
 
   const petBong = await prisma.pet.create({
     data: {
+      clinicId: clinic.id,
       customerId: customerB.id,
       name: 'Bông',
       species: 'Chó',
@@ -217,9 +251,25 @@ async function main() {
     },
   });
 
+  const completedAppointment = await prisma.appointment.create({
+    data: {
+      clinicId: clinic.id,
+      customerId: customerA.id,
+      petId: petLucky.id,
+      serviceId: serviceVaccine.id,
+      appointmentAt: new Date('2026-03-08T09:00:00+07:00'),
+      note: 'Tiêm vaccine nhắc lại',
+      status: AppointmentStatus.completed,
+      paymentStatus: PaymentStatus.paid,
+      managerId: manager.id,
+      paidAt: new Date('2026-03-08T09:45:00+07:00'),
+    },
+  });
+
   await Promise.all([
     prisma.appointment.create({
       data: {
+        clinicId: clinic.id,
         customerId: customerA.id,
         petId: petLucky.id,
         serviceId: serviceCheckup.id,
@@ -231,6 +281,7 @@ async function main() {
     }),
     prisma.appointment.create({
       data: {
+        clinicId: clinic.id,
         customerId: customerA.id,
         petId: petMimi.id,
         serviceId: serviceSpa.id,
@@ -242,19 +293,7 @@ async function main() {
     }),
     prisma.appointment.create({
       data: {
-        customerId: customerA.id,
-        petId: petLucky.id,
-        serviceId: serviceVaccine.id,
-        appointmentAt: new Date('2026-03-08T09:00:00+07:00'),
-        note: 'Tiêm vaccine nhắc lại',
-        status: AppointmentStatus.completed,
-        paymentStatus: PaymentStatus.paid,
-        managerId: manager.id,
-        paidAt: new Date('2026-03-08T09:45:00+07:00'),
-      },
-    }),
-    prisma.appointment.create({
-      data: {
+        clinicId: clinic.id,
         customerId: customerB.id,
         petId: petBong.id,
         serviceId: serviceTrim.id,
@@ -266,7 +305,96 @@ async function main() {
     }),
   ]);
 
-  console.log('Seed completed: manager, customers, pets, services, products, appointments');
+  const invoice = await prisma.invoice.create({
+    data: {
+      clinicId: clinic.id,
+      invoiceNo: 'INV-20260308-094500',
+      appointmentId: completedAppointment.id,
+      customerId: customerA.id,
+      managerId: manager.id,
+      paymentMethod: PaymentMethod.cash,
+      paymentStatus: PaymentStatus.paid,
+      subtotal: 300_000,
+      taxPercent: 8,
+      taxAmount: 24_000,
+      grandTotal: 324_000,
+      immutableHash: 'seed-invoice-hash',
+      items: {
+        create: [
+          {
+            itemType: InvoiceItemType.service,
+            serviceId: serviceVaccine.id,
+            petId: petLucky.id,
+            name: serviceVaccine.name,
+            qty: 1,
+            unitPrice: 300_000,
+            total: 300_000,
+          },
+          {
+            itemType: InvoiceItemType.product,
+            productId: productFood.id,
+            petId: petLucky.id,
+            name: productFood.name,
+            qty: 1,
+            unitPrice: 0,
+            total: 0,
+          },
+        ],
+      },
+    },
+  });
+
+  await prisma.paymentTransaction.create({
+    data: {
+      clinicId: clinic.id,
+      invoiceId: invoice.id,
+      provider: 'pos',
+      providerRef: 'SEED-PAID-INV-20260308-094500',
+      paymentMethod: PaymentMethod.cash,
+      amount: 324_000,
+      status: PaymentStatus.paid,
+      currency: 'VND',
+      paidAt: new Date('2026-03-08T09:45:00+07:00'),
+    },
+  });
+
+  await prisma.medicalRecord.create({
+    data: {
+      clinicId: clinic.id,
+      petId: petLucky.id,
+      customerId: customerA.id,
+      appointmentId: completedAppointment.id,
+      doctorName: manager.name,
+      diagnosis: 'Tiêm phòng định kỳ',
+      treatment: 'Tiêm vaccine nhắc lại và theo dõi phản ứng 24h',
+      notes: 'Sức khỏe ổn định',
+      recordedAt: new Date('2026-03-08T09:40:00+07:00'),
+      createdById: manager.id,
+    },
+  });
+
+  await prisma.reminderTemplate.createMany({
+    data: [
+      {
+        clinicId: clinic.id,
+        name: 'Nhắc tiêm phòng',
+        type: 'vaccine',
+        channelDefaults: ['email', 'sms'],
+        messageTemplate:
+          'Kính gửi [CustomerName], [PetName] đã đến lịch tiêm phòng tại [ClinicName]. Vui lòng đặt hẹn sớm.',
+      },
+      {
+        clinicId: clinic.id,
+        name: 'Nhắc tái khám',
+        type: 'checkup',
+        channelDefaults: ['email'],
+        messageTemplate:
+          'Kính gửi [CustomerName], [PetName] cần tái khám theo lịch tại [ClinicName].',
+      },
+    ],
+  });
+
+  console.log('Seed completed with clinic-scoped data and baseline records.');
 }
 
 main()
