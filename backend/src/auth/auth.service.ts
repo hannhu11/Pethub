@@ -1,7 +1,10 @@
 import {
   BadRequestException,
+  InternalServerErrorException,
   Injectable,
+  Logger,
   NotFoundException,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Prisma, Role, type User } from '@prisma/client';
@@ -24,42 +27,67 @@ export interface AuthMeResponse {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly firebaseAdminService: FirebaseAdminService,
   ) {}
 
   async syncFirebase(dto: SyncFirebaseDto): Promise<AuthMeResponse> {
-    const decoded = await this.firebaseAdminService.verifyIdToken(dto.idToken);
-    const clinicId = await this.resolveClinicId(dto.clinicSlug);
-    const email = decoded.email ?? `${decoded.uid}@pethub.vn`;
-    const normalizedPhone = dto.phone?.trim() ?? decoded.phone_number?.trim() ?? '';
-    const displayName = dto.name?.trim() || decoded.name?.trim() || null;
+    try {
+      const decoded = await this.verifyIdTokenWithTimeout(dto.idToken);
+      const clinicId = await this.resolveClinicId(dto.clinicSlug);
+      const email = decoded.email ?? `${decoded.uid}@pethub.vn`;
+      const normalizedPhone = dto.phone?.trim() ?? decoded.phone_number?.trim() ?? '';
+      const displayName = dto.name?.trim() || decoded.name?.trim() || null;
 
-    const userByUid = await this.prisma.user.findUnique({
-      where: { firebaseUid: decoded.uid },
-    });
+      const userByUid = await this.prisma.user.findUnique({
+        where: { firebaseUid: decoded.uid },
+      });
 
-    const user = userByUid
-      ? await this.prisma.user.update({
-          where: { id: userByUid.id },
-          data: {
-            clinicId: clinicId ?? userByUid.clinicId,
-            email,
-            name: displayName ?? userByUid.name,
-            phone: normalizedPhone || userByUid.phone,
-          },
-        })
-      : await this.upsertByEmailFallback(decoded.uid, email, normalizedPhone, displayName, clinicId);
+      const user = userByUid
+        ? await this.prisma.user.update({
+            where: { id: userByUid.id },
+            data: {
+              clinicId: clinicId ?? userByUid.clinicId,
+              email,
+              name: displayName ?? userByUid.name,
+              phone: normalizedPhone || userByUid.phone,
+            },
+          })
+        : await this.upsertByEmailFallback(decoded.uid, email, normalizedPhone, displayName, clinicId);
 
-    await this.upsertCustomerProfile(user);
+      await this.upsertCustomerProfile(user);
 
-    const onboarding = this.buildOnboardingState(
-      user,
-      decoded.firebase?.sign_in_provider ?? 'unknown',
-    );
+      const onboarding = this.buildOnboardingState(
+        user,
+        decoded.firebase?.sign_in_provider ?? 'unknown',
+      );
 
-    return { user: this.toAuthUser(user), onboarding };
+      return { user: this.toAuthUser(user), onboarding };
+    } catch (error) {
+      const stack = error instanceof Error ? error.stack : String(error);
+      this.logger.error('Firebase sync failed', stack);
+
+      if (
+        error instanceof BadRequestException ||
+        error instanceof UnauthorizedException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+
+      if (this.isMissingClinicTableError(error)) {
+        throw new ServiceUnavailableException(
+          'He thong dang cap nhat du lieu. Vui long thu lai sau it phut.',
+        );
+      }
+
+      throw new InternalServerErrorException(
+        'May chu dang ban. Vui long thu lai sau.',
+      );
+    }
   }
 
   async getMe(currentUser: AuthUser | null): Promise<AuthMeResponse> {
@@ -334,5 +362,39 @@ export class AuthService {
       .replace(/^-|-$/g, '');
 
     return normalized.length > 0 ? normalized : 'default';
+  }
+
+  private async verifyIdTokenWithTimeout(idToken: string) {
+    const timeoutMs = Number(process.env.AUTH_VERIFY_TIMEOUT_MS ?? 12000);
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    try {
+      return await Promise.race([
+        this.firebaseAdminService.verifyIdToken(idToken),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => {
+            reject(new ServiceUnavailableException('Firebase verification timeout'));
+          }, timeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    }
+  }
+
+  private isMissingClinicTableError(error: unknown): boolean {
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      (error as { code?: string }).code === 'P2021'
+    ) {
+      const message = JSON.stringify(error);
+      return message.includes('public.Clinic');
+    }
+
+    return false;
   }
 }

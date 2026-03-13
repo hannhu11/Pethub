@@ -82,3 +82,35 @@
   - digital card aggregate data
   - POS transfer/QR + payOS webhook
   - overview vs customer LTV consistency
+
+## Incident 2026-03-13 (Auth timeout / server busy on login)
+- Symptom reported:
+  - Login/Register spins for long time then shows server busy error.
+- Root cause identified from live VPS logs:
+  - `POST /api/auth/sync-firebase` returned `500`.
+  - Prisma error `P2021`: relation `"public.Clinic"` does not exist.
+  - DB was partially migrated (new code expected clinic-aware schema, legacy DB missing `Clinic` + `clinicId` rollout).
+- Corrective actions executed:
+  - Added one-time SQL backfill script:
+    - `scripts/vps_backfill_clinic.sql`
+    - creates `Clinic`, backfills `clinicId` on legacy tables, preserves data.
+  - Added pre-check query pack:
+    - `scripts/vps_check_unique_conflicts.sql`
+    - validates no duplicate conflicts before unique constraints.
+  - Ran production DB sync:
+    - `prisma db push --accept-data-loss` (non-destructive in this case; only warnings for unique constraints, pre-validated no duplicates).
+  - Verified new tables exist:
+    - `Clinic`, `MedicalRecord`, `DigitalCardEvent`.
+  - Rebuilt/restarted stack on VPS successfully.
+- Defensive coding hardening added:
+  - `backend/src/auth/auth.service.ts`
+    - wrapped `syncFirebase` in robust `try/catch` with explicit error logging.
+    - added Firebase verify fail-fast timeout via `verifyIdTokenWithTimeout`.
+    - added graceful `ServiceUnavailable` response for missing-clinic-table scenario.
+  - `docker/nginx/pethub.conf`
+    - added `proxy_connect_timeout`, `proxy_send_timeout`, `proxy_read_timeout` to 60s for `/api`.
+  - `src/app/lib/api-client.ts`
+    - reduced axios timeout to `15000ms` for faster frontend fail feedback.
+- Operational note:
+  - For file bind mounts, replacing host config file can require container recreate.
+  - Applied with `docker compose ... up -d --force-recreate nginx` to ensure new nginx config is mounted.
