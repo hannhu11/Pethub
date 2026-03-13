@@ -168,3 +168,47 @@
   - payOS keys only injected on VPS `.env.production`.
   - Keep webhook URL registration in payOS dashboard pointed to:
     - `http://140.245.119.189/api/payments/payos/webhook`
+
+## Hotfix 2026-03-14 (Webhook verification + booking empty-state + admin role)
+- Trigger from user testing:
+  - Appointment form had empty service/pet selectors.
+  - Requested manager role for `mnu3032004@gmail.com`.
+  - payOS dashboard webhook check failed with 404/400.
+
+- Code changes:
+  - `backend/src/payments/payments.controller.ts`
+    - Added explicit legacy alias route support:
+      - `GET/POST /api/payments/payos/webhook`
+      - `GET/POST /api/payments/payos-webhook`
+    - Forced webhook POST status to `200` via `@HttpCode(200)` for gateway compatibility.
+  - `backend/src/payments/payments.service.ts`
+    - Added connectivity-probe handling for empty/non-payment webhook payloads (ack `200`).
+    - Kept strict signature check for real payment payloads.
+    - Added amount mismatch guard.
+    - Unknown transaction now returns acknowledged `ignored` response instead of 404.
+  - `src/app/components/services.tsx`
+    - Removed mock-service source.
+    - Now loads real catalog services via API (`listCatalogServices`).
+    - Added loading/error/empty states.
+  - `src/app/components/customer-appointments.tsx`
+    - Added `serviceId` query prefill support from services page.
+    - Added clear empty-state hints for no services/no pets.
+    - Disabled selectors when no data source exists to avoid broken flow perception.
+
+- VPS actions executed before any git push:
+  - Synced changed files to `/home/ubuntu/pethub`.
+  - Rebuilt/restarted containers (`api`, `web`, `nginx`; then `api` once more after route alias adjustment).
+  - Live endpoint verification:
+    - `GET /api/payments/payos/webhook` -> 200
+    - `GET /api/payments/payos-webhook` -> 200
+    - `POST /api/payments/payos/webhook` with `{}` -> 200
+    - `POST /api/payments/payos-webhook` with `{}` -> 200
+
+- Admin promotion status:
+  - Verified in production DB:
+    - email: `mnu3032004@gmail.com`
+    - role: `manager`
+    - clinic slug: `default`
+
+- Security note:
+  - No new secrets/keys were added to repository files in this hotfix.

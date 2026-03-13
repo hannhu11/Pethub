@@ -105,6 +105,14 @@ export class PaymentsService {
   }
 
   async handlePayosWebhook(dto: PayosWebhookDto) {
+    if (this.isWebhookConnectivityProbe(dto)) {
+      return {
+        success: true,
+        acknowledged: true,
+        probe: true,
+      };
+    }
+
     const payload = this.extractWebhookPayload(dto);
     this.verifyWebhookSignature(dto);
 
@@ -116,7 +124,17 @@ export class PaymentsService {
     });
 
     if (!txn) {
-      throw new NotFoundException('Payment transaction not found');
+      return {
+        success: true,
+        ignored: true,
+        reason: 'payment_transaction_not_found',
+        orderCode: payload.orderCode,
+      };
+    }
+
+    const expectedAmount = Math.round(Number(txn.amount ?? 0));
+    if (expectedAmount > 0 && Math.round(payload.amount) !== expectedAmount) {
+      throw new BadRequestException('Webhook amount mismatch');
     }
 
     const paid = payload.status.toUpperCase() === 'PAID' || payload.status.toUpperCase() === 'SUCCESS';
@@ -313,6 +331,14 @@ export class PaymentsService {
     }
 
     return { orderCode, status, amount };
+  }
+
+  private isWebhookConnectivityProbe(dto: PayosWebhookDto): boolean {
+    const orderCode = `${dto.data?.orderCode ?? dto.orderCode ?? ''}`.trim();
+    const status = `${dto.data?.status ?? dto.status ?? ''}`.trim();
+    const amount = Number(dto.data?.amount ?? dto.amount ?? 0);
+
+    return !orderCode && !status && (!Number.isFinite(amount) || amount <= 0);
   }
 
   private signPayload(data: Record<string, unknown>, checksumKey: string): string {

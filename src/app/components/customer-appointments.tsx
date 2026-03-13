@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CalendarDays, Clock3, PawPrint, PlusCircle, Stethoscope } from 'lucide-react';
+import { useSearchParams } from 'react-router';
 import type { ApiAppointment, ApiPet, ApiService, BookingDraft, CancelDialogState } from '../types';
 import { cancelAppointment, createAppointment, listAppointments, listCatalogServices, listPets } from '../lib/pethub-api';
 import { extractApiError } from '../lib/api-client';
@@ -70,6 +71,7 @@ function statusClass(status: ApiAppointment['status']) {
 }
 
 export function CustomerAppointmentsPage() {
+  const [searchParams] = useSearchParams();
   const [appointments, setAppointments] = useState<ApiAppointment[]>([]);
   const [services, setServices] = useState<ApiService[]>([]);
   const [pets, setPets] = useState<ApiPet[]>([]);
@@ -82,6 +84,7 @@ export function CustomerAppointmentsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const serviceIdFromQuery = searchParams.get('serviceId')?.trim() || '';
 
   const loadData = async () => {
     const [appointmentData, serviceData, petData] = await Promise.all([
@@ -119,9 +122,23 @@ export function CustomerAppointmentsPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!serviceIdFromQuery || services.length === 0) {
+      return;
+    }
+
+    if (!services.some((service) => service.id === serviceIdFromQuery)) {
+      return;
+    }
+
+    setDraft((prev) => (prev.serviceId ? prev : { ...prev, serviceId: serviceIdFromQuery }));
+  }, [serviceIdFromQuery, services]);
+
   const selectedService = services.find((item) => item.id === draft.serviceId);
   const selectedPet = pets.find((item) => item.id === draft.petId);
-  const canSubmit = Boolean(draft.serviceId && draft.petId && draft.date && draft.time);
+  const hasServices = services.length > 0;
+  const hasPets = pets.length > 0;
+  const canSubmit = Boolean(hasServices && hasPets && draft.serviceId && draft.petId && draft.date && draft.time);
 
   const filteredAppointments = useMemo(() => {
     if (filter === 'all') {
@@ -211,6 +228,7 @@ export function CustomerAppointmentsPage() {
               <select
                 value={draft.serviceId || ''}
                 onChange={(event) => setDraft((prev) => ({ ...prev, serviceId: event.target.value }))}
+                disabled={!hasServices}
                 className='w-full p-3 border border-[#2d2a26] rounded-xl bg-[#faf9f6]'
               >
                 <option value=''>-- Chọn dịch vụ --</option>
@@ -220,6 +238,9 @@ export function CustomerAppointmentsPage() {
                   </option>
                 ))}
               </select>
+              {!loading && !hasServices ? (
+                <p className='mt-2 text-xs text-[#7a756e]'>Phòng khám chưa cập nhật dịch vụ. Vui lòng thử lại sau.</p>
+              ) : null}
             </div>
 
             <div>
@@ -230,6 +251,7 @@ export function CustomerAppointmentsPage() {
               <select
                 value={draft.petId || ''}
                 onChange={(event) => setDraft((prev) => ({ ...prev, petId: event.target.value }))}
+                disabled={!hasPets}
                 className='w-full p-3 border border-[#2d2a26] rounded-xl bg-[#faf9f6]'
               >
                 <option value=''>-- Chọn thú cưng --</option>
@@ -239,6 +261,11 @@ export function CustomerAppointmentsPage() {
                   </option>
                 ))}
               </select>
+              {!loading && !hasPets ? (
+                <p className='mt-2 text-xs text-[#7a756e]'>
+                  Bạn chưa có thú cưng nào. Vui lòng thêm tại mục <a href='/customer/pets' className='underline text-[#6b8f5e]'>Thú cưng của tôi</a>.
+                </p>
+              ) : null}
             </div>
 
             <div>

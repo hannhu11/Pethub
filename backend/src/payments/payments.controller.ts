@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, UseGuards } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { CreatePayosLinkDto } from './dto/create-payos-link.dto';
 import { PayosWebhookDto } from './dto/payos-webhook.dto';
@@ -23,7 +23,27 @@ export class PaymentsController {
   }
 
   @Post('payos/webhook')
+  @HttpCode(200)
   async webhook(@Body() dto: PayosWebhookDto) {
     return this.paymentsService.handlePayosWebhook(dto);
+  }
+
+  @Post('payos-webhook')
+  @HttpCode(200)
+  async webhookLegacy(@Body() dto: PayosWebhookDto) {
+    return this.paymentsService.handlePayosWebhook(dto);
+  }
+
+  @Get('payos/webhook')
+  async webhookHealth() {
+    return {
+      success: true,
+      message: 'payOS webhook endpoint is alive. Use HTTP POST for payment events.',
+    };
+  }
+
+  @Get('payos-webhook')
+  async webhookLegacyHealth() {
+    return this.webhookHealth();
   }
 }
