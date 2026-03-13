@@ -17,6 +17,7 @@ import {
 import { useAuthSession } from '../auth-session';
 import type { AuthRole, ForgotPasswordState } from '../types';
 import { LEGAL_ROUTES } from '../constants/legal';
+import { toFriendlyAuthError } from '../lib/auth-errors';
 import loginVisual from '../../assets/images/auth/login-hero.jpg';
 import registerVisual from '../../assets/images/auth/register-hero.jpg';
 import {
@@ -175,7 +176,7 @@ export function LoginPage() {
         navigate(redirectTo, { replace: true });
       }
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'Đăng nhập thất bại.');
+      setFormError(toFriendlyAuthError(error, 'login'));
     } finally {
       setSubmitting(false);
     }
@@ -197,7 +198,7 @@ export function LoginPage() {
         navigate(redirectTo, { replace: true });
       }
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'Đăng nhập Google thất bại.');
+      setFormError(toFriendlyAuthError(error, 'google-login'));
     } finally {
       setGoogleSubmitting(false);
     }
@@ -214,7 +215,7 @@ export function LoginPage() {
       setForgot((prev) => ({ ...prev, submitting: false, sent: true }));
     } catch (error) {
       setForgot((prev) => ({ ...prev, submitting: false }));
-      setFormError(error instanceof Error ? error.message : 'Không gửi được email khôi phục.');
+      setFormError(toFriendlyAuthError(error, 'reset-password'));
     }
   };
 
@@ -228,7 +229,7 @@ export function LoginPage() {
       setForgot((prev) => ({ ...prev, submitting: false, sent: true }));
     } catch (error) {
       setForgot((prev) => ({ ...prev, submitting: false }));
-      setFormError(error instanceof Error ? error.message : 'Không gửi lại được email.');
+      setFormError(toFriendlyAuthError(error, 'reset-password'));
     }
   };
 
@@ -454,7 +455,7 @@ export function RegisterPage() {
       });
       navigate(resolveDefaultPath(authUser.role), { replace: true });
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'Đăng ký thất bại.');
+      setFormError(toFriendlyAuthError(error, 'register'));
     } finally {
       setSubmitting(false);
     }
@@ -467,7 +468,7 @@ export function RegisterPage() {
       const authUser = await loginWithGoogle();
       navigate(resolveDefaultPath(authUser.role), { replace: true });
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'Đăng ký bằng Google thất bại.');
+      setFormError(toFriendlyAuthError(error, 'google-login'));
     } finally {
       setGoogleSubmitting(false);
     }

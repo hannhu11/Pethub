@@ -11,8 +11,9 @@ import {
   type User as FirebaseUser,
 } from 'firebase/auth';
 import { firebaseAuth, googleProvider } from './lib/firebase';
-import { extractApiError, setApiAccessToken } from './lib/api-client';
+import { setApiAccessToken } from './lib/api-client';
 import { getAuthMe, syncFirebaseUser } from './lib/pethub-api';
+import { toFriendlyAuthError } from './lib/auth-errors';
 import type { AuthRole, AuthUser, SessionState } from './types';
 
 type LoginInput = {
@@ -73,20 +74,6 @@ function toSession(user: AuthUser): SessionState {
   };
 }
 
-function normalizeAuthMessage(message: string) {
-  const lower = message.toLowerCase();
-  if (
-    lower.includes('status code 502') ||
-    lower.includes('status code 503') ||
-    lower.includes('status code 500') ||
-    lower.includes('firebase admin credentials missing') ||
-    lower.includes('network error')
-  ) {
-    return 'Lỗi máy chủ: Không thể đồng bộ tài khoản. Vui lòng thử lại.';
-  }
-  return message;
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<SessionState>(loadingSession);
 
@@ -94,14 +81,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (firebaseUser: FirebaseUser, profileOverride?: { name?: string; phone?: string }) => {
       const idToken = await firebaseUser.getIdToken(true);
       setApiAccessToken(idToken);
-
-      await syncFirebaseUser({
-        idToken,
-        name: profileOverride?.name ?? firebaseUser.displayName ?? undefined,
-        phone: profileOverride?.phone ?? firebaseUser.phoneNumber ?? undefined,
-      });
-
-      return getAuthMe();
+      try {
+        await syncFirebaseUser({
+          idToken,
+          name: profileOverride?.name ?? firebaseUser.displayName ?? undefined,
+          phone: profileOverride?.phone ?? firebaseUser.phoneNumber ?? undefined,
+        });
+        return getAuthMe();
+      } catch (error) {
+        throw new Error(toFriendlyAuthError(error, 'sync'));
+      }
     },
     [],
   );
@@ -131,7 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!mounted) {
           return;
         }
-        const message = extractApiError(error);
+        const message = toFriendlyAuthError(error, 'sync');
         setApiAccessToken(null);
         setSession({ ...unauthenticatedSession, error: message });
       }
@@ -153,7 +142,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(nextSession);
         return authUser;
       } catch (error) {
-        const message = normalizeAuthMessage(extractApiError(error));
+        const message = toFriendlyAuthError(error, 'login');
         setSession({ ...unauthenticatedSession, error: message });
         throw new Error(message);
       }
@@ -170,7 +159,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(nextSession);
       return authUser;
     } catch (error) {
-      const message = normalizeAuthMessage(extractApiError(error));
+      const message = toFriendlyAuthError(error, 'google-login');
       setSession({ ...unauthenticatedSession, error: message });
       throw new Error(message);
     }
@@ -189,7 +178,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(nextSession);
         return authUser;
       } catch (error) {
-        const message = normalizeAuthMessage(extractApiError(error));
+        const message = toFriendlyAuthError(error, 'register');
         setSession({ ...unauthenticatedSession, error: message });
         throw new Error(message);
       }
@@ -204,7 +193,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const sendResetPasswordEmail = useCallback(async (email: string) => {
-    await sendPasswordResetEmail(firebaseAuth, email.trim());
+    try {
+      await sendPasswordResetEmail(firebaseAuth, email.trim());
+    } catch (error) {
+      throw new Error(toFriendlyAuthError(error, 'reset-password'));
+    }
   }, []);
 
   const updateSessionProfile = useCallback(
@@ -220,14 +213,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const idToken = await firebaseUser.getIdToken(true);
       setApiAccessToken(idToken);
-      await syncFirebaseUser({
-        idToken,
-        name: name.trim(),
-        phone: phone?.trim() || undefined,
-      });
-      const authUser = await getAuthMe();
-      setSession(toSession(authUser));
-      return authUser;
+      try {
+        await syncFirebaseUser({
+          idToken,
+          name: name.trim(),
+          phone: phone?.trim() || undefined,
+        });
+        const authUser = await getAuthMe();
+        setSession(toSession(authUser));
+        return authUser;
+      } catch (error) {
+        throw new Error(toFriendlyAuthError(error, 'profile-update'));
+      }
     },
     [],
   );
