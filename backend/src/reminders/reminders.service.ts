@@ -14,8 +14,12 @@ export class RemindersService {
   ) {}
 
   async list(_currentUser: AuthUser, query: RemindersQueryDto) {
+    const clinicId = _currentUser.clinicId;
     const items = await this.prisma.reminder.findMany({
-      where: query.status ? { status: query.status } : undefined,
+      where: {
+        clinicId,
+        ...(query.status ? { status: query.status } : {}),
+      },
       include: {
         customer: true,
         pet: true,
@@ -25,10 +29,10 @@ export class RemindersService {
     });
 
     const [sent, failed, scheduled, cancelled] = await Promise.all([
-      this.prisma.reminder.count({ where: { status: ReminderStatus.sent } }),
-      this.prisma.reminder.count({ where: { status: ReminderStatus.failed } }),
-      this.prisma.reminder.count({ where: { status: ReminderStatus.scheduled } }),
-      this.prisma.reminder.count({ where: { status: ReminderStatus.cancelled } }),
+      this.prisma.reminder.count({ where: { clinicId, status: ReminderStatus.sent } }),
+      this.prisma.reminder.count({ where: { clinicId, status: ReminderStatus.failed } }),
+      this.prisma.reminder.count({ where: { clinicId, status: ReminderStatus.scheduled } }),
+      this.prisma.reminder.count({ where: { clinicId, status: ReminderStatus.cancelled } }),
     ]);
 
     const successDenominator = sent + failed;
@@ -47,21 +51,48 @@ export class RemindersService {
   }
 
   async createFromTemplate(dto: CreateReminderFromTemplateDto, currentUser: AuthUser) {
-    const customer = await this.prisma.customer.findUnique({ where: { id: dto.customerId } });
+    const customer = await this.prisma.customer.findFirst({
+      where: {
+        id: dto.customerId,
+        clinicId: currentUser.clinicId,
+      },
+    });
     if (!customer) {
       throw new NotFoundException('Customer not found');
     }
 
-    const pet = await this.prisma.pet.findUnique({ where: { id: dto.petId } });
+    const pet = await this.prisma.pet.findFirst({
+      where: {
+        id: dto.petId,
+        clinicId: currentUser.clinicId,
+      },
+    });
     if (!pet) {
       throw new NotFoundException('Pet not found');
     }
 
-    const clinic = await this.prisma.clinicSettings.findFirst({ orderBy: { updatedAt: 'desc' } });
+    const clinic = await this.prisma.clinicSettings.findFirst({
+      where: {
+        clinicId: currentUser.clinicId,
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
     const template = dto.templateId
-      ? await this.prisma.reminderTemplate.findUnique({ where: { id: dto.templateId } })
+      ? await this.prisma.reminderTemplate.findFirst({
+          where: {
+            id: dto.templateId,
+            clinicId: currentUser.clinicId,
+          },
+        })
       : dto.templateName
-        ? await this.prisma.reminderTemplate.findUnique({ where: { name: dto.templateName } })
+        ? await this.prisma.reminderTemplate.findUnique({
+            where: {
+              clinicId_name: {
+                clinicId: currentUser.clinicId,
+                name: dto.templateName,
+              },
+            },
+          })
         : null;
 
     const baseMessage =
@@ -80,6 +111,7 @@ export class RemindersService {
 
     const reminder = await this.prisma.reminder.create({
       data: {
+        clinicId: currentUser.clinicId,
         customerId: customer.id,
         petId: pet.id,
         channel: dto.channel,
@@ -97,6 +129,7 @@ export class RemindersService {
 
     await this.prisma.auditLog.create({
       data: {
+        clinicId: currentUser.clinicId,
         actorId: currentUser.userId,
         action: 'reminder.create.from-template',
         entityType: 'reminder',
@@ -120,7 +153,12 @@ export class RemindersService {
   }
 
   async cancel(id: string, currentUser: AuthUser) {
-    const reminder = await this.prisma.reminder.findUnique({ where: { id } });
+    const reminder = await this.prisma.reminder.findFirst({
+      where: {
+        id,
+        clinicId: currentUser.clinicId,
+      },
+    });
     if (!reminder) {
       throw new NotFoundException('Reminder not found');
     }
@@ -134,6 +172,7 @@ export class RemindersService {
 
     await this.prisma.auditLog.create({
       data: {
+        clinicId: currentUser.clinicId,
         actorId: currentUser.userId,
         action: 'reminder.cancel',
         entityType: 'reminder',

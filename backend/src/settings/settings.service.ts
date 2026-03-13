@@ -16,16 +16,27 @@ export class SettingsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getSettings(currentUser: AuthUser) {
-    const user = await this.prisma.user.findUnique({ where: { id: currentUser.userId } });
+    const user = await this.prisma.user.findFirst({
+      where: {
+        id: currentUser.userId,
+        clinicId: currentUser.clinicId,
+      },
+    });
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
     const clinic = await this.prisma.clinicSettings.findFirst({
+      where: {
+        clinicId: currentUser.clinicId,
+      },
       orderBy: { updatedAt: 'desc' },
     });
 
     const subscription = await this.prisma.subscription.findFirst({
+      where: {
+        clinicId: currentUser.clinicId,
+      },
       orderBy: { updatedAt: 'desc' },
     });
 
@@ -54,8 +65,23 @@ export class SettingsService {
       },
     });
 
+    if (updated.role === 'customer') {
+      await this.prisma.customer.updateMany({
+        where: {
+          clinicId: currentUser.clinicId,
+          userId: currentUser.userId,
+        },
+        data: {
+          name: updated.name,
+          email: updated.email,
+          phone: updated.phone,
+        },
+      });
+    }
+
     await this.prisma.auditLog.create({
       data: {
+        clinicId: currentUser.clinicId,
         actorId: currentUser.userId,
         action: 'settings.profile.update',
         entityType: 'user',
@@ -81,7 +107,12 @@ export class SettingsService {
 
     await this.ensureSensitivePassword(currentUser.userId, dto.confirmPassword);
 
-    const existing = await this.prisma.clinicSettings.findFirst({ orderBy: { createdAt: 'asc' } });
+    const existing = await this.prisma.clinicSettings.findFirst({
+      where: {
+        clinicId: currentUser.clinicId,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
 
     const clinic = existing
       ? await this.prisma.clinicSettings.update({
@@ -98,6 +129,7 @@ export class SettingsService {
         })
       : await this.prisma.clinicSettings.create({
           data: {
+            clinicId: currentUser.clinicId,
             clinicName: dto.clinicName,
             taxId: dto.taxId,
             phone: dto.phone,
@@ -110,6 +142,7 @@ export class SettingsService {
 
     await this.prisma.auditLog.create({
       data: {
+        clinicId: currentUser.clinicId,
         actorId: currentUser.userId,
         action: 'settings.clinic.update',
         entityType: 'clinic_settings',
@@ -138,6 +171,7 @@ export class SettingsService {
 
     await this.prisma.auditLog.create({
       data: {
+        clinicId: currentUser.clinicId,
         actorId: currentUser.userId,
         action: 'settings.password.update',
         entityType: 'user',

@@ -4,6 +4,7 @@ import { SyncFirebaseDto } from './dto/sync-firebase.dto';
 import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
+import { CompleteOnboardingDto } from './dto/complete-onboarding.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -11,13 +12,21 @@ export class AuthController {
 
   @Post('sync-firebase')
   async syncFirebase(@Body() dto: SyncFirebaseDto) {
-    const user = await this.authService.syncFirebase(dto);
-    return { user };
+    return this.authService.syncFirebase(dto);
   }
 
   @UseGuards(FirebaseAuthGuard)
   @Get('me')
   async me(@CurrentUser() user: AuthUser | null) {
-    return { user: await this.authService.getMe(user) };
+    return this.authService.getMe(user);
+  }
+
+  @UseGuards(FirebaseAuthGuard)
+  @Post('onboarding/complete')
+  async completeOnboarding(
+    @CurrentUser() user: AuthUser | null,
+    @Body() dto: CompleteOnboardingDto,
+  ) {
+    return this.authService.completeOnboarding(user, dto);
   }
 }

@@ -20,6 +20,7 @@ import { AiModule } from './ai/ai.module';
 import { HealthModule } from './health/health.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { DatabaseModule } from './database/database.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { DatabaseModule } from './database/database.module';
     PaymentsModule,
     AiModule,
     HealthModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

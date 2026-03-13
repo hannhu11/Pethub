@@ -74,6 +74,20 @@ function toSession(user: AuthUser): SessionState {
   };
 }
 
+function resolveClinicSlug(): string | undefined {
+  if (typeof window === 'undefined') {
+    return undefined;
+  }
+
+  const fromQuery = new URLSearchParams(window.location.search).get('clinic')?.trim();
+  if (fromQuery) {
+    window.sessionStorage.setItem('clinicSlug', fromQuery);
+    return fromQuery;
+  }
+
+  return window.sessionStorage.getItem('clinicSlug')?.trim() || undefined;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<SessionState>(loadingSession);
 
@@ -82,10 +96,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const idToken = await firebaseUser.getIdToken(true);
       setApiAccessToken(idToken);
       try {
+        const clinicSlug = resolveClinicSlug();
         await syncFirebaseUser({
           idToken,
           name: profileOverride?.name ?? firebaseUser.displayName ?? undefined,
           phone: profileOverride?.phone ?? firebaseUser.phoneNumber ?? undefined,
+          clinicSlug,
         });
         return getAuthMe();
       } catch (error) {

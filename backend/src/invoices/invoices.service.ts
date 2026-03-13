@@ -1,14 +1,18 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { PrismaService } from '../database/prisma.service';
+import type { AuthUser } from '../common/interfaces/auth-user.interface';
 
 @Injectable()
 export class InvoicesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getById(id: string) {
-    const invoice = await this.prisma.invoice.findUnique({
-      where: { id },
+  async getById(id: string, currentUser: AuthUser) {
+    const invoice = await this.prisma.invoice.findFirst({
+      where: {
+        id,
+        clinicId: currentUser.clinicId,
+      },
       include: {
         customer: true,
         items: true,
@@ -24,7 +28,24 @@ export class InvoicesService {
       throw new NotFoundException('Invoice not found');
     }
 
-    const clinic = await this.prisma.clinicSettings.findFirst({ orderBy: { updatedAt: 'desc' } });
+    if (currentUser.role === 'customer') {
+      const customer = await this.prisma.customer.findFirst({
+        where: {
+          clinicId: currentUser.clinicId,
+          userId: currentUser.userId,
+        },
+      });
+      if (!customer || customer.id !== invoice.customerId) {
+        throw new ForbiddenException('Not allowed to access this invoice');
+      }
+    }
+
+    const clinic = await this.prisma.clinicSettings.findFirst({
+      where: {
+        clinicId: currentUser.clinicId,
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
 
     return {
       invoice,
@@ -32,8 +53,8 @@ export class InvoicesService {
     };
   }
 
-  async createPdf(id: string): Promise<Buffer> {
-    const { invoice, clinic } = await this.getById(id);
+  async createPdf(id: string, currentUser: AuthUser): Promise<Buffer> {
+    const { invoice, clinic } = await this.getById(id, currentUser);
 
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([595.28, 841.89]);

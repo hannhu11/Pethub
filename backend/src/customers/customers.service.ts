@@ -2,14 +2,18 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CustomerSegment } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { CustomersQueryDto } from './dto/customers-query.dto';
+import type { AuthUser } from '../common/interfaces/auth-user.interface';
 
 @Injectable()
 export class CustomersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(query: CustomersQueryDto) {
+  async list(currentUser: AuthUser, query: CustomersQueryDto) {
     const customers = await this.prisma.customer.findMany({
-      where: query.segment ? { segment: query.segment } : undefined,
+      where: {
+        clinicId: currentUser.clinicId,
+        ...(query.segment ? { segment: query.segment } : {}),
+      },
       include: {
         pets: true,
       },
@@ -40,9 +44,12 @@ export class CustomersService {
     return normalized.sort((a, b) => this.segmentRank(a.segment) - this.segmentRank(b.segment));
   }
 
-  async getById(id: string) {
-    const customer = await this.prisma.customer.findUnique({
-      where: { id },
+  async getById(currentUser: AuthUser, id: string) {
+    const customer = await this.prisma.customer.findFirst({
+      where: {
+        id,
+        clinicId: currentUser.clinicId,
+      },
       include: {
         pets: true,
         appointments: {

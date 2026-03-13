@@ -5,15 +5,21 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
 import { PosPrefillQueryDto } from './dto/pos-prefill-query.dto';
 import { PosCheckoutDto } from './dto/pos-checkout.dto';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 
 @Controller('pos')
-@UseGuards(FirebaseAuthGuard)
+@UseGuards(FirebaseAuthGuard, RolesGuard)
+@Roles('manager')
 export class PosController {
   constructor(private readonly posService: PosService) {}
 
   @Get('prefill')
-  async prefill(@Query() query: PosPrefillQueryDto) {
-    return this.posService.getPrefill(query);
+  async prefill(@CurrentUser() user: AuthUser | null, @Query() query: PosPrefillQueryDto) {
+    if (!user) {
+      return { appointment: null };
+    }
+    return this.posService.getPrefill(user, query);
   }
 
   @Post('checkout')

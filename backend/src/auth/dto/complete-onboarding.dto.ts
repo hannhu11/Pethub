@@ -1,17 +1,13 @@
 import { IsOptional, IsString, MinLength } from 'class-validator';
 
-export class SyncFirebaseDto {
+export class CompleteOnboardingDto {
   @IsString()
-  @MinLength(3)
-  idToken!: string;
+  @MinLength(2)
+  name!: string;
 
-  @IsOptional()
   @IsString()
-  name?: string;
-
-  @IsOptional()
-  @IsString()
-  phone?: string;
+  @MinLength(8)
+  phone!: string;
 
   @IsOptional()
   @IsString()

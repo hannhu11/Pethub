@@ -63,28 +63,64 @@ enum ReminderChannel {
   sms
 }
 
-model User {
-  id            String    @id @default(cuid())
-  firebaseUid   String    @unique
-  role          Role
-  name          String
-  phone         String
-  email         String    @unique
-  passwordHash  String?
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+model Clinic {
+  id                String             @id @default(cuid())
+  slug              String             @unique
+  name              String
+  phone             String?
+  address           String?
+  isActive          Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 
-  customerProfile      Customer?
-  managedAppointments  Appointment[]  @relation("ManagedAppointments")
-  managedInvoices      Invoice[]      @relation("ManagedInvoices")
-  notifications        Notification[]
-  auditLogs            AuditLog[]
-  clinicSettingsEdits  ClinicSettings[] @relation("ClinicSettingsUpdatedBy")
+  users             User[]
+  customers         Customer[]
+  pets              Pet[]
+  services          Service[]
+  products          Product[]
+  appointments      Appointment[]
+  invoices          Invoice[]
+  notifications     Notification[]
+  reminders         Reminder[]
+  reminderTemplates ReminderTemplate[]
+  clinicSettings    ClinicSettings[]
+  subscriptions     Subscription[]
+  paymentTxns       PaymentTransaction[]
+  medicalRecords    MedicalRecord[]
+  digitalCardEvents DigitalCardEvent[]
+  auditLogs         AuditLog[]
+}
+
+model User {
+  id                 String          @id @default(cuid())
+  clinicId           String
+  firebaseUid        String          @unique
+  role               Role
+  name               String
+  phone              String
+  email              String
+  passwordHash       String?
+  isActive           Boolean         @default(true)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  clinic             Clinic          @relation(fields: [clinicId], references: [id], onDelete: Restrict)
+  customerProfile    Customer?
+  managedAppointments Appointment[]  @relation("ManagedAppointments")
+  managedInvoices    Invoice[]       @relation("ManagedInvoices")
+  notifications      Notification[]
+  auditLogs          AuditLog[]      @relation("AuditLogActor")
+  clinicSettingsEdits ClinicSettings[] @relation("ClinicSettingsUpdatedBy")
+  createdMedicalRecords MedicalRecord[] @relation("MedicalRecordCreatedBy")
+  digitalCardEvents  DigitalCardEvent[] @relation("DigitalCardEventActor")
+
+  @@unique([clinicId, email])
+  @@index([clinicId, role])
 }
 
 model ClinicSettings {
   id          String   @id @default(cuid())
+  clinicId    String   @unique
   clinicName  String
   taxId       String?
   phone       String
@@ -93,12 +129,14 @@ model ClinicSettings {
   timezone    String   @default("Asia/Ho_Chi_Minh")
   updatedById String?
   updatedBy   User?    @relation("ClinicSettingsUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  clinic      Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 
 model Customer {
   id            String          @id @default(cuid())
+  clinicId      String
   userId        String?         @unique
   name          String
   phone         String
@@ -110,20 +148,24 @@ model Customer {
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
+  clinic        Clinic          @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   user          User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   pets          Pet[]
   appointments  Appointment[]
   invoices      Invoice[]
   reminders     Reminder[]
   notifications Notification[]
+  medicalRecords MedicalRecord[]
 
-  @@index([segment])
-  @@index([phone])
-  @@index([totalSpent])
+  @@index([clinicId, segment])
+  @@index([clinicId, phone])
+  @@index([clinicId, totalSpent])
+  @@index([clinicId, createdAt])
 }
 
 model Pet {
   id            String   @id @default(cuid())
+  clinicId      String
   customerId    String
   imageUrl      String?
   name          String
@@ -141,18 +183,22 @@ model Pet {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  customer      Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  clinic        Clinic           @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  customer      Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
   appointments  Appointment[]
   reminders     Reminder[]
   invoiceItems  InvoiceLineItem[]
+  medicalRecords MedicalRecord[]
+  digitalCardEvents DigitalCardEvent[]
 
-  @@index([customerId])
-  @@index([name])
+  @@index([clinicId, customerId])
+  @@index([clinicId, name])
 }
 
 model Service {
   id           String   @id @default(cuid())
-  code         String   @unique
+  clinicId     String
+  code         String
   name         String
   description  String?
   durationMin  Int
@@ -161,15 +207,18 @@ model Service {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  clinic       Clinic           @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   appointments Appointment[]
   invoiceItems InvoiceLineItem[]
 
-  @@index([name])
+  @@unique([clinicId, code])
+  @@index([clinicId, name])
 }
 
 model Product {
   id           String   @id @default(cuid())
-  sku          String   @unique
+  clinicId     String
+  sku          String
   name         String
   category     String?
   description  String?
@@ -179,14 +228,17 @@ model Product {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  clinic       Clinic           @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   invoiceItems InvoiceLineItem[]
 
-  @@index([name])
-  @@index([category])
+  @@unique([clinicId, sku])
+  @@index([clinicId, name])
+  @@index([clinicId, category])
 }
 
 model Appointment {
   id             String            @id @default(cuid())
+  clinicId       String
   customerId     String
   petId          String
   serviceId      String
@@ -199,20 +251,23 @@ model Appointment {
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
+  clinic         Clinic            @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   customer       Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
   pet            Pet               @relation(fields: [petId], references: [id], onDelete: Cascade)
   service        Service           @relation(fields: [serviceId], references: [id], onDelete: Restrict)
   manager        User?             @relation("ManagedAppointments", fields: [managerId], references: [id], onDelete: SetNull)
   invoice        Invoice?
+  medicalRecord  MedicalRecord?
 
-  @@index([appointmentAt, status])
-  @@index([customerId, appointmentAt])
-  @@index([petId, appointmentAt])
-  @@unique([petId, appointmentAt])
+  @@index([clinicId, appointmentAt, status])
+  @@index([clinicId, customerId, appointmentAt])
+  @@index([clinicId, petId, appointmentAt])
+  @@unique([clinicId, petId, appointmentAt])
 }
 
 model Invoice {
   id             String        @id @default(cuid())
+  clinicId       String
   invoiceNo      String        @unique
   appointmentId  String?       @unique
   customerId     String
@@ -228,13 +283,14 @@ model Invoice {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
+  clinic         Clinic        @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   appointment    Appointment?  @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   customer       Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
   manager        User?         @relation("ManagedInvoices", fields: [managerId], references: [id], onDelete: SetNull)
   items          InvoiceLineItem[]
   paymentTxns    PaymentTransaction[]
 
-  @@index([customerId, issuedAt])
+  @@index([clinicId, customerId, issuedAt])
 }
 
 model InvoiceLineItem {
@@ -261,6 +317,7 @@ model InvoiceLineItem {
 
 model Notification {
   id          String             @id @default(cuid())
+  clinicId    String
   userId      String?
   customerId  String?
   target      NotificationTarget @default(manager)
@@ -271,15 +328,17 @@ model Notification {
   readAt      DateTime?
   createdAt   DateTime           @default(now())
 
+  clinic      Clinic             @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   user        User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
   customer    Customer?          @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
-  @@index([userId, read, createdAt])
-  @@index([customerId, read, createdAt])
+  @@index([clinicId, userId, read, createdAt])
+  @@index([clinicId, customerId, read, createdAt])
 }
 
 model Reminder {
   id            String          @id @default(cuid())
+  clinicId      String
   customerId    String
   petId         String
   channel       ReminderChannel
@@ -292,22 +351,28 @@ model Reminder {
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
+  clinic        Clinic          @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   customer      Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
   pet           Pet             @relation(fields: [petId], references: [id], onDelete: Cascade)
 
-  @@index([status, scheduledAt])
-  @@index([customerId, status])
+  @@index([clinicId, status, scheduledAt])
+  @@index([clinicId, customerId, status])
 }
 
 model ReminderTemplate {
   id               String   @id @default(cuid())
-  name             String   @unique
+  clinicId         String
+  name             String
   type             String
   channelDefaults  String[]
   messageTemplate  String
   isActive         Boolean  @default(true)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+
+  clinic           Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@unique([clinicId, name])
 }
 
 model Subscription {
@@ -322,10 +387,13 @@ model Subscription {
   expiresAt         DateTime?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+
+  clinic            Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
 }
 
 model PaymentTransaction {
   id               String        @id @default(cuid())
+  clinicId         String
   invoiceId        String?
   provider         String
   providerRef      String?       @unique
@@ -338,14 +406,58 @@ model PaymentTransaction {
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 
+  clinic           Clinic        @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   invoice          Invoice?      @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
 
-  @@index([provider, status])
-  @@index([createdAt])
+  @@index([clinicId, provider, status])
+  @@index([clinicId, createdAt])
+}
+
+model MedicalRecord {
+  id            String    @id @default(cuid())
+  clinicId      String
+  petId         String
+  customerId    String
+  appointmentId String?   @unique
+  doctorName    String?
+  diagnosis     String
+  treatment     String
+  notes         String?
+  nextVisitAt   DateTime?
+  recordedAt    DateTime  @default(now())
+  createdById   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  clinic        Clinic      @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  pet           Pet         @relation(fields: [petId], references: [id], onDelete: Cascade)
+  customer      Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  createdBy     User?       @relation("MedicalRecordCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([clinicId, petId, recordedAt])
+  @@index([clinicId, customerId, recordedAt])
+}
+
+model DigitalCardEvent {
+  id          String   @id @default(cuid())
+  clinicId    String
+  petId       String
+  actorId     String?
+  action      String
+  note        String?
+  createdAt   DateTime @default(now())
+
+  clinic      Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  pet         Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+  actor       User?    @relation("DigitalCardEventActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([clinicId, petId, createdAt])
 }
 
 model AuditLog {
   id          String   @id @default(cuid())
+  clinicId    String?
   actorId     String?
   action      String
   entityType  String
@@ -355,8 +467,9 @@ model AuditLog {
   ipAddress   String?
   createdAt   DateTime @default(now())
 
-  actor       User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  clinic      Clinic?  @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+  actor       User?    @relation("AuditLogActor", fields: [actorId], references: [id], onDelete: SetNull)
 
-  @@index([entityType, entityId])
-  @@index([createdAt])
+  @@index([clinicId, entityType, entityId])
+  @@index([clinicId, createdAt])
 }
