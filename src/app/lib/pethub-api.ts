@@ -13,6 +13,7 @@ type SyncFirebasePayload = {
   idToken: string;
   name?: string;
   phone?: string;
+  clinicSlug?: string;
 };
 
 type UpsertPetPayload = {

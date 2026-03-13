@@ -4,6 +4,7 @@ export type RouteAccess = 'public' | 'customer' | 'manager';
 
 export interface AuthUser {
   userId: string;
+  clinicId?: string;
   firebaseUid: string;
   email: string;
   name: string;
