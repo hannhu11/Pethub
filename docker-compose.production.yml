@@ -49,6 +49,7 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN:-https://app.example.com}
       AUTH_MOCK_ENABLED: ${AUTH_MOCK_ENABLED:-false}
       DEFAULT_SENSITIVE_PASSWORD: ${DEFAULT_SENSITIVE_PASSWORD:-}
+      FIREBASE_SERVICE_ACCOUNT_PATH: ${FIREBASE_SERVICE_ACCOUNT_PATH:-}
       FIREBASE_SERVICE_ACCOUNT_JSON: ${FIREBASE_SERVICE_ACCOUNT_JSON:-}
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
       FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL:-}
@@ -62,6 +63,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    volumes:
+      - ./secrets:/run/secrets:ro
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4000/api/health || exit 1"]
       interval: 15s
@@ -84,6 +87,7 @@ services:
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-replace_me}
       AUTH_MOCK_ENABLED: ${AUTH_MOCK_ENABLED:-false}
+      FIREBASE_SERVICE_ACCOUNT_PATH: ${FIREBASE_SERVICE_ACCOUNT_PATH:-}
       FIREBASE_SERVICE_ACCOUNT_JSON: ${FIREBASE_SERVICE_ACCOUNT_JSON:-}
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
       FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL:-}
@@ -94,6 +98,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    volumes:
+      - ./secrets:/run/secrets:ro
     networks:
       - pethub_net
 

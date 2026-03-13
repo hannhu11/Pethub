@@ -1,7 +1,7 @@
-import type { PetCardView } from '../types';
+import type { Pet } from './data';
 
 type PetProfileDetailPanelProps = {
-  pet: PetCardView;
+  pet: Pet;
   includeOwner?: boolean;
   className?: string;
 };

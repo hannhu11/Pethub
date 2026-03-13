@@ -20,6 +20,7 @@ import {
   type Product,
   type Category,
   type Pet,
+  type MedicalRecord,
 } from './data';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { PetDigitalCard } from './pet-digital-card';
@@ -412,6 +413,24 @@ const initialPetDraft: PetProfileDraft = {
   imagePreview: '',
 };
 
+type MedicalRecordDraft = {
+  date: string;
+  doctor: string;
+  diagnosis: string;
+  treatment: string;
+  notes: string;
+  nextVisit: string;
+};
+
+const initialMedicalRecordDraft: MedicalRecordDraft = {
+  date: '',
+  doctor: 'BS. Phạm Hương',
+  diagnosis: '',
+  treatment: '',
+  notes: '',
+  nextVisit: '',
+};
+
 const normalizeNoneText = (value: string) => {
   const normalized = value.trim().toLowerCase();
   return normalized === '' || normalized === 'none' || normalized === 'không có';
@@ -469,11 +488,17 @@ export function ManagerPetsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const [pets, setPets] = useState(mockPets.map(p => ({ ...p })));
+  const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>(mockMedicalRecords.map(r => ({ ...r })));
   const [selectedPetId, setSelectedPetId] = useState<string | null>(null);
   const [showAddDrawer, setShowAddDrawer] = useState(false);
   const [detailTab, setDetailTab] = useState<'info' | 'medical' | 'card'>('info');
   const [petFormMode, setPetFormMode] = useState<'create' | 'edit'>('create');
   const [editingPetId, setEditingPetId] = useState<string | null>(null);
+  const [showMedicalForm, setShowMedicalForm] = useState(false);
+  const [medicalFormMode, setMedicalFormMode] = useState<'create' | 'edit'>('create');
+  const [editingMedicalRecordId, setEditingMedicalRecordId] = useState<string | null>(null);
+  const [medicalForm, setMedicalForm] = useState<MedicalRecordDraft>(initialMedicalRecordDraft);
+  const [cardStatusMessage, setCardStatusMessage] = useState('');
   const petCardExportRef = useRef<HTMLDivElement>(null);
 
   // Quick Add form
@@ -486,7 +511,7 @@ export function ManagerPetsPage() {
     p.ownerName.toLowerCase().includes(search.toLowerCase())
   );
   const selectedPet = pets.find(p => p.id === selectedPetId);
-  const petMedicalRecords = selectedPetId ? mockMedicalRecords.filter(r => r.petId === selectedPetId) : [];
+  const petMedicalRecords = selectedPetId ? medicalRecords.filter(r => r.petId === selectedPetId) : [];
   const customers = mockUsers.filter(u => u.role === 'customer');
 
   const openCreateDrawer = () => {
@@ -526,6 +551,8 @@ export function ManagerPetsPage() {
 
   const closePetDetail = () => {
     setSelectedPetId(null);
+    closeMedicalForm();
+    setCardStatusMessage('');
   };
 
   const closeAddDrawer = () => {
@@ -533,8 +560,129 @@ export function ManagerPetsPage() {
     clearQuickAddQuery();
   };
 
+  const syncCardFromProfile = (petId: string, message: string) => {
+    const latestRecordDate = medicalRecords
+      .filter(record => record.petId === petId)
+      .map(record => record.date)
+      .sort((a, b) => b.localeCompare(a))[0];
+
+    const generatedAt = latestRecordDate || new Date().toISOString().slice(0, 10);
+
+    setPets(prev => prev.map(p => p.id === petId
+      ? { ...p, hasDigitalCard: true, lastCheckup: generatedAt }
+      : p));
+    setCardStatusMessage(message);
+  };
+
   const handleCreateCard = (petId: string) => {
-    setPets(prev => prev.map(p => p.id === petId ? { ...p, hasDigitalCard: true } : p));
+    syncCardFromProfile(petId, 'Đã tạo Digital Smart Card từ dữ liệu hồ sơ hiện tại.');
+  };
+
+  const handleRefreshCard = (petId: string) => {
+    syncCardFromProfile(petId, 'Đã cập nhật Digital Smart Card theo thay đổi hồ sơ thú cưng.');
+  };
+
+  const handleRegenerateCard = (petId: string) => {
+    syncCardFromProfile(petId, 'Đã tạo lại Digital Smart Card với thông tin mới nhất.');
+  };
+
+  const openCreateMedicalRecord = () => {
+    if (!selectedPetId) return;
+    setMedicalFormMode('create');
+    setEditingMedicalRecordId(null);
+    setMedicalForm({
+      ...initialMedicalRecordDraft,
+      date: new Date().toISOString().slice(0, 10),
+      nextVisit: '',
+    });
+    setShowMedicalForm(true);
+  };
+
+  const openEditMedicalRecord = (record: MedicalRecord) => {
+    setMedicalFormMode('edit');
+    setEditingMedicalRecordId(record.id);
+    setMedicalForm({
+      date: record.date,
+      doctor: record.doctor,
+      diagnosis: record.diagnosis,
+      treatment: record.treatment,
+      notes: record.notes,
+      nextVisit: record.nextVisit || '',
+    });
+    setShowMedicalForm(true);
+  };
+
+  const closeMedicalForm = () => {
+    setShowMedicalForm(false);
+    setMedicalFormMode('create');
+    setEditingMedicalRecordId(null);
+    setMedicalForm(initialMedicalRecordDraft);
+  };
+
+  const syncPetCheckupFromRecords = (petId: string, records: MedicalRecord[]) => {
+    const latestDate = records
+      .filter(record => record.petId === petId)
+      .map(record => record.date)
+      .sort((a, b) => b.localeCompare(a))[0];
+
+    if (!latestDate) {
+      return;
+    }
+
+    setPets(prev => prev.map(p => p.id === petId ? { ...p, lastCheckup: latestDate } : p));
+  };
+
+  const saveMedicalRecord = () => {
+    if (!selectedPetId) return;
+    if (!medicalForm.date || !medicalForm.doctor.trim() || !medicalForm.diagnosis.trim() || !medicalForm.treatment.trim()) {
+      return;
+    }
+
+    if (medicalFormMode === 'edit' && editingMedicalRecordId) {
+      const nextRecords = medicalRecords.map(record => (
+        record.id === editingMedicalRecordId
+          ? {
+              ...record,
+              date: medicalForm.date,
+              doctor: medicalForm.doctor.trim(),
+              diagnosis: medicalForm.diagnosis.trim(),
+              treatment: medicalForm.treatment.trim(),
+              notes: medicalForm.notes.trim() || 'Không có ghi chú thêm',
+              nextVisit: medicalForm.nextVisit.trim() || undefined,
+            }
+          : record
+      ));
+      setMedicalRecords(nextRecords);
+      syncPetCheckupFromRecords(selectedPetId, nextRecords);
+      setCardStatusMessage('Đã cập nhật bệnh án. Bạn có thể bấm "Cập nhật từ hồ sơ" để đồng bộ thẻ.');
+      closeMedicalForm();
+      return;
+    }
+
+    const newRecord: MedicalRecord = {
+      id: `mr${Date.now()}`,
+      petId: selectedPetId,
+      date: medicalForm.date,
+      doctor: medicalForm.doctor.trim(),
+      diagnosis: medicalForm.diagnosis.trim(),
+      treatment: medicalForm.treatment.trim(),
+      notes: medicalForm.notes.trim() || 'Không có ghi chú thêm',
+      nextVisit: medicalForm.nextVisit.trim() || undefined,
+    };
+
+    const nextRecords = [newRecord, ...medicalRecords];
+    setMedicalRecords(nextRecords);
+    syncPetCheckupFromRecords(selectedPetId, nextRecords);
+    setCardStatusMessage('Đã thêm bệnh án mới. Bạn có thể đồng bộ lại Digital Card ngay.');
+    closeMedicalForm();
+  };
+
+  const removeMedicalRecord = (recordId: string) => {
+    if (!selectedPetId) return;
+    const nextRecords = medicalRecords.filter(record => record.id !== recordId);
+    setMedicalRecords(nextRecords);
+    syncPetCheckupFromRecords(selectedPetId, nextRecords);
+    setCardStatusMessage('Đã xóa bệnh án. Hãy cập nhật lại Digital Card nếu cần.');
   };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -740,9 +888,25 @@ export function ManagerPetsPage() {
 
                 {/* Medical Records Tab */}
                 {detailTab === 'medical' && (
-                  <>
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#2d2a26]/10 bg-white px-3 py-2">
+                      <div>
+                        <p className="text-xs text-[#2d2a26]" style={{ fontWeight: 600 }}>Luồng bệnh án</p>
+                        <p className="text-[11px] text-[#7a756e]">Tạo/cập nhật bệnh án tại đây, sau đó đồng bộ lại Digital Card nếu cần.</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={openCreateMedicalRecord}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#6b8f5e] text-white border border-[#2d2a26] text-xs hover:-translate-y-0.5 transition-all"
+                        style={{ fontWeight: 600 }}
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Thêm bệnh án
+                      </button>
+                    </div>
+
                     {petMedicalRecords.length === 0 ? (
-                      <div className="text-center py-8 text-[#7a756e]">
+                      <div className="text-center py-8 text-[#7a756e] border border-[#2d2a26]/10 rounded-xl bg-white">
                         <FileText className="w-10 h-10 mx-auto mb-2 opacity-30" />
                         <p className="text-sm">Chưa có bệnh án nào</p>
                       </div>
@@ -750,10 +914,30 @@ export function ManagerPetsPage() {
                       <div className="space-y-3">
                         {petMedicalRecords.map(r => (
                           <div key={r.id} className="bg-white rounded-xl border border-[#2d2a26]/15 p-4">
-                            <div className="flex items-center gap-2 mb-2">
-                              <CalendarDays className="w-4 h-4 text-[#6b8f5e]" />
-                              <span className="text-sm" style={{ fontWeight: 600 }}>{r.date}</span>
-                              <span className="text-xs text-[#7a756e]">— {r.doctor}</span>
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <div className="flex items-center gap-2">
+                                <CalendarDays className="w-4 h-4 text-[#6b8f5e]" />
+                                <span className="text-sm" style={{ fontWeight: 600 }}>{r.date}</span>
+                                <span className="text-xs text-[#7a756e]">— {r.doctor}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => openEditMedicalRecord(r)}
+                                  className="p-1.5 rounded-lg border border-[#2d2a26]/20 hover:bg-[#f0ede8] transition-colors"
+                                  aria-label="Sửa bệnh án"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5 text-[#7a756e]" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => removeMedicalRecord(r.id)}
+                                  className="p-1.5 rounded-lg border border-red-200 hover:bg-red-50 transition-colors"
+                                  aria-label="Xóa bệnh án"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                                </button>
+                              </div>
                             </div>
                             <div className="space-y-1.5 text-sm">
                               <p><span className="text-[#7a756e]">Chẩn đoán:</span> <span style={{ fontWeight: 500 }}>{r.diagnosis}</span></p>
@@ -769,7 +953,90 @@ export function ManagerPetsPage() {
                         ))}
                       </div>
                     )}
-                  </>
+
+                    {showMedicalForm ? (
+                      <div className="rounded-xl border border-[#2d2a26] bg-white p-4 space-y-3">
+                        <p className="text-sm text-[#2d2a26]" style={{ fontWeight: 600 }}>
+                          {medicalFormMode === 'create' ? 'Tạo bệnh án mới' : 'Cập nhật bệnh án'}
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[11px] text-[#7a756e] mb-1 block">Ngày khám</label>
+                            <input
+                              type="date"
+                              value={medicalForm.date}
+                              onChange={event => setMedicalForm(prev => ({ ...prev, date: event.target.value }))}
+                              className="w-full p-2.5 border border-[#2d2a26]/30 rounded-lg text-sm bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-[#7a756e] mb-1 block">Bác sĩ</label>
+                            <input
+                              value={medicalForm.doctor}
+                              onChange={event => setMedicalForm(prev => ({ ...prev, doctor: event.target.value }))}
+                              placeholder="BS. Phạm Hương"
+                              className="w-full p-2.5 border border-[#2d2a26]/30 rounded-lg text-sm bg-white"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-[#7a756e] mb-1 block">Chẩn đoán</label>
+                          <input
+                            value={medicalForm.diagnosis}
+                            onChange={event => setMedicalForm(prev => ({ ...prev, diagnosis: event.target.value }))}
+                            placeholder="Nhập chẩn đoán"
+                            className="w-full p-2.5 border border-[#2d2a26]/30 rounded-lg text-sm bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-[#7a756e] mb-1 block">Điều trị</label>
+                          <input
+                            value={medicalForm.treatment}
+                            onChange={event => setMedicalForm(prev => ({ ...prev, treatment: event.target.value }))}
+                            placeholder="Nhập chỉ định điều trị"
+                            className="w-full p-2.5 border border-[#2d2a26]/30 rounded-lg text-sm bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-[#7a756e] mb-1 block">Ghi chú</label>
+                          <textarea
+                            value={medicalForm.notes}
+                            onChange={event => setMedicalForm(prev => ({ ...prev, notes: event.target.value }))}
+                            placeholder="Ghi chú thêm"
+                            rows={3}
+                            className="w-full p-2.5 border border-[#2d2a26]/30 rounded-lg text-sm bg-white resize-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-[#7a756e] mb-1 block">Ngày tái khám (tùy chọn)</label>
+                          <input
+                            type="date"
+                            value={medicalForm.nextVisit}
+                            onChange={event => setMedicalForm(prev => ({ ...prev, nextVisit: event.target.value }))}
+                            className="w-full p-2.5 border border-[#2d2a26]/30 rounded-lg text-sm bg-white"
+                          />
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={saveMedicalRecord}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#6b8f5e] text-white border border-[#2d2a26] text-xs hover:-translate-y-0.5 transition-all"
+                            style={{ fontWeight: 600 }}
+                          >
+                            <Save className="w-3.5 h-3.5" />
+                            {medicalFormMode === 'create' ? 'Lưu bệnh án' : 'Lưu chỉnh sửa'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={closeMedicalForm}
+                            className="px-4 py-2 rounded-lg border border-[#2d2a26]/25 text-xs bg-white hover:-translate-y-0.5 transition-all"
+                          >
+                            Hủy
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
                 )}
 
                 {/* Digital Card Tab */}
@@ -784,14 +1051,25 @@ export function ManagerPetsPage() {
                           <p className="text-sm" style={{ fontWeight: 500 }}>Chưa có Digital Card</p>
                           <p className="text-xs text-[#7a756e] mt-1">Tạo thẻ định danh điện tử chuẩn mới cho {selectedPet.name}</p>
                         </div>
-                        <button
-                          onClick={() => handleCreateCard(selectedPet.id)}
-                          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#6b8f5e] text-white text-sm hover:-translate-y-0.5 active:translate-y-0 transition-all border border-[#2d2a26]"
-                          style={{ fontWeight: 700 }}
-                        >
-                          <Sparkles className="w-4 h-4" />
-                          Generate Digital Smart Card
-                        </button>
+                        <div className="flex flex-wrap items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleCreateCard(selectedPet.id)}
+                            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#6b8f5e] text-white text-sm hover:-translate-y-0.5 active:translate-y-0 transition-all border border-[#2d2a26]"
+                            style={{ fontWeight: 700 }}
+                          >
+                            <Sparkles className="w-4 h-4" />
+                            Generate Digital Smart Card
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openEditDrawer(selectedPet)}
+                            className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-white text-[#2d2a26] text-sm hover:-translate-y-0.5 transition-all border border-[#2d2a26]/25"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                            Cập nhật hồ sơ trước khi tạo
+                          </button>
+                        </div>
                       </div>
                     ) : null}
 
@@ -805,21 +1083,46 @@ export function ManagerPetsPage() {
                             <PetDigitalCard pet={selectedPet} className="w-[760px]" />
                           </div>
                         </div>
-                        <div className="bg-white border border-[#2d2a26]/10 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-2">
+                        <div className="bg-white border border-[#2d2a26]/10 rounded-2xl p-4 space-y-3">
                           <p className="text-xs text-[#7a756e]">
                             Cập nhật gần nhất: <span className="text-[#2d2a26]" style={{ fontWeight: 600 }}>{selectedPet.lastCheckup}</span>
                           </p>
-                          <button
-                            onClick={() => {
-                              if (!petCardExportRef.current) return;
-                              void exportPetCardAsPng(petCardExportRef.current, selectedPet.id);
-                            }}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#6b8f5e] text-white border border-[#2d2a26] text-xs hover:-translate-y-0.5 transition-all"
-                            style={{ fontWeight: 600 }}
-                          >
-                            <Download className="w-3.5 h-3.5" />
-                            Tải ảnh thẻ (PNG)
-                          </button>
+                          {cardStatusMessage ? (
+                            <p className="text-[11px] rounded-lg border border-[#6b8f5e]/30 bg-[#6b8f5e]/10 px-2 py-1 text-[#355a2a]">
+                              {cardStatusMessage}
+                            </p>
+                          ) : null}
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleRefreshCard(selectedPet.id)}
+                              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white text-[#2d2a26] border border-[#2d2a26]/25 text-xs hover:-translate-y-0.5 transition-all"
+                              style={{ fontWeight: 600 }}
+                            >
+                              <Save className="w-3.5 h-3.5" />
+                              Cập nhật từ hồ sơ
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRegenerateCard(selectedPet.id)}
+                              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white text-[#2d2a26] border border-[#2d2a26]/25 text-xs hover:-translate-y-0.5 transition-all"
+                              style={{ fontWeight: 600 }}
+                            >
+                              <Sparkles className="w-3.5 h-3.5" />
+                              Tạo lại thẻ mới
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (!petCardExportRef.current) return;
+                                void exportPetCardAsPng(petCardExportRef.current, selectedPet.id);
+                              }}
+                              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#6b8f5e] text-white border border-[#2d2a26] text-xs hover:-translate-y-0.5 transition-all"
+                              style={{ fontWeight: 600 }}
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              Tải ảnh thẻ (PNG)
+                            </button>
+                          </div>
                         </div>
                       </>
                     ) : null}

@@ -17,6 +17,7 @@ import {
 import { useAuthSession } from '../auth-session';
 import type { AuthRole, ForgotPasswordState } from '../types';
 import { LEGAL_ROUTES } from '../constants/legal';
+import { toFriendlyAuthError } from '../lib/auth-errors';
 import loginVisual from '../../assets/images/auth/login-hero.jpg';
 import registerVisual from '../../assets/images/auth/register-hero.jpg';
 import {
@@ -110,16 +111,53 @@ function LegalConsent({ mode }: { mode: 'login' | 'register' }) {
   );
 }
 
+function AuthDivider() {
+  return (
+    <div className='relative my-5'>
+      <div className='absolute inset-0 flex items-center'>
+        <span className='w-full border-t border-[#2d2a26]/25' />
+      </div>
+      <div className='relative flex justify-center text-xs uppercase'>
+        <span className='bg-[#faf9f6] px-2 text-[#7a756e]'>Hoặc</span>
+      </div>
+    </div>
+  );
+}
+
+function GoogleIcon() {
+  return (
+    <svg viewBox='0 0 24 24' aria-hidden='true' className='w-5 h-5'>
+      <path
+        fill='#EA4335'
+        d='M12 10.2v3.9h5.4c-.24 1.26-.96 2.33-2.04 3.05l3.3 2.56c1.92-1.77 3.03-4.38 3.03-7.5 0-.72-.06-1.41-.18-2.06H12Z'
+      />
+      <path
+        fill='#4285F4'
+        d='M12 22c2.7 0 4.97-.9 6.63-2.44l-3.3-2.56c-.92.62-2.1.98-3.33.98-2.56 0-4.74-1.72-5.52-4.03l-3.41 2.63A10 10 0 0 0 12 22Z'
+      />
+      <path
+        fill='#FBBC05'
+        d='M6.48 13.95A6 6 0 0 1 6.18 12c0-.68.12-1.34.3-1.95L3.07 7.42A10 10 0 0 0 2 12c0 1.6.38 3.12 1.07 4.58l3.41-2.63Z'
+      />
+      <path
+        fill='#34A853'
+        d='M12 5.99c1.47 0 2.8.51 3.84 1.5l2.88-2.88C16.96 2.96 14.7 2 12 2A10 10 0 0 0 3.07 7.42l3.41 2.63c.78-2.31 2.96-4.06 5.52-4.06Z'
+      />
+    </svg>
+  );
+}
+
 export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [googleSubmitting, setGoogleSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
   const [forgot, setForgot] = useState<ForgotPasswordState>(defaultForgotState);
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, sendResetPasswordEmail } = useAuthSession();
+  const { login, loginWithGoogle, sendResetPasswordEmail } = useAuthSession();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,9 +176,31 @@ export function LoginPage() {
         navigate(redirectTo, { replace: true });
       }
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'Đăng nhập thất bại.');
+      setFormError(toFriendlyAuthError(error, 'login'));
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setFormError('');
+    setGoogleSubmitting(true);
+
+    try {
+      const authUser = await loginWithGoogle();
+      const fromState = location.state as { from?: { pathname?: string } } | null;
+      const fromPath = fromState?.from?.pathname;
+      const redirectTo = resolveDefaultPath(authUser.role);
+
+      if (fromPath && fromPath.startsWith(authUser.role === 'manager' ? '/manager' : '/customer')) {
+        navigate(fromPath, { replace: true });
+      } else {
+        navigate(redirectTo, { replace: true });
+      }
+    } catch (error) {
+      setFormError(toFriendlyAuthError(error, 'google-login'));
+    } finally {
+      setGoogleSubmitting(false);
     }
   };
 
@@ -155,7 +215,7 @@ export function LoginPage() {
       setForgot((prev) => ({ ...prev, submitting: false, sent: true }));
     } catch (error) {
       setForgot((prev) => ({ ...prev, submitting: false }));
-      setFormError(error instanceof Error ? error.message : 'Không gửi được email khôi phục.');
+      setFormError(toFriendlyAuthError(error, 'reset-password'));
     }
   };
 
@@ -169,7 +229,7 @@ export function LoginPage() {
       setForgot((prev) => ({ ...prev, submitting: false, sent: true }));
     } catch (error) {
       setForgot((prev) => ({ ...prev, submitting: false }));
-      setFormError(error instanceof Error ? error.message : 'Không gửi lại được email.');
+      setFormError(toFriendlyAuthError(error, 'reset-password'));
     }
   };
 
@@ -232,7 +292,7 @@ export function LoginPage() {
 
         <button
           type='submit'
-          disabled={submitting}
+          disabled={submitting || googleSubmitting}
           className='w-full py-3 bg-[#6b8f5e] text-white rounded-xl border border-[#2d2a26] hover:-translate-y-0.5 active:translate-y-[2px] transition-transform disabled:opacity-70 disabled:cursor-not-allowed'
         >
           {submitting ? (
@@ -242,6 +302,27 @@ export function LoginPage() {
             </span>
           ) : (
             'Đăng nhập'
+          )}
+        </button>
+
+        <AuthDivider />
+
+        <button
+          type='button'
+          onClick={handleGoogleSignIn}
+          disabled={submitting || googleSubmitting}
+          className='w-full py-3 rounded-xl border border-[#2d2a26] bg-white text-[#2d2a26] hover:-translate-y-0.5 active:translate-y-[2px] transition-transform disabled:opacity-70 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2'
+        >
+          {googleSubmitting ? (
+            <>
+              <LoaderCircle className='w-4 h-4 animate-spin' />
+              Đang kết nối Google...
+            </>
+          ) : (
+            <>
+              <GoogleIcon />
+              Tiếp tục với Google
+            </>
           )}
         </button>
       </form>
@@ -346,9 +427,10 @@ export function RegisterPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [googleSubmitting, setGoogleSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
   const navigate = useNavigate();
-  const { register } = useAuthSession();
+  const { loginWithGoogle, register } = useAuthSession();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -373,9 +455,22 @@ export function RegisterPage() {
       });
       navigate(resolveDefaultPath(authUser.role), { replace: true });
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'Đăng ký thất bại.');
+      setFormError(toFriendlyAuthError(error, 'register'));
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setFormError('');
+    setGoogleSubmitting(true);
+    try {
+      const authUser = await loginWithGoogle();
+      navigate(resolveDefaultPath(authUser.role), { replace: true });
+    } catch (error) {
+      setFormError(toFriendlyAuthError(error, 'google-login'));
+    } finally {
+      setGoogleSubmitting(false);
     }
   };
 
@@ -482,7 +577,7 @@ export function RegisterPage() {
 
         <button
           type='submit'
-          disabled={submitting}
+          disabled={submitting || googleSubmitting}
           className='w-full py-3 bg-[#6b8f5e] text-white rounded-xl border border-[#2d2a26] hover:-translate-y-0.5 active:translate-y-[2px] transition-transform disabled:opacity-70 disabled:cursor-not-allowed'
         >
           {submitting ? (
@@ -492,6 +587,27 @@ export function RegisterPage() {
             </span>
           ) : (
             'Tạo tài khoản'
+          )}
+        </button>
+
+        <AuthDivider />
+
+        <button
+          type='button'
+          onClick={handleGoogleSignIn}
+          disabled={submitting || googleSubmitting}
+          className='w-full py-3 rounded-xl border border-[#2d2a26] bg-white text-[#2d2a26] hover:-translate-y-0.5 active:translate-y-[2px] transition-transform disabled:opacity-70 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2'
+        >
+          {googleSubmitting ? (
+            <>
+              <LoaderCircle className='w-4 h-4 animate-spin' />
+              Đang kết nối Google...
+            </>
+          ) : (
+            <>
+              <GoogleIcon />
+              Tiếp tục với Google
+            </>
           )}
         </button>
       </form>
