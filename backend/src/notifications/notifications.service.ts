@@ -17,6 +17,7 @@ export class NotificationsService {
 
     const notifications = await this.prisma.notification.findMany({
       where: {
+        clinicId: currentUser.clinicId,
         OR: [
           { userId: currentUser.userId },
           { target: NotificationTarget.all },
@@ -31,6 +32,7 @@ export class NotificationsService {
 
     const unread = await this.prisma.notification.count({
       where: {
+        clinicId: currentUser.clinicId,
         OR: [
           { userId: currentUser.userId },
           { target: NotificationTarget.all },
@@ -50,6 +52,7 @@ export class NotificationsService {
   async markRead(currentUser: AuthUser, id: string) {
     const existing = await this.prisma.notification.findFirst({
       where: {
+        clinicId: currentUser.clinicId,
         id,
         OR: [
           { userId: currentUser.userId },
@@ -70,6 +73,7 @@ export class NotificationsService {
 
     const unread = await this.prisma.notification.count({
       where: {
+        clinicId: currentUser.clinicId,
         OR: [
           { userId: currentUser.userId },
           { target: NotificationTarget.all },
@@ -91,6 +95,7 @@ export class NotificationsService {
   async markAllRead(currentUser: AuthUser) {
     const updated = await this.prisma.notification.updateMany({
       where: {
+        clinicId: currentUser.clinicId,
         OR: [
           { userId: currentUser.userId },
           { target: NotificationTarget.all },

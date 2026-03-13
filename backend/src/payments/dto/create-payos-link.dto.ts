@@ -11,4 +11,16 @@ export class CreatePayosLinkDto {
   @IsOptional()
   @IsString()
   orderCode?: string;
+
+  @IsOptional()
+  @IsString()
+  invoiceId?: string;
+
+  @IsOptional()
+  @IsString()
+  returnUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  cancelUrl?: string;
 }

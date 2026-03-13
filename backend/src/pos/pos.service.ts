@@ -1,32 +1,31 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import {
-  AppointmentStatus,
-  InvoiceItemType,
-  PaymentStatus,
-  Prisma,
-  type PaymentMethod,
-} from '@prisma/client';
+import { AppointmentStatus, InvoiceItemType, PaymentMethod, PaymentStatus } from '@prisma/client';
 import { createHash } from 'node:crypto';
 import { PrismaService } from '../database/prisma.service';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
 import { PosPrefillQueryDto } from './dto/pos-prefill-query.dto';
 import { PosCheckoutDto } from './dto/pos-checkout.dto';
 import { RealtimeService } from '../realtime/realtime.service';
+import { PaymentsService } from '../payments/payments.service';
 
 @Injectable()
 export class PosService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly realtimeService: RealtimeService,
+    private readonly paymentsService: PaymentsService,
   ) {}
 
-  async getPrefill(query: PosPrefillQueryDto) {
+  async getPrefill(currentUser: AuthUser, query: PosPrefillQueryDto) {
     if (!query.appointmentId) {
       return { appointment: null };
     }
 
-    const appointment = await this.prisma.appointment.findUnique({
-      where: { id: query.appointmentId },
+    const appointment = await this.prisma.appointment.findFirst({
+      where: {
+        id: query.appointmentId,
+        clinicId: currentUser.clinicId,
+      },
       include: {
         customer: true,
         pet: true,
@@ -54,14 +53,25 @@ export class PosService {
 
   async checkout(dto: PosCheckoutDto, currentUser: AuthUser) {
     const taxPercent = dto.taxPercent ?? 8;
+    const instantPayment = this.isInstantPayment(dto.paymentMethod);
 
-    const customer = await this.prisma.customer.findUnique({ where: { id: dto.customerId } });
+    const customer = await this.prisma.customer.findFirst({
+      where: {
+        id: dto.customerId,
+        clinicId: currentUser.clinicId,
+      },
+    });
     if (!customer) {
       throw new NotFoundException('Customer not found');
     }
 
     if (dto.appointmentId) {
-      const appointment = await this.prisma.appointment.findUnique({ where: { id: dto.appointmentId } });
+      const appointment = await this.prisma.appointment.findFirst({
+        where: {
+          id: dto.appointmentId,
+          clinicId: currentUser.clinicId,
+        },
+      });
       if (!appointment) {
         throw new NotFoundException('Appointment not found');
       }
@@ -91,18 +101,22 @@ export class PosService {
     const subtotal = preparedItems.reduce((acc, item) => acc + item.total, 0);
     const taxAmount = (subtotal * taxPercent) / 100;
     const grandTotal = subtotal + taxAmount;
-
     const invoiceNo = this.generateInvoiceNo();
+    const pendingOrderCode = instantPayment ? null : `${Date.now()}`;
+
+    const paymentStatus = instantPayment ? PaymentStatus.paid : PaymentStatus.unpaid;
+    const now = new Date();
 
     const data = await this.prisma.$transaction(async (tx) => {
       const invoice = await tx.invoice.create({
         data: {
+          clinicId: currentUser.clinicId,
           invoiceNo,
           appointmentId: dto.appointmentId,
           customerId: dto.customerId,
           managerId: currentUser.userId,
           paymentMethod: dto.paymentMethod as PaymentMethod,
-          paymentStatus: PaymentStatus.paid,
+          paymentStatus,
           subtotal,
           taxPercent,
           taxAmount,
@@ -130,36 +144,40 @@ export class PosService {
       const immutableHash = this.hashInvoice(invoice.id, invoice.invoiceNo, grandTotal);
       await tx.invoice.update({ where: { id: invoice.id }, data: { immutableHash } });
 
-      if (dto.appointmentId) {
+      await tx.paymentTransaction.create({
+        data: {
+          clinicId: currentUser.clinicId,
+          invoiceId: invoice.id,
+          provider: this.resolvePaymentProvider(dto.paymentMethod),
+          providerRef: instantPayment ? `POS-${invoice.invoiceNo}` : pendingOrderCode,
+          paymentMethod: dto.paymentMethod,
+          amount: grandTotal,
+          status: paymentStatus,
+          currency: 'VND',
+          paidAt: instantPayment ? now : null,
+        },
+      });
+
+      if (dto.appointmentId && instantPayment) {
         await tx.appointment.update({
           where: { id: dto.appointmentId },
           data: {
             paymentStatus: PaymentStatus.paid,
-            paidAt: new Date(),
+            paidAt: now,
           },
         });
       }
 
-      await tx.paymentTransaction.create({
-        data: {
-          invoiceId: invoice.id,
-          provider: 'pos',
-          paymentMethod: dto.paymentMethod,
-          amount: grandTotal,
-          status: PaymentStatus.paid,
-          currency: 'VND',
-          paidAt: new Date(),
-        },
-      });
-
-      await tx.customer.update({
-        where: { id: dto.customerId },
-        data: {
-          totalSpent: { increment: grandTotal },
-          totalVisits: { increment: 1 },
-          lastVisitAt: new Date(),
-        },
-      });
+      if (instantPayment) {
+        await tx.customer.update({
+          where: { id: dto.customerId },
+          data: {
+            totalSpent: { increment: grandTotal },
+            totalVisits: { increment: 1 },
+            lastVisitAt: now,
+          },
+        });
+      }
 
       for (const item of preparedItems) {
         if (item.itemType === InvoiceItemType.product && item.productId) {
@@ -175,16 +193,29 @@ export class PosService {
       return invoice;
     });
 
+    const paymentAction = instantPayment
+      ? null
+      : await this.paymentsService.createPayosLinkForInvoice({
+          clinicId: currentUser.clinicId,
+          invoiceId: data.id,
+          amount: grandTotal,
+          orderCode: pendingOrderCode ?? undefined,
+          description: `Thanh toan hoa don ${data.invoiceNo}`,
+        });
+
     this.realtimeService.emitSubscriptionUpdated({
       type: 'invoice.created',
       invoiceId: data.id,
       customerId: data.customerId,
       amount: grandTotal,
+      paymentStatus,
     });
 
     return {
       invoiceId: data.id,
       invoiceNo,
+      paymentStatus,
+      paymentAction,
       totals: {
         subtotal,
         taxPercent,
@@ -192,6 +223,20 @@ export class PosService {
         grandTotal,
       },
     };
+  }
+
+  private resolvePaymentProvider(method: PaymentMethod): string {
+    if (method === PaymentMethod.payos || method === PaymentMethod.momo || method === PaymentMethod.zalopay) {
+      return 'payos';
+    }
+    if (method === PaymentMethod.transfer) {
+      return 'bank-transfer';
+    }
+    return 'pos';
+  }
+
+  private isInstantPayment(method: PaymentMethod): boolean {
+    return method === PaymentMethod.cash || method === PaymentMethod.card;
   }
 
   private generateInvoiceNo(): string {

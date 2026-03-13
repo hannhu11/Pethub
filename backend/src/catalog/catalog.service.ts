@@ -2,29 +2,42 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { UpsertServiceDto } from './dto/upsert-service.dto';
 import { UpsertProductDto } from './dto/upsert-product.dto';
+import type { AuthUser } from '../common/interfaces/auth-user.interface';
 
 @Injectable()
 export class CatalogService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listServices() {
+  async listServices(currentUser: AuthUser) {
     return this.prisma.service.findMany({
-      where: { isActive: true },
+      where: {
+        clinicId: currentUser.clinicId,
+        isActive: true,
+      },
       orderBy: { name: 'asc' },
     });
   }
 
-  async listProducts() {
+  async listProducts(currentUser: AuthUser) {
     return this.prisma.product.findMany({
-      where: { isActive: true },
+      where: {
+        clinicId: currentUser.clinicId,
+        isActive: true,
+      },
       orderBy: { name: 'asc' },
     });
   }
 
-  async upsertService(dto: UpsertServiceDto) {
+  async upsertService(currentUser: AuthUser, dto: UpsertServiceDto) {
     return this.prisma.service.upsert({
-      where: { code: dto.code },
+      where: {
+        clinicId_code: {
+          clinicId: currentUser.clinicId,
+          code: dto.code,
+        },
+      },
       create: {
+        clinicId: currentUser.clinicId,
         code: dto.code,
         name: dto.name,
         description: dto.description,
@@ -40,10 +53,16 @@ export class CatalogService {
     });
   }
 
-  async upsertProduct(dto: UpsertProductDto) {
+  async upsertProduct(currentUser: AuthUser, dto: UpsertProductDto) {
     return this.prisma.product.upsert({
-      where: { sku: dto.sku },
+      where: {
+        clinicId_sku: {
+          clinicId: currentUser.clinicId,
+          sku: dto.sku,
+        },
+      },
       create: {
+        clinicId: currentUser.clinicId,
         sku: dto.sku,
         name: dto.name,
         category: dto.category,

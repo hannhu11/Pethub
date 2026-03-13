@@ -5,9 +5,12 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
 import { RemindersQueryDto } from './dto/reminders-query.dto';
 import { CreateReminderFromTemplateDto } from './dto/create-reminder-from-template.dto';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 
 @Controller('reminders')
-@UseGuards(FirebaseAuthGuard)
+@UseGuards(FirebaseAuthGuard, RolesGuard)
+@Roles('manager')
 export class RemindersController {
   constructor(private readonly remindersService: RemindersService) {}
 
