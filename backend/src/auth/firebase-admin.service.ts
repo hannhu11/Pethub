@@ -34,8 +34,12 @@ export class FirebaseAdminService {
     }
 
     const auth = this.getFirebaseAuth();
+    const checkRevokedRaw = (this.configService.get<string>('AUTH_CHECK_REVOKED') ?? 'false')
+      .trim()
+      .toLowerCase();
+    const checkRevoked = checkRevokedRaw === 'true';
     try {
-      return await auth.verifyIdToken(token, true);
+      return await auth.verifyIdToken(token, checkRevoked);
     } catch (error) {
       const errorMessage =
         (error as { errorInfo?: { message?: string } }).errorInfo?.message ??

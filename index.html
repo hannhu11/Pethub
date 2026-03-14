@@ -4,6 +4,49 @@
     <head>
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <script>
+        (function () {
+          // Define both global binding and window property before Vite bundle executes.
+          if (typeof require !== 'function') {
+            var require = function (moduleId) {
+              if (moduleId === '@emotion/is-prop-valid') {
+                return {
+                  default: function (propName) {
+                    return typeof propName === 'string' ? !propName.startsWith('$') : true;
+                  },
+                };
+              }
+              return {};
+            };
+            window.require = require;
+          } else if (typeof window.require !== 'function') {
+            window.require = require;
+          }
+
+          // Clean up stale service workers/cache once after domain cutover.
+          var resetKey = 'pethub_cache_reset_v2';
+          if (window.localStorage.getItem(resetKey) === '1') {
+            return;
+          }
+          window.localStorage.setItem(resetKey, '1');
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker
+              .getRegistrations()
+              .then(function (regs) {
+                return Promise.all(regs.map(function (reg) { return reg.unregister(); }));
+              })
+              .catch(function () {});
+          }
+          if ('caches' in window) {
+            caches
+              .keys()
+              .then(function (keys) {
+                return Promise.all(keys.map(function (key) { return caches.delete(key); }));
+              })
+              .catch(function () {});
+          }
+        })();
+      </script>
       <title>Thiết kế website Pethub</title>
     </head>
 

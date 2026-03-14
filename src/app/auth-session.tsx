@@ -15,6 +15,7 @@ import { setApiAccessToken } from './lib/api-client';
 import { completeOnboarding, syncFirebaseUser, type AuthSessionPayload } from './lib/pethub-api';
 import { toFriendlyAuthError } from './lib/auth-errors';
 import type { AuthRole, AuthUser, SessionState } from './types';
+import { resetManagerSettingsStore } from './components/manager-settings-store';
 
 type LoginInput = {
   email: string;
@@ -142,6 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (!firebaseUser) {
         setApiAccessToken(null);
+        resetManagerSettingsStore();
         setSession(unauthenticatedSession);
         return;
       }
@@ -228,6 +230,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await signOut(firebaseAuth);
     } finally {
       setApiAccessToken(null);
+      resetManagerSettingsStore();
       window.localStorage.clear();
       window.sessionStorage.clear();
       if ('caches' in window) {

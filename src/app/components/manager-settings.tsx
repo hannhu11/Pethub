@@ -10,13 +10,20 @@ import {
   getClinicSettings,
   getProfileSettings,
   getSubscriptionSettings,
+  hydrateManagerSettings,
   saveClinicSettings,
   saveProfileSettings,
   subscribeManagerSettingsUpdates,
 } from './manager-settings-store';
 import type { SensitiveSaveConfirmState } from '../types';
 import { extractApiError } from '../lib/api-client';
-import { getNotificationSettings, updateNotificationSettings } from '../lib/pethub-api';
+import {
+  getManagerSettings,
+  updateClinicSettings,
+  updateNotificationSettings,
+  updatePasswordSettings,
+  updateProfileSettings,
+} from '../lib/pethub-api';
 
 const settingsTabs = [
   { id: 'profile', label: 'Hồ sơ cá nhân', icon: User },
@@ -27,6 +34,20 @@ const settingsTabs = [
 ] as const;
 
 type SettingsTabId = (typeof settingsTabs)[number]['id'];
+
+function toRoleLabel(role: 'customer' | 'manager') {
+  return role === 'manager' ? 'Quản trị viên' : 'Khách hàng';
+}
+
+function initialsFromName(name: string) {
+  const normalized = name
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part[0]?.toUpperCase())
+    .join('')
+    .slice(0, 2);
+  return normalized || 'PH';
+}
 
 export function ManagerSettingsPage() {
   const navigate = useNavigate();
@@ -41,6 +62,10 @@ export function ManagerSettingsPage() {
   const [profile, setProfile] = useState(getProfileSettings());
   const [clinic, setClinic] = useState(getClinicSettings());
   const [subscription, setSubscription] = useState(getSubscriptionSettings());
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [settingsError, setSettingsError] = useState('');
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [clinicSaving, setClinicSaving] = useState(false);
   const [confirmState, setConfirmState] = useState<SensitiveSaveConfirmState>({
     open: false,
     target: null,
@@ -56,6 +81,7 @@ export function ManagerSettingsPage() {
   });
   const [passwordError, setPasswordError] = useState('');
   const [passwordSaved, setPasswordSaved] = useState(false);
+  const [passwordSaving, setPasswordSaving] = useState(false);
 
   // Notification settings
   const [notifications, setNotifications] = useState({
@@ -78,23 +104,50 @@ export function ManagerSettingsPage() {
   }, [requestedTab, validTabIds]);
 
   useEffect(() => {
-    return subscribeManagerSettingsUpdates(() => {
-      setProfile(getProfileSettings());
-      setClinic(getClinicSettings());
-      setSubscription(getSubscriptionSettings());
-    });
-  }, []);
-
-  useEffect(() => {
     let mounted = true;
     const run = async () => {
+      setSettingsLoading(true);
       setNotifLoading(true);
+      setSettingsError('');
       setNotifError('');
       try {
-        const data = await getNotificationSettings();
+        const data = await getManagerSettings();
         if (!mounted) {
           return;
         }
+
+        const nextProfile = {
+          name: data.profile.name,
+          email: data.profile.email,
+          phone: data.profile.phone,
+          role: toRoleLabel(data.profile.role),
+        };
+        const nextClinic = {
+          name: data.clinic?.clinicName ?? '',
+          taxId: data.clinic?.taxId ?? '',
+          phone: data.clinic?.phone ?? '',
+          address: data.clinic?.address ?? '',
+          invoiceNote: data.clinic?.invoiceNote ?? '',
+        };
+        const isPremiumPlan = Boolean(
+          data.subscription?.isActive ||
+            data.subscription?.planCode?.toLowerCase().includes('premium') ||
+            data.subscription?.planName?.toLowerCase().includes('premium'),
+        );
+        const nextSubscription = {
+          plan: isPremiumPlan ? 'premium' : 'basic',
+          amount: Number(data.subscription?.amount ?? getSubscriptionSettings().amount ?? 249000),
+          currency: 'VND' as const,
+          billingCycle: 'monthly' as const,
+          paymentMethod: getSubscriptionSettings().paymentMethod,
+          activatedAt: data.subscription?.startedAt
+            ? new Date(data.subscription.startedAt).toLocaleDateString('vi-VN')
+            : undefined,
+        };
+
+        setProfile(nextProfile);
+        setClinic(nextClinic);
+        setSubscription(nextSubscription);
         setNotifications({
           emailBooking: data.notifications.emailBooking,
           emailReminder: data.notifications.emailReminder,
@@ -103,12 +156,21 @@ export function ManagerSettingsPage() {
           dailyReport: data.notifications.dailyReport,
           weeklyReport: data.notifications.weeklyReport,
         });
+
+        hydrateManagerSettings({
+          profile: nextProfile,
+          clinic: nextClinic,
+          subscription: nextSubscription,
+        });
       } catch (apiError) {
         if (mounted) {
-          setNotifError(extractApiError(apiError));
+          const message = extractApiError(apiError);
+          setSettingsError(message);
+          setNotifError(message);
         }
       } finally {
         if (mounted) {
+          setSettingsLoading(false);
           setNotifLoading(false);
         }
       }
@@ -118,6 +180,14 @@ export function ManagerSettingsPage() {
     return () => {
       mounted = false;
     };
+  }, []);
+
+  useEffect(() => {
+    return subscribeManagerSettingsUpdates(() => {
+      setProfile(getProfileSettings());
+      setClinic(getClinicSettings());
+      setSubscription(getSubscriptionSettings());
+    });
   }, []);
 
   const handleTabChange = (tabId: SettingsTabId) => {
@@ -137,7 +207,7 @@ export function ManagerSettingsPage() {
     setConfirmState({ open: false, target: null, password: '', submitting: false });
   };
 
-  const submitSensitiveSave = () => {
+  const submitSensitiveSave = async () => {
     if (!confirmState.target) return;
     const password = confirmState.password.trim();
     if (password.length < 6) {
@@ -145,20 +215,62 @@ export function ManagerSettingsPage() {
       return;
     }
 
-    setConfirmState(prev => ({ ...prev, submitting: true }));
-    if (confirmState.target === 'profile') {
-      saveProfileSettings(profile);
-      setSavedTarget('profile');
-    } else {
-      saveClinicSettings(clinic);
-      setSavedTarget('clinic');
+    setConfirmState((prev) => ({ ...prev, submitting: true }));
+    setConfirmError('');
+    setSettingsError('');
+
+    try {
+      if (confirmState.target === 'profile') {
+        setProfileSaving(true);
+        const data = await updateProfileSettings({
+          name: profile.name.trim(),
+          email: profile.email.trim(),
+          phone: profile.phone.trim(),
+          confirmPassword: password,
+        });
+        const nextProfile = {
+          name: data.profile.name,
+          email: data.profile.email,
+          phone: data.profile.phone,
+          role: toRoleLabel(data.profile.role),
+        };
+        setProfile(nextProfile);
+        saveProfileSettings(nextProfile);
+        setSavedTarget('profile');
+      } else {
+        setClinicSaving(true);
+        const data = await updateClinicSettings({
+          clinicName: clinic.name.trim(),
+          taxId: clinic.taxId.trim() || undefined,
+          phone: clinic.phone.trim(),
+          address: clinic.address.trim(),
+          invoiceNote: clinic.invoiceNote.trim() || undefined,
+          confirmPassword: password,
+        });
+        const nextClinic = {
+          name: data.clinic.clinicName,
+          taxId: data.clinic.taxId ?? '',
+          phone: data.clinic.phone,
+          address: data.clinic.address,
+          invoiceNote: data.clinic.invoiceNote ?? '',
+        };
+        setClinic(nextClinic);
+        saveClinicSettings(nextClinic);
+        setSavedTarget('clinic');
+      }
+
+      window.setTimeout(() => {
+        setSavedTarget(null);
+      }, 2000);
+
+      closeSensitiveConfirm();
+    } catch (apiError) {
+      setConfirmError(extractApiError(apiError));
+    } finally {
+      setProfileSaving(false);
+      setClinicSaving(false);
+      setConfirmState((prev) => ({ ...prev, submitting: false }));
     }
-
-    window.setTimeout(() => {
-      setSavedTarget(null);
-    }, 2000);
-
-    closeSensitiveConfirm();
   };
 
   const toggleNotif = async (key: keyof typeof notifications) => {
@@ -176,7 +288,7 @@ export function ManagerSettingsPage() {
     }
   };
 
-  const savePassword = () => {
+  const savePassword = async () => {
     setPasswordError('');
     setPasswordSaved(false);
 
@@ -193,11 +305,23 @@ export function ManagerSettingsPage() {
       return;
     }
 
-    setPasswordSaved(true);
-    setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-    window.setTimeout(() => {
-      setPasswordSaved(false);
-    }, 2000);
+    setPasswordSaving(true);
+    try {
+      await updatePasswordSettings({
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+        confirmNewPassword: passwordForm.confirmPassword,
+      });
+      setPasswordSaved(true);
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      window.setTimeout(() => {
+        setPasswordSaved(false);
+      }, 2000);
+    } catch (apiError) {
+      setPasswordError(extractApiError(apiError));
+    } finally {
+      setPasswordSaving(false);
+    }
   };
 
   return (
@@ -207,6 +331,8 @@ export function ManagerSettingsPage() {
           {'Cài đặt'}
         </h1>
         <p className="text-sm text-[#7a756e] mt-1">{'Quản lý thông tin tài khoản và phòng khám'}</p>
+        {settingsLoading ? <p className='text-xs text-[#7a756e] mt-2'>Đang đồng bộ cấu hình từ backend...</p> : null}
+        {settingsError ? <p className='text-xs text-red-600 mt-2'>{settingsError}</p> : null}
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
@@ -242,7 +368,7 @@ export function ManagerSettingsPage() {
               <div className="p-5 space-y-4">
                 <div className="flex items-center gap-4 mb-6">
                   <div className="w-16 h-16 rounded-full bg-[#c67d5b] flex items-center justify-center border-2 border-[#2d2a26]">
-                    <span className="text-white text-xl" style={{ fontWeight: 600 }}>PH</span>
+                    <span className="text-white text-xl" style={{ fontWeight: 600 }}>{initialsFromName(profile.name)}</span>
                   </div>
                   <div>
                     <p className="text-sm" style={{ fontWeight: 600 }}>{profile.name}</p>
@@ -273,9 +399,10 @@ export function ManagerSettingsPage() {
                 </div>
                 <div className="pt-3">
                   <button onClick={() => openSensitiveConfirm('profile')}
+                    disabled={profileSaving}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#6b8f5e] text-white text-sm hover:-translate-y-0.5 transition-all border border-[#2d2a26]">
                     {savedTarget === 'profile' ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-                    {savedTarget === 'profile' ? 'Đã lưu!' : 'Lưu thay đổi'}
+                    {savedTarget === 'profile' ? 'Đã lưu!' : profileSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
                   </button>
                 </div>
               </div>
@@ -322,9 +449,10 @@ export function ManagerSettingsPage() {
                 </div>
                 <div className="pt-3">
                   <button onClick={() => openSensitiveConfirm('clinic')}
+                    disabled={clinicSaving}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#6b8f5e] text-white text-sm hover:-translate-y-0.5 transition-all border border-[#2d2a26]">
                     {savedTarget === 'clinic' ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-                    {savedTarget === 'clinic' ? 'Đã lưu!' : 'Lưu thay đổi'}
+                    {savedTarget === 'clinic' ? 'Đã lưu!' : clinicSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
                   </button>
                 </div>
               </div>
@@ -373,10 +501,11 @@ export function ManagerSettingsPage() {
                 {passwordError ? <p className="text-xs text-red-600">{passwordError}</p> : null}
                 {passwordSaved ? <p className="text-xs text-emerald-700">Đã cập nhật mật khẩu thành công.</p> : null}
                 <div className="pt-2">
-                  <button onClick={savePassword}
+                  <button onClick={() => void savePassword()}
+                    disabled={passwordSaving}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#6b8f5e] text-white text-sm hover:-translate-y-0.5 transition-all border border-[#2d2a26]">
                     {passwordSaved ? <Check className="w-4 h-4" /> : <LockKeyhole className="w-4 h-4" />}
-                    {passwordSaved ? 'Đã cập nhật' : 'Đổi mật khẩu'}
+                    {passwordSaved ? 'Đã cập nhật' : passwordSaving ? 'Đang cập nhật...' : 'Đổi mật khẩu'}
                   </button>
                 </div>
               </div>

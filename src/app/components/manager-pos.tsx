@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Banknote, CreditCard, QrCode, Receipt, Search, ShoppingBag, Stethoscope, Trash2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useNavigate, useSearchParams } from 'react-router';
@@ -72,45 +72,59 @@ export function ManagerPOSPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const loadInFlightRef = useRef(false);
   const appointmentId = searchParams.get('appointmentId')?.trim() || '';
   const paymentFlag = searchParams.get('payment')?.trim() || '';
 
-  useEffect(() => {
-    let mounted = true;
-    const run = async () => {
+  const loadPosData = useCallback(async (silent = false) => {
+    if (loadInFlightRef.current) {
+      return;
+    }
+    loadInFlightRef.current = true;
+    if (!silent) {
       setLoading(true);
       setError('');
-      try {
-        const [customerData, serviceData, productData] = await Promise.all([
-          listCustomers(),
-          listCatalogServices(),
-          listCatalogProducts(),
-        ]);
+    }
+    try {
+      const [customerData, serviceData, productData] = await Promise.all([
+        listCustomers(),
+        listCatalogServices(),
+        listCatalogProducts(),
+      ]);
 
-        if (!mounted) {
-          return;
-        }
-
-        setCustomers(customerData);
-        setServices(serviceData);
-        setProducts(productData);
-      } catch (apiError) {
-        if (mounted) {
-          setError(extractApiError(apiError));
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+      setCustomers(customerData);
+      setServices(serviceData);
+      setProducts(productData);
+      setError('');
+    } catch (apiError) {
+      if (!silent) {
+        setError(extractApiError(apiError));
       }
-    };
+    } finally {
+      loadInFlightRef.current = false;
+      if (!silent) {
+        setLoading(false);
+      }
+    }
+  }, []);
 
-    void run();
+  useEffect(() => {
+    void loadPosData(false);
+
+    const onFocus = () => {
+      void loadPosData(true);
+    };
+    window.addEventListener('focus', onFocus);
+
+    const timer = window.setInterval(() => {
+      void loadPosData(true);
+    }, 15000);
 
     return () => {
-      mounted = false;
+      window.removeEventListener('focus', onFocus);
+      window.clearInterval(timer);
     };
-  }, []);
+  }, [loadPosData]);
 
   useEffect(() => {
     const raw = window.sessionStorage.getItem(LAST_POS_CHECKOUT_STORAGE_KEY);

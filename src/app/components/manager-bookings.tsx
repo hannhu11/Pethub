@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { CalendarDays, Search } from 'lucide-react';
@@ -41,39 +41,52 @@ export function ManagerBookingsPage() {
   const [workingId, setWorkingId] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const loadInFlightRef = useRef(false);
 
   const loadBookings = useMemo(
-    () => async () => {
-      setLoading(true);
-      setError('');
+    () => async (silent = false) => {
+      if (loadInFlightRef.current) {
+        return;
+      }
+      loadInFlightRef.current = true;
+      if (!silent) {
+        setLoading(true);
+        setError('');
+      }
       try {
         const data = await listAppointments();
         setBookings(data);
+        setError('');
       } catch (apiError) {
-        setError(extractApiError(apiError));
+        if (!silent) {
+          setError(extractApiError(apiError));
+        }
       } finally {
-        setLoading(false);
+        loadInFlightRef.current = false;
+        if (!silent) {
+          setLoading(false);
+        }
       }
     },
     [],
   );
 
   useEffect(() => {
-    void loadBookings();
+    void loadBookings(false);
 
     const onFocus = () => {
-      void loadBookings();
+      void loadBookings(true);
     };
     window.addEventListener('focus', onFocus);
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        void loadBookings();
+        void loadBookings(true);
       }
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
 
     const timer = window.setInterval(() => {
-      void loadBookings();
+      void loadBookings(true);
     }, 3000);
 
     return () => {

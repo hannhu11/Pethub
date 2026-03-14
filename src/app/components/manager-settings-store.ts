@@ -1,6 +1,5 @@
 import type { ClinicSettings } from '../types';
 
-const SETTINGS_STORAGE_KEY = 'pethub-manager-settings-v1';
 const UPDATE_EVENT = 'pethub-manager-settings-updated';
 
 export interface ManagerProfileSettings {
@@ -27,17 +26,17 @@ interface ManagerSettingsState {
 
 const defaultSettings: ManagerSettingsState = {
   profile: {
-    name: 'Phạm Hương',
-    email: 'huong.pham@email.com',
-    phone: '0934567890',
+    name: '',
+    email: '',
+    phone: '',
     role: 'Quản trị viên',
   },
   clinic: {
-    name: 'PetHub Clinic',
-    taxId: '0123456789',
-    phone: '028-1234-5678',
-    address: '123 Nguyễn Huệ, Q.1, TP.HCM',
-    invoiceNote: 'Cảm ơn quý khách đã sử dụng dịch vụ tại PetHub!',
+    name: 'Phòng khám',
+    taxId: '',
+    phone: '',
+    address: '',
+    invoiceNote: '',
   },
   subscription: {
     plan: 'basic',
@@ -52,35 +51,22 @@ function isBrowser() {
   return typeof window !== 'undefined';
 }
 
-function readSettingsState(): ManagerSettingsState {
-  if (!isBrowser()) return defaultSettings;
-
-  try {
-    const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
-    if (!raw) return defaultSettings;
-    const parsed = JSON.parse(raw) as Partial<ManagerSettingsState>;
-    return {
-      profile: {
-        ...defaultSettings.profile,
-        ...(parsed.profile ?? {}),
-      },
-      clinic: {
-        ...defaultSettings.clinic,
-        ...(parsed.clinic ?? {}),
-      },
-      subscription: {
-        ...defaultSettings.subscription,
-        ...(parsed.subscription ?? {}),
-      },
-    };
-  } catch {
-    return defaultSettings;
-  }
+function createDefaultSettings(): ManagerSettingsState {
+  return {
+    profile: { ...defaultSettings.profile },
+    clinic: { ...defaultSettings.clinic },
+    subscription: { ...defaultSettings.subscription },
+  };
 }
 
-function writeSettingsState(settings: ManagerSettingsState) {
-  if (!isBrowser()) return;
-  window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+let settingsState: ManagerSettingsState = createDefaultSettings();
+
+function readSettingsState(): ManagerSettingsState {
+  return settingsState;
+}
+
+function writeSettingsState(next: ManagerSettingsState) {
+  settingsState = next;
 }
 
 function notifyUpdate() {
@@ -131,23 +117,39 @@ export function saveSubscriptionSettings(subscription: ManagerSubscriptionSettin
   notifyUpdate();
 }
 
+export function hydrateManagerSettings(partial: Partial<ManagerSettingsState>) {
+  const current = readSettingsState();
+  writeSettingsState({
+    profile: {
+      ...current.profile,
+      ...(partial.profile ?? {}),
+    },
+    clinic: {
+      ...current.clinic,
+      ...(partial.clinic ?? {}),
+    },
+    subscription: {
+      ...current.subscription,
+      ...(partial.subscription ?? {}),
+    },
+  });
+  notifyUpdate();
+}
+
+export function resetManagerSettingsStore() {
+  writeSettingsState(createDefaultSettings());
+  notifyUpdate();
+}
+
 export function subscribeManagerSettingsUpdates(callback: () => void) {
   if (!isBrowser()) {
     return () => {};
   }
 
   const onUpdate = () => callback();
-  const onStorage = (event: StorageEvent) => {
-    if (event.key === SETTINGS_STORAGE_KEY) {
-      callback();
-    }
-  };
-
   window.addEventListener(UPDATE_EVENT, onUpdate);
-  window.addEventListener('storage', onStorage);
 
   return () => {
     window.removeEventListener(UPDATE_EVENT, onUpdate);
-    window.removeEventListener('storage', onStorage);
   };
 }
