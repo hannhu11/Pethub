@@ -295,6 +295,16 @@ export interface ApiNotificationsListResponse {
   filter: 'all' | 'unread' | 'read';
 }
 
+export interface ApiNotificationSettings {
+  emailBooking: boolean;
+  emailReminder: boolean;
+  smsBooking: boolean;
+  smsReminder: boolean;
+  dailyReport: boolean;
+  weeklyReport: boolean;
+  updatedAt: string | null;
+}
+
 export interface ApiMedicalRecord {
   id: string;
   appointmentId: string | null;
@@ -585,6 +595,28 @@ export async function markNotificationAsRead(id: string): Promise<{ item: ApiNot
 export async function markAllNotificationsAsRead(): Promise<{ updated: number; unread: number }> {
   const { data } = await apiClient.patch<{ updated: number; unread: number }>(
     '/notifications/read-all',
+  );
+  return data;
+}
+
+export async function getNotificationSettings(): Promise<{ notifications: ApiNotificationSettings }> {
+  const { data } = await apiClient.get<{ notifications: ApiNotificationSettings }>(
+    '/settings/notifications',
+  );
+  return data;
+}
+
+export async function updateNotificationSettings(payload: {
+  emailBooking?: boolean;
+  emailReminder?: boolean;
+  smsBooking?: boolean;
+  smsReminder?: boolean;
+  dailyReport?: boolean;
+  weeklyReport?: boolean;
+}): Promise<{ notifications: ApiNotificationSettings }> {
+  const { data } = await apiClient.put<{ notifications: ApiNotificationSettings }>(
+    '/settings/notifications',
+    payload,
   );
   return data;
 }

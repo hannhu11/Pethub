@@ -300,7 +300,7 @@ export function CustomerAppointmentsPage() {
               </select>
               {!loading && !hasPets ? (
                 <p className='mt-2 text-xs text-[#7a756e]'>
-                  Bạn chưa có thú cưng nào. Vui lòng thêm tại mục <a href='/customer/my-pets' className='underline text-[#6b8f5e]'>Thú cưng của tôi</a>.
+                  Bạn chưa có thú cưng nào. Vui lòng liên hệ quản trị viên để thêm hồ sơ thú cưng trước khi đặt lịch.
                 </p>
               ) : null}
             </div>

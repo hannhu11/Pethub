@@ -32,6 +32,14 @@ type CartItem = {
 const DEFAULT_TAX_PERCENT = 8;
 const LAST_POS_CHECKOUT_STORAGE_KEY = 'pethub:last-pos-checkout';
 
+type StoredPosCheckoutState = {
+  result: PosCheckoutResponse;
+  appointmentId: string;
+  customerId: string;
+  petId: string;
+  updatedAt: string;
+};
+
 function formatCurrency(value: number | string) {
   const normalized = Number(value ?? 0);
   return `${Math.round(normalized).toLocaleString('vi-VN')} ₫`;
@@ -114,15 +122,28 @@ export function ManagerPOSPage() {
     }
 
     try {
-      const parsed = JSON.parse(raw) as PosCheckoutResponse;
-      if (parsed?.invoiceId) {
-        setCheckoutResult(parsed);
-        if (parsed.paymentStatus === 'paid') {
-          navigate(`/manager/invoice/${parsed.invoiceId}`, { replace: true });
+      const parsed = JSON.parse(raw) as StoredPosCheckoutState | PosCheckoutResponse;
+      const stored =
+        parsed && 'result' in parsed
+          ? (parsed as StoredPosCheckoutState)
+          : ({
+              result: parsed as PosCheckoutResponse,
+              appointmentId: '',
+              customerId: '',
+              petId: '',
+              updatedAt: new Date().toISOString(),
+            } satisfies StoredPosCheckoutState);
+
+      if (appointmentId && stored.appointmentId && stored.appointmentId !== appointmentId) {
+        window.sessionStorage.removeItem(LAST_POS_CHECKOUT_STORAGE_KEY);
+      } else if (stored.result?.invoiceId) {
+        setCheckoutResult(stored.result);
+        if (stored.result.paymentStatus === 'paid') {
+          navigate(`/manager/pos/receipt/${stored.result.invoiceId}`, { replace: true });
           return;
         }
-        if (parsed.paymentAction) {
-          navigate(`/manager/pos/transaction/${parsed.invoiceId}`, { replace: true });
+        if (stored.result.paymentAction) {
+          navigate(`/manager/pos/transaction/${stored.result.invoiceId}`, { replace: true });
           return;
         }
       }
@@ -136,7 +157,7 @@ export function ManagerPOSPage() {
     if (paymentFlag === 'cancel') {
       setMessage('Khách đã hủy thanh toán trên payOS. Hóa đơn vẫn ở trạng thái chờ.');
     }
-  }, [navigate, paymentFlag]);
+  }, [appointmentId, navigate, paymentFlag]);
 
   useEffect(() => {
     if (!appointmentId) {
@@ -241,7 +262,7 @@ export function ManagerPOSPage() {
           setMessage('payOS đã xác nhận giao dịch. Hóa đơn đã chuyển sang ĐÃ THANH TOÁN.');
           setCheckingPayment(false);
           window.sessionStorage.removeItem(LAST_POS_CHECKOUT_STORAGE_KEY);
-          navigate(`/manager/invoice/${data.invoice.id}`, { replace: true });
+          navigate(`/manager/pos/receipt/${data.invoice.id}`, { replace: true });
           return;
         }
       } catch {
@@ -275,8 +296,15 @@ export function ManagerPOSPage() {
       return;
     }
 
-    window.sessionStorage.setItem(LAST_POS_CHECKOUT_STORAGE_KEY, JSON.stringify(checkoutResult));
-  }, [checkoutResult]);
+    const payload: StoredPosCheckoutState = {
+      result: checkoutResult,
+      appointmentId,
+      customerId: selectedCustomerId,
+      petId: selectedPetId,
+      updatedAt: new Date().toISOString(),
+    };
+    window.sessionStorage.setItem(LAST_POS_CHECKOUT_STORAGE_KEY, JSON.stringify(payload));
+  }, [appointmentId, checkoutResult, selectedCustomerId, selectedPetId]);
 
   const visibleItems = useMemo(() => {
     const keyword = search.trim().toLowerCase();
@@ -379,7 +407,7 @@ export function ManagerPOSPage() {
         setMessage('Thanh toán thành công. Hóa đơn đã được ghi nhận.');
         setCart([]);
         window.sessionStorage.removeItem(LAST_POS_CHECKOUT_STORAGE_KEY);
-        navigate(`/manager/invoice/${result.invoiceId}`);
+        navigate(`/manager/pos/receipt/${result.invoiceId}`);
       } else {
         setMessage('Đã tạo hóa đơn chờ thanh toán. Khách vui lòng quét QR payOS để chuyển khoản.');
         if (result.paymentAction) {

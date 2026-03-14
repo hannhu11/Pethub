@@ -8,6 +8,7 @@ import {
   markNotificationAsRead,
   type ApiNotification,
 } from '../lib/pethub-api';
+import { connectRealtimeSocket } from '../lib/realtime';
 
 type NotificationFilter = 'all' | 'unread' | 'read';
 
@@ -60,6 +61,43 @@ export function ManagerNotificationsPage() {
     }, 15000);
     return () => {
       window.clearInterval(timer);
+    };
+  }, [filter, loadNotifications]);
+
+  useEffect(() => {
+    let active = true;
+    let cleanup: (() => void) | null = null;
+
+    const setupRealtime = async () => {
+      let socket = null;
+      try {
+        socket = await connectRealtimeSocket();
+      } catch {
+        return;
+      }
+      if (!active || !socket) {
+        return;
+      }
+
+      const refresh = () => {
+        void loadNotifications(filter, true);
+      };
+
+      socket.on('notification.created', refresh);
+      socket.on('notification.read', refresh);
+
+      cleanup = () => {
+        socket.off('notification.created', refresh);
+        socket.off('notification.read', refresh);
+        socket.disconnect();
+      };
+    };
+
+    void setupRealtime();
+
+    return () => {
+      active = false;
+      cleanup?.();
     };
   }, [filter, loadNotifications]);
 

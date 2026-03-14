@@ -15,6 +15,8 @@ import {
   subscribeManagerSettingsUpdates,
 } from './manager-settings-store';
 import type { SensitiveSaveConfirmState } from '../types';
+import { extractApiError } from '../lib/api-client';
+import { getNotificationSettings, updateNotificationSettings } from '../lib/pethub-api';
 
 const settingsTabs = [
   { id: 'profile', label: 'Hồ sơ cá nhân', icon: User },
@@ -64,6 +66,9 @@ export function ManagerSettingsPage() {
     dailyReport: true,
     weeklyReport: false,
   });
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [notifSaving, setNotifSaving] = useState(false);
+  const [notifError, setNotifError] = useState('');
 
   useEffect(() => {
     if (!requestedTab || !validTabIds.includes(requestedTab as SettingsTabId)) {
@@ -78,6 +83,41 @@ export function ManagerSettingsPage() {
       setClinic(getClinicSettings());
       setSubscription(getSubscriptionSettings());
     });
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    const run = async () => {
+      setNotifLoading(true);
+      setNotifError('');
+      try {
+        const data = await getNotificationSettings();
+        if (!mounted) {
+          return;
+        }
+        setNotifications({
+          emailBooking: data.notifications.emailBooking,
+          emailReminder: data.notifications.emailReminder,
+          smsBooking: data.notifications.smsBooking,
+          smsReminder: data.notifications.smsReminder,
+          dailyReport: data.notifications.dailyReport,
+          weeklyReport: data.notifications.weeklyReport,
+        });
+      } catch (apiError) {
+        if (mounted) {
+          setNotifError(extractApiError(apiError));
+        }
+      } finally {
+        if (mounted) {
+          setNotifLoading(false);
+        }
+      }
+    };
+
+    void run();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const handleTabChange = (tabId: SettingsTabId) => {
@@ -121,8 +161,19 @@ export function ManagerSettingsPage() {
     closeSensitiveConfirm();
   };
 
-  const toggleNotif = (key: keyof typeof notifications) => {
-    setNotifications(prev => ({ ...prev, [key]: !prev[key] }));
+  const toggleNotif = async (key: keyof typeof notifications) => {
+    const next = { ...notifications, [key]: !notifications[key] };
+    setNotifications(next);
+    setNotifSaving(true);
+    setNotifError('');
+    try {
+      await updateNotificationSettings(next);
+    } catch (apiError) {
+      setNotifications(notifications);
+      setNotifError(extractApiError(apiError));
+    } finally {
+      setNotifSaving(false);
+    }
   };
 
   const savePassword = () => {
@@ -445,6 +496,9 @@ export function ManagerSettingsPage() {
                   {'Cài đặt thông báo'}
                 </h2>
                 <p className="text-xs text-[#7a756e] mt-1">{'Quản lý cách nhận thông báo từ hệ thống'}</p>
+                {notifLoading ? <p className='text-xs text-[#7a756e] mt-2'>Đang tải cài đặt thông báo...</p> : null}
+                {notifSaving ? <p className='text-xs text-[#6b8f5e] mt-2'>Đang lưu thay đổi...</p> : null}
+                {notifError ? <p className='text-xs text-red-600 mt-2'>{notifError}</p> : null}
               </div>
               <div className="divide-y divide-[#2d2a26]/10">
                 <div className="p-5">
@@ -463,10 +517,11 @@ export function ManagerSettingsPage() {
                           <p className="text-xs text-[#7a756e]">{item.desc}</p>
                         </div>
                         <button
-                          onClick={() => toggleNotif(item.key)}
+                          onClick={() => void toggleNotif(item.key)}
+                          disabled={notifLoading || notifSaving}
                           className={`w-10 h-6 rounded-full transition-all relative ${
                             notifications[item.key] ? 'bg-[#6b8f5e]' : 'bg-[#e8e4de]'
-                          }`}
+                          } disabled:opacity-60`}
                         >
                           <div className={`w-4 h-4 rounded-full bg-white border border-[#2d2a26]/20 absolute top-1 transition-all ${
                             notifications[item.key] ? 'left-5' : 'left-1'
@@ -493,10 +548,11 @@ export function ManagerSettingsPage() {
                           <p className="text-xs text-[#7a756e]">{item.desc}</p>
                         </div>
                         <button
-                          onClick={() => toggleNotif(item.key)}
+                          onClick={() => void toggleNotif(item.key)}
+                          disabled={notifLoading || notifSaving}
                           className={`w-10 h-6 rounded-full transition-all relative ${
                             notifications[item.key] ? 'bg-[#6b8f5e]' : 'bg-[#e8e4de]'
-                          }`}
+                          } disabled:opacity-60`}
                         >
                           <div className={`w-4 h-4 rounded-full bg-white border border-[#2d2a26]/20 absolute top-1 transition-all ${
                             notifications[item.key] ? 'left-5' : 'left-1'
@@ -523,10 +579,11 @@ export function ManagerSettingsPage() {
                           <p className="text-xs text-[#7a756e]">{item.desc}</p>
                         </div>
                         <button
-                          onClick={() => toggleNotif(item.key)}
+                          onClick={() => void toggleNotif(item.key)}
+                          disabled={notifLoading || notifSaving}
                           className={`w-10 h-6 rounded-full transition-all relative ${
                             notifications[item.key] ? 'bg-[#6b8f5e]' : 'bg-[#e8e4de]'
-                          }`}
+                          } disabled:opacity-60`}
                         >
                           <div className={`w-4 h-4 rounded-full bg-white border border-[#2d2a26]/20 absolute top-1 transition-all ${
                             notifications[item.key] ? 'left-5' : 'left-1'

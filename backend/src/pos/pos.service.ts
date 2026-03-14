@@ -65,21 +65,72 @@ export class PosService {
       throw new NotFoundException('Customer not found');
     }
 
-    if (dto.appointmentId) {
-      const appointment = await this.prisma.appointment.findFirst({
+    const appointment = await this.resolveAppointmentContext(dto, currentUser);
+    const appointmentId = appointment?.id ?? dto.appointmentId;
+    if (appointmentId) {
+      const existingInvoice = await this.prisma.invoice.findFirst({
         where: {
-          id: dto.appointmentId,
           clinicId: currentUser.clinicId,
+          appointmentId,
         },
       });
-      if (!appointment) {
-        throw new NotFoundException('Appointment not found');
+      if (existingInvoice) {
+        if (existingInvoice.paymentStatus === PaymentStatus.paid) {
+          return {
+            invoiceId: existingInvoice.id,
+            invoiceNo: existingInvoice.invoiceNo,
+            paymentStatus: 'paid' as const,
+            paymentAction: null,
+            totals: {
+              subtotal: Number(existingInvoice.subtotal),
+              taxPercent: Number(existingInvoice.taxPercent),
+              taxAmount: Number(existingInvoice.taxAmount),
+              grandTotal: Number(existingInvoice.grandTotal),
+            },
+          };
+        }
+
+        if (instantPayment) {
+          throw new BadRequestException(
+            'Lịch hẹn này đã có hóa đơn chờ thanh toán. Vui lòng thanh toán hóa đơn hiện có trên trang Trạng thái giao dịch.',
+          );
+        }
+
+        const paymentAction = await this.paymentsService.createPayosLinkForInvoice({
+          clinicId: currentUser.clinicId,
+          invoiceId: existingInvoice.id,
+          amount: Number(existingInvoice.grandTotal),
+          description: `Thanh toan hoa don ${existingInvoice.invoiceNo}`,
+          returnUrl: dto.returnUrl,
+          cancelUrl: dto.cancelUrl,
+        });
+
+        return {
+          invoiceId: existingInvoice.id,
+          invoiceNo: existingInvoice.invoiceNo,
+          paymentStatus: existingInvoice.paymentStatus as 'unpaid' | 'paid' | 'refunded',
+          paymentAction,
+          totals: {
+            subtotal: Number(existingInvoice.subtotal),
+            taxPercent: Number(existingInvoice.taxPercent),
+            taxAmount: Number(existingInvoice.taxAmount),
+            grandTotal: Number(existingInvoice.grandTotal),
+          },
+        };
       }
-      if (appointment.status !== AppointmentStatus.completed) {
-        throw new BadRequestException('Only completed appointments can be checked out in POS');
-      }
-      if (appointment.paymentStatus === PaymentStatus.paid) {
-        throw new BadRequestException('Appointment already paid');
+    }
+
+    const effectivePetId = appointment?.petId ?? dto.petId;
+    if (effectivePetId) {
+      const pet = await this.prisma.pet.findFirst({
+        where: {
+          id: effectivePetId,
+          clinicId: currentUser.clinicId,
+          customerId: customer.id,
+        },
+      });
+      if (!pet) {
+        throw new BadRequestException('Pet does not belong to the selected customer');
       }
     }
 
@@ -90,7 +141,7 @@ export class PosService {
         itemType: item.itemType,
         serviceId: item.serviceId,
         productId: item.productId,
-        petId: dto.petId,
+        petId: effectivePetId,
         name: item.name,
         qty: item.qty,
         unitPrice,
@@ -112,8 +163,8 @@ export class PosService {
         data: {
           clinicId: currentUser.clinicId,
           invoiceNo,
-          appointmentId: dto.appointmentId,
-          customerId: dto.customerId,
+          appointmentId: appointmentId || undefined,
+          customerId: customer.id,
           managerId: currentUser.userId,
           paymentMethod: dto.paymentMethod as PaymentMethod,
           paymentStatus,
@@ -158,9 +209,9 @@ export class PosService {
         },
       });
 
-      if (dto.appointmentId && instantPayment) {
+      if (appointmentId && instantPayment) {
         await tx.appointment.update({
-          where: { id: dto.appointmentId },
+          where: { id: appointmentId },
           data: {
             paymentStatus: PaymentStatus.paid,
             paidAt: now,
@@ -170,7 +221,7 @@ export class PosService {
 
       if (instantPayment) {
         await tx.customer.update({
-          where: { id: dto.customerId },
+          where: { id: customer.id },
           data: {
             totalSpent: { increment: grandTotal },
             totalVisits: { increment: 1 },
@@ -207,6 +258,7 @@ export class PosService {
 
     this.realtimeService.emitSubscriptionUpdated({
       type: 'invoice.created',
+      clinicId: currentUser.clinicId,
       invoiceId: data.id,
       customerId: data.customerId,
       amount: grandTotal,
@@ -225,6 +277,72 @@ export class PosService {
         grandTotal,
       },
     };
+  }
+
+  private async resolveAppointmentContext(dto: PosCheckoutDto, currentUser: AuthUser) {
+    const serviceIds = Array.from(
+      new Set(
+        dto.items
+          .filter((item) => item.itemType === InvoiceItemType.service && item.serviceId)
+          .map((item) => item.serviceId as string),
+      ),
+    );
+
+    if (dto.appointmentId) {
+      const appointment = await this.prisma.appointment.findFirst({
+        where: {
+          id: dto.appointmentId,
+          clinicId: currentUser.clinicId,
+        },
+      });
+      if (!appointment) {
+        throw new NotFoundException('Appointment not found');
+      }
+      if (appointment.status !== AppointmentStatus.completed) {
+        throw new BadRequestException('Only completed appointments can be checked out in POS');
+      }
+      if (appointment.paymentStatus === PaymentStatus.paid) {
+        throw new BadRequestException('Appointment already paid');
+      }
+      if (appointment.customerId !== dto.customerId) {
+        throw new BadRequestException('appointmentId does not match selected customer');
+      }
+      if (dto.petId && appointment.petId !== dto.petId) {
+        throw new BadRequestException('appointmentId does not match selected pet');
+      }
+      if (serviceIds.length > 0 && !serviceIds.includes(appointment.serviceId)) {
+        throw new BadRequestException('appointmentId does not match selected service in cart');
+      }
+      return appointment;
+    }
+
+    if (!dto.petId || serviceIds.length === 0) {
+      return null;
+    }
+
+    const candidates = await this.prisma.appointment.findMany({
+      where: {
+        clinicId: currentUser.clinicId,
+        customerId: dto.customerId,
+        petId: dto.petId,
+        status: AppointmentStatus.completed,
+        paymentStatus: PaymentStatus.unpaid,
+        serviceId: { in: serviceIds },
+      },
+      orderBy: { appointmentAt: 'desc' },
+      take: 3,
+    });
+
+    if (candidates.length === 0) {
+      return null;
+    }
+    if (candidates.length > 1) {
+      throw new BadRequestException(
+        'Có nhiều lịch hẹn chưa thanh toán cho khách/thú cưng này. Vui lòng vào màn Lịch hẹn và bấm "Chuyển sang POS" để giữ đúng appointmentId.',
+      );
+    }
+
+    return candidates[0];
   }
 
   private resolvePaymentProvider(method: PaymentMethod): string {

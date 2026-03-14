@@ -10,10 +10,34 @@ import type { AuthUser } from '../common/interfaces/auth-user.interface';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateClinicDto } from './dto/update-clinic.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
+import { UpdateNotificationSettingsDto } from './dto/update-notification-settings.dto';
+
+type NotificationSettingsResponse = {
+  emailBooking: boolean;
+  emailReminder: boolean;
+  smsBooking: boolean;
+  smsReminder: boolean;
+  dailyReport: boolean;
+  weeklyReport: boolean;
+  updatedAt: string | null;
+};
 
 @Injectable()
 export class SettingsService {
+  private readonly defaultNotificationSettings = {
+    emailBooking: true,
+    emailReminder: true,
+    smsBooking: false,
+    smsReminder: true,
+    dailyReport: true,
+    weeklyReport: false,
+  } as const;
+
   constructor(private readonly prisma: PrismaService) {}
+
+  private get notificationSettingsModel() {
+    return (this.prisma as unknown as { notificationSettings: any }).notificationSettings;
+  }
 
   async getSettings(currentUser: AuthUser) {
     const user = await this.prisma.user.findFirst({
@@ -39,6 +63,11 @@ export class SettingsService {
       },
       orderBy: { updatedAt: 'desc' },
     });
+    const notificationSettings = await this.notificationSettingsModel.findUnique({
+      where: {
+        clinicId: currentUser.clinicId,
+      },
+    });
 
     return {
       profile: {
@@ -50,6 +79,7 @@ export class SettingsService {
       },
       clinic,
       subscription,
+      notifications: this.toNotificationSettingsResponse(notificationSettings),
     };
   }
 
@@ -185,6 +215,82 @@ export class SettingsService {
     };
   }
 
+  async getNotificationSettings(currentUser: AuthUser): Promise<{ notifications: NotificationSettingsResponse }> {
+    if (currentUser.role !== 'manager') {
+      throw new ForbiddenException('Only manager can view notification settings');
+    }
+
+    const settings = await this.notificationSettingsModel.findUnique({
+      where: {
+        clinicId: currentUser.clinicId,
+      },
+    });
+
+    return {
+      notifications: this.toNotificationSettingsResponse(settings),
+    };
+  }
+
+  async updateNotificationSettings(
+    currentUser: AuthUser,
+    dto: UpdateNotificationSettingsDto,
+  ): Promise<{ notifications: NotificationSettingsResponse }> {
+    if (currentUser.role !== 'manager') {
+      throw new ForbiddenException('Only manager can update notification settings');
+    }
+
+    const current = await this.notificationSettingsModel.findUnique({
+      where: {
+        clinicId: currentUser.clinicId,
+      },
+    });
+
+    const merged = {
+      emailBooking: dto.emailBooking ?? current?.emailBooking ?? this.defaultNotificationSettings.emailBooking,
+      emailReminder: dto.emailReminder ?? current?.emailReminder ?? this.defaultNotificationSettings.emailReminder,
+      smsBooking: dto.smsBooking ?? current?.smsBooking ?? this.defaultNotificationSettings.smsBooking,
+      smsReminder: dto.smsReminder ?? current?.smsReminder ?? this.defaultNotificationSettings.smsReminder,
+      dailyReport: dto.dailyReport ?? current?.dailyReport ?? this.defaultNotificationSettings.dailyReport,
+      weeklyReport: dto.weeklyReport ?? current?.weeklyReport ?? this.defaultNotificationSettings.weeklyReport,
+    };
+
+    const updated = await this.notificationSettingsModel.upsert({
+      where: {
+        clinicId: currentUser.clinicId,
+      },
+      create: {
+        clinicId: currentUser.clinicId,
+        ...merged,
+      },
+      update: merged,
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        clinicId: currentUser.clinicId,
+        actorId: currentUser.userId,
+        action: 'settings.notifications.update',
+        entityType: 'notification_settings',
+        entityId: updated.id,
+        before: current
+          ? {
+              emailBooking: current.emailBooking,
+              emailReminder: current.emailReminder,
+              smsBooking: current.smsBooking,
+              smsReminder: current.smsReminder,
+              dailyReport: current.dailyReport,
+              weeklyReport: current.weeklyReport,
+            }
+          : undefined,
+        after: merged,
+      },
+    });
+
+    return {
+      notifications: this.toNotificationSettingsResponse(updated),
+    };
+  }
+
   private async ensureSensitivePassword(userId: string, password: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
@@ -208,5 +314,29 @@ export class SettingsService {
     if (!valid) {
       throw new ForbiddenException('Invalid confirmation password');
     }
+  }
+
+  private toNotificationSettingsResponse(
+    settings:
+      | {
+          emailBooking: boolean;
+          emailReminder: boolean;
+          smsBooking: boolean;
+          smsReminder: boolean;
+          dailyReport: boolean;
+          weeklyReport: boolean;
+          updatedAt: Date;
+        }
+      | null,
+  ): NotificationSettingsResponse {
+    return {
+      emailBooking: settings?.emailBooking ?? this.defaultNotificationSettings.emailBooking,
+      emailReminder: settings?.emailReminder ?? this.defaultNotificationSettings.emailReminder,
+      smsBooking: settings?.smsBooking ?? this.defaultNotificationSettings.smsBooking,
+      smsReminder: settings?.smsReminder ?? this.defaultNotificationSettings.smsReminder,
+      dailyReport: settings?.dailyReport ?? this.defaultNotificationSettings.dailyReport,
+      weeklyReport: settings?.weeklyReport ?? this.defaultNotificationSettings.weeklyReport,
+      updatedAt: settings?.updatedAt?.toISOString() ?? null,
+    };
   }
 }

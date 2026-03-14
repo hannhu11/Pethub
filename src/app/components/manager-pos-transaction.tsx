@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useNavigate, useParams } from 'react-router';
 import { getInvoiceById, type InvoiceDetailsResponse } from '../lib/pethub-api';
 import { extractApiError } from '../lib/api-client';
+import { connectRealtimeSocket } from '../lib/realtime';
 
 function formatCurrency(value: number | string) {
   const normalized = Number(value ?? 0);
@@ -67,7 +68,7 @@ export function ManagerPosTransactionStatusPage() {
       window.sessionStorage.removeItem('pethub:last-pos-checkout');
       setMessage('payOS đã xác nhận giao dịch. Đang chuyển sang trang in hóa đơn...');
       const timer = window.setTimeout(() => {
-        navigate(`/manager/invoice/${payload.invoice.id}`, { replace: true });
+        navigate(`/manager/pos/receipt/${payload.invoice.id}`, { replace: true });
       }, 700);
       return () => window.clearTimeout(timer);
     }
@@ -108,6 +109,58 @@ export function ManagerPosTransactionStatusPage() {
       window.clearInterval(timer);
     };
   }, [invoiceId, navigate, payload?.invoice.id, payload?.invoice.paymentStatus, payload?.paymentAction]);
+
+  useEffect(() => {
+    let active = true;
+    let cleanup: (() => void) | null = null;
+
+    const setupRealtime = async () => {
+      let socket = null;
+      try {
+        socket = await connectRealtimeSocket();
+      } catch {
+        return;
+      }
+      if (!active || !socket || !invoiceId) {
+        return;
+      }
+
+      const onInvoicePaymentUpdated = (event: {
+        invoiceId?: string;
+        paymentStatus?: 'paid' | 'unpaid' | 'refunded';
+      }) => {
+        if (!event?.invoiceId || event.invoiceId !== invoiceId) {
+          return;
+        }
+
+        if (event.paymentStatus === 'paid') {
+          setMessage('Nhận tín hiệu realtime: giao dịch đã thanh toán. Đang tải hóa đơn...');
+          void getInvoiceById(invoiceId)
+            .then((latest) => {
+              setPayload(latest);
+              if (latest.invoice.paymentStatus === 'paid') {
+                window.sessionStorage.removeItem('pethub:last-pos-checkout');
+                navigate(`/manager/pos/receipt/${latest.invoice.id}`, { replace: true });
+              }
+            })
+            .catch(() => undefined);
+        }
+      };
+
+      socket.on('invoice.payment.updated', onInvoicePaymentUpdated);
+      cleanup = () => {
+        socket.off('invoice.payment.updated', onInvoicePaymentUpdated);
+        socket.disconnect();
+      };
+    };
+
+    void setupRealtime();
+
+    return () => {
+      active = false;
+      cleanup?.();
+    };
+  }, [invoiceId, navigate]);
 
   if (loading) {
     return <div className='text-sm text-[#7a756e]'>Đang tải trạng thái giao dịch...</div>;
