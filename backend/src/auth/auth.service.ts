@@ -1,7 +1,10 @@
 import {
   BadRequestException,
+  InternalServerErrorException,
   Injectable,
+  Logger,
   NotFoundException,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Prisma, Role, type User } from '@prisma/client';
@@ -24,42 +27,58 @@ export interface AuthMeResponse {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly firebaseAdminService: FirebaseAdminService,
   ) {}
 
   async syncFirebase(dto: SyncFirebaseDto): Promise<AuthMeResponse> {
-    const decoded = await this.firebaseAdminService.verifyIdToken(dto.idToken);
-    const clinicId = await this.resolveClinicId(dto.clinicSlug);
-    const email = decoded.email ?? `${decoded.uid}@pethub.vn`;
-    const normalizedPhone = dto.phone?.trim() ?? decoded.phone_number?.trim() ?? '';
-    const displayName = dto.name?.trim() || decoded.name?.trim() || null;
+    try {
+      const decoded = await this.verifyIdTokenWithTimeout(dto.idToken);
+      const clinicId = await this.resolveClinicId(dto.clinicSlug);
+      const email = decoded.email ?? `${decoded.uid}@pethub.vn`;
+      const normalizedPhone = dto.phone?.trim() ?? decoded.phone_number?.trim() ?? '';
+      const displayName = dto.name?.trim() || decoded.name?.trim() || null;
+      const user = await this.upsertUserForSync({
+        firebaseUid: decoded.uid,
+        clinicId,
+        email,
+        phone: normalizedPhone,
+        displayName,
+      });
 
-    const userByUid = await this.prisma.user.findUnique({
-      where: { firebaseUid: decoded.uid },
-    });
+      await this.upsertCustomerProfile(user);
 
-    const user = userByUid
-      ? await this.prisma.user.update({
-          where: { id: userByUid.id },
-          data: {
-            clinicId: clinicId ?? userByUid.clinicId,
-            email,
-            name: displayName ?? userByUid.name,
-            phone: normalizedPhone || userByUid.phone,
-          },
-        })
-      : await this.upsertByEmailFallback(decoded.uid, email, normalizedPhone, displayName, clinicId);
+      const onboarding = this.buildOnboardingState(
+        user,
+        decoded.firebase?.sign_in_provider ?? 'unknown',
+      );
 
-    await this.upsertCustomerProfile(user);
+      return { user: this.toAuthUser(user), onboarding };
+    } catch (error) {
+      const stack = error instanceof Error ? error.stack : String(error);
+      this.logger.error('Firebase sync failed', stack);
 
-    const onboarding = this.buildOnboardingState(
-      user,
-      decoded.firebase?.sign_in_provider ?? 'unknown',
-    );
+      if (
+        error instanceof BadRequestException ||
+        error instanceof UnauthorizedException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
 
-    return { user: this.toAuthUser(user), onboarding };
+      if (this.isMissingClinicTableError(error)) {
+        throw new ServiceUnavailableException(
+          'He thong dang cap nhat du lieu. Vui long thu lai sau it phut.',
+        );
+      }
+
+      throw new InternalServerErrorException(
+        'May chu dang ban. Vui long thu lai sau.',
+      );
+    }
   }
 
   async getMe(currentUser: AuthUser | null): Promise<AuthMeResponse> {
@@ -126,42 +145,66 @@ export class AuthService {
     return this.toAuthUser(user);
   }
 
-  private async upsertByEmailFallback(
-    firebaseUid: string,
-    email: string,
-    phone: string,
-    displayName: string | null,
-    clinicId: string,
-  ): Promise<User> {
-    const userByEmail = await this.prisma.user.findFirst({
-      where: {
-        email,
-        clinicId,
-      },
-      orderBy: { createdAt: 'asc' },
-    });
+  private async upsertUserForSync(input: {
+    firebaseUid: string;
+    clinicId: string;
+    email: string;
+    phone: string;
+    displayName: string | null;
+  }): Promise<User> {
+    const safeName = input.displayName ?? input.email.split('@')[0] ?? 'PetHub User';
 
-    if (userByEmail) {
+    try {
+      return await this.prisma.user.upsert({
+        where: { firebaseUid: input.firebaseUid },
+        update: {
+          clinicId: input.clinicId,
+          email: input.email,
+          name: input.displayName ?? undefined,
+          phone: input.phone || undefined,
+        },
+        create: {
+          clinicId: input.clinicId,
+          firebaseUid: input.firebaseUid,
+          email: input.email,
+          role: Role.customer,
+          name: safeName,
+          phone: input.phone,
+        },
+      });
+    } catch (error) {
+      if (!this.isUniqueConstraintError(error)) {
+        throw error;
+      }
+
+      const existing = await this.prisma.user.findFirst({
+        where: {
+          OR: [
+            { firebaseUid: input.firebaseUid },
+            {
+              clinicId: input.clinicId,
+              email: input.email,
+            },
+          ],
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      if (!existing) {
+        throw error;
+      }
+
       return this.prisma.user.update({
-        where: { id: userByEmail.id },
+        where: { id: existing.id },
         data: {
-          firebaseUid,
-          name: displayName ?? userByEmail.name,
-          phone: phone || userByEmail.phone,
+          firebaseUid: input.firebaseUid,
+          clinicId: input.clinicId,
+          email: input.email,
+          name: input.displayName ?? existing.name,
+          phone: input.phone || existing.phone,
         },
       });
     }
-
-    return this.prisma.user.create({
-      data: {
-        clinicId,
-        firebaseUid,
-        email,
-        role: Role.customer,
-        name: displayName ?? email.split('@')[0] ?? 'PetHub User',
-        phone,
-      },
-    });
   }
 
   private async resolveUserByUidOrEmail(firebaseUid: string, email: string): Promise<User | null> {
@@ -271,8 +314,8 @@ export class AuthService {
     const requiresOnboarding = user.role === Role.customer && missingFields.length > 0;
     const nextStep = requiresOnboarding
       ? signInProvider === 'google.com'
-        ? '/customer/onboarding/google'
-        : '/customer/onboarding/profile'
+        ? '/customer/profile?onboarding=google'
+        : '/customer/profile?onboarding=required'
       : null;
 
     return {
@@ -334,5 +377,48 @@ export class AuthService {
       .replace(/^-|-$/g, '');
 
     return normalized.length > 0 ? normalized : 'default';
+  }
+
+  private async verifyIdTokenWithTimeout(idToken: string) {
+    const timeoutMs = Number(process.env.AUTH_VERIFY_TIMEOUT_MS ?? 12000);
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    try {
+      return await Promise.race([
+        this.firebaseAdminService.verifyIdToken(idToken),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => {
+            reject(new ServiceUnavailableException('Firebase verification timeout'));
+          }, timeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    }
+  }
+
+  private isMissingClinicTableError(error: unknown): boolean {
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      (error as { code?: string }).code === 'P2021'
+    ) {
+      const message = JSON.stringify(error);
+      return message.includes('public.Clinic');
+    }
+
+    return false;
+  }
+
+  private isUniqueConstraintError(error: unknown): boolean {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      (error as { code?: string }).code === 'P2002'
+    );
   }
 }

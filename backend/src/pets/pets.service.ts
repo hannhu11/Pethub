@@ -16,7 +16,25 @@ export class PetsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async list(currentUser: AuthUser, query: PetsQueryDto) {
-    const customerId = await this.resolveCustomerId(currentUser, query.customerId);
+    let customerId: string | undefined;
+
+    if (currentUser.role === 'manager') {
+      if (query.customerId) {
+        const customer = await this.prisma.customer.findFirst({
+          where: {
+            id: query.customerId,
+            clinicId: currentUser.clinicId,
+          },
+          select: { id: true },
+        });
+        if (!customer) {
+          throw new NotFoundException('Customer not found in current clinic');
+        }
+        customerId = customer.id;
+      }
+    } else {
+      customerId = await this.resolveCustomerId(currentUser, query.customerId);
+    }
 
     return this.prisma.pet.findMany({
       where: {

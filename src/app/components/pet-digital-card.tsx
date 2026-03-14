@@ -1,6 +1,6 @@
 import { ShieldCheck } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import type { Pet } from './data';
+import type { Pet } from './pet-types';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { cn } from './ui/utils';
 

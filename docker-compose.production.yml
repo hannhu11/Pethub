@@ -58,6 +58,9 @@ services:
       PAYOS_CLIENT_ID: ${PAYOS_CLIENT_ID:-}
       PAYOS_API_KEY: ${PAYOS_API_KEY:-}
       PAYOS_CHECKSUM_KEY: ${PAYOS_CHECKSUM_KEY:-}
+      PAYOS_RETURN_URL: ${PAYOS_RETURN_URL:-}
+      PAYOS_CANCEL_URL: ${PAYOS_CANCEL_URL:-}
+      FRONTEND_URL: ${FRONTEND_URL:-}
     depends_on:
       postgres:
         condition: service_healthy

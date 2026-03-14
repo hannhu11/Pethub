@@ -9,7 +9,6 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { PaymentMethod, PaymentStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { CreatePayosLinkDto } from './dto/create-payos-link.dto';
-import { PayosWebhookDto } from './dto/payos-webhook.dto';
 import { RealtimeService } from '../realtime/realtime.service';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
 
@@ -21,6 +20,17 @@ type CreatePayosLinkInput = {
   invoiceId?: string;
   returnUrl?: string;
   cancelUrl?: string;
+};
+
+type NormalizedWebhookPayload = {
+  orderCode?: string;
+  status?: string;
+  amount?: number;
+  signature?: string;
+  code?: string;
+  desc?: string;
+  success?: boolean;
+  data?: Record<string, unknown>;
 };
 
 @Injectable()
@@ -104,9 +114,24 @@ export class PaymentsService {
     };
   }
 
-  async handlePayosWebhook(dto: PayosWebhookDto) {
+  async handlePayosWebhook(rawPayload: Record<string, unknown>) {
+    const dto = this.normalizeWebhookPayload(rawPayload);
+    if (this.isWebhookConnectivityProbe(dto)) {
+      return {
+        success: true,
+        acknowledged: true,
+        probe: true,
+      };
+    }
+
     const payload = this.extractWebhookPayload(dto);
-    this.verifyWebhookSignature(dto);
+    if (!payload) {
+      return {
+        success: true,
+        ignored: true,
+        reason: 'invalid_payload',
+      };
+    }
 
     const txn = await this.prisma.paymentTransaction.findUnique({
       where: { providerRef: payload.orderCode },
@@ -116,7 +141,19 @@ export class PaymentsService {
     });
 
     if (!txn) {
-      throw new NotFoundException('Payment transaction not found');
+      return {
+        success: true,
+        ignored: true,
+        reason: 'payment_transaction_not_found',
+        orderCode: payload.orderCode,
+      };
+    }
+
+    this.verifyWebhookSignature(dto);
+
+    const expectedAmount = Math.round(Number(txn.amount ?? 0));
+    if (expectedAmount > 0 && Math.round(payload.amount) !== expectedAmount) {
+      throw new BadRequestException('Webhook amount mismatch');
     }
 
     const paid = payload.status.toUpperCase() === 'PAID' || payload.status.toUpperCase() === 'SUCCESS';
@@ -139,7 +176,7 @@ export class PaymentsService {
           paidAt: paid ? now : null,
           metadata: {
             ...(typeof txn.metadata === 'object' && txn.metadata ? txn.metadata : {}),
-            webhook: this.toJsonObject(dto),
+            webhook: this.toJsonObject(rawPayload),
           } as Prisma.JsonObject,
         },
       });
@@ -229,10 +266,17 @@ export class PaymentsService {
       );
     }
 
-    const returnUrl =
-      input.returnUrl?.trim() || process.env.PAYOS_RETURN_URL?.trim() || 'https://pethub.vn/payment/success';
-    const cancelUrl =
-      input.cancelUrl?.trim() || process.env.PAYOS_CANCEL_URL?.trim() || 'https://pethub.vn/payment/cancel';
+    const frontendBaseUrl = this.resolveFrontendBaseUrl();
+    const returnUrl = this.resolveRedirectUrl(
+      input.returnUrl,
+      process.env.PAYOS_RETURN_URL,
+      `${frontendBaseUrl}/manager/pos?payment=success`,
+    );
+    const cancelUrl = this.resolveRedirectUrl(
+      input.cancelUrl,
+      process.env.PAYOS_CANCEL_URL,
+      `${frontendBaseUrl}/manager/pos?payment=cancel`,
+    );
 
     const requestBody = {
       orderCode: Number(input.orderCode),
@@ -271,7 +315,7 @@ export class PaymentsService {
     };
   }
 
-  private verifyWebhookSignature(dto: PayosWebhookDto) {
+  private verifyWebhookSignature(dto: NormalizedWebhookPayload) {
     const checksumKey = process.env.PAYOS_CHECKSUM_KEY?.trim();
     const providedSignature = dto.signature?.trim();
     if (!checksumKey || !providedSignature) {
@@ -299,20 +343,38 @@ export class PaymentsService {
     }
   }
 
-  private extractWebhookPayload(dto: PayosWebhookDto): {
-    orderCode: string;
-    status: string;
-    amount: number;
-  } {
-    const orderCode = `${dto.data?.orderCode ?? dto.orderCode ?? ''}`.trim();
-    const status = `${dto.data?.status ?? dto.status ?? ''}`.trim();
-    const amount = Number(dto.data?.amount ?? dto.amount ?? 0);
+  private extractWebhookPayload(dto: NormalizedWebhookPayload):
+    | {
+        orderCode: string;
+        status: string;
+        amount: number;
+      }
+    | null {
+    const rawOrderCode = this.getWebhookField(dto, 'orderCode') ?? '';
+    const rawStatus = this.getWebhookField(dto, 'status') ?? '';
+    const rawAmount = this.getWebhookField(dto, 'amount') ?? 0;
+
+    const orderCode = `${rawOrderCode}`.trim();
+    const status = `${rawStatus}`.trim();
+    const amount = Number(rawAmount);
 
     if (!orderCode || !status || !Number.isFinite(amount) || amount <= 0) {
-      throw new BadRequestException('Invalid payOS webhook payload');
+      return null;
     }
 
     return { orderCode, status, amount };
+  }
+
+  private isWebhookConnectivityProbe(dto: NormalizedWebhookPayload): boolean {
+    const rawOrderCode = this.getWebhookField(dto, 'orderCode') ?? '';
+    const rawStatus = this.getWebhookField(dto, 'status') ?? '';
+    const rawAmount = this.getWebhookField(dto, 'amount') ?? 0;
+
+    const orderCode = `${rawOrderCode}`.trim();
+    const status = `${rawStatus}`.trim();
+    const amount = Number(rawAmount);
+
+    return !orderCode && !status && (!Number.isFinite(amount) || amount <= 0);
   }
 
   private signPayload(data: Record<string, unknown>, checksumKey: string): string {
@@ -356,5 +418,108 @@ export class PaymentsService {
     }
     const digits = raw.replace(/\D/g, '');
     return digits.length > 0 ? digits.slice(0, 18) : this.generateOrderCode();
+  }
+
+  private resolveFrontendBaseUrl(): string {
+    const explicit = process.env.FRONTEND_URL?.trim();
+    if (explicit && /^https?:\/\//i.test(explicit)) {
+      return explicit.replace(/\/+$/, '');
+    }
+
+    const corsOrigin = process.env.CORS_ORIGIN?.trim();
+    if (corsOrigin) {
+      const firstOrigin = corsOrigin
+        .split(',')
+        .map((origin) => origin.trim())
+        .find((origin) => /^https?:\/\//i.test(origin));
+      if (firstOrigin) {
+        return firstOrigin.replace(/\/+$/, '');
+      }
+    }
+
+    return 'http://140.245.119.189';
+  }
+
+  private resolveRedirectUrl(primary: string | undefined, secondary: string | undefined, fallback: string): string {
+    return (
+      this.sanitizeAbsoluteHttpUrl(primary) ||
+      this.sanitizeAbsoluteHttpUrl(secondary) ||
+      fallback
+    );
+  }
+
+  private sanitizeAbsoluteHttpUrl(value?: string): string | null {
+    const raw = value?.trim();
+    if (!raw) {
+      return null;
+    }
+
+    try {
+      const parsed = new URL(raw);
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
+        return null;
+      }
+      return parsed.toString();
+    } catch {
+      return null;
+    }
+  }
+
+  private normalizeWebhookPayload(rawPayload: Record<string, unknown>): NormalizedWebhookPayload {
+    const data = this.asRecord(rawPayload.data);
+    const successValue = rawPayload.success;
+
+    return {
+      orderCode: this.coerceString(rawPayload.orderCode),
+      status: this.coerceString(rawPayload.status),
+      amount: this.coerceNumber(rawPayload.amount),
+      signature: this.coerceString(rawPayload.signature),
+      code: this.coerceString(rawPayload.code),
+      desc: this.coerceString(rawPayload.desc),
+      success:
+        typeof successValue === 'boolean'
+          ? successValue
+          : typeof successValue === 'string'
+            ? successValue.toLowerCase() === 'true'
+            : undefined,
+      data,
+    };
+  }
+
+  private getWebhookField(dto: NormalizedWebhookPayload, field: string): unknown {
+    if (dto.data && field in dto.data) {
+      return dto.data[field];
+    }
+    return (dto as Record<string, unknown>)[field];
+  }
+
+  private asRecord(value: unknown): Record<string, unknown> | undefined {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      return value as Record<string, unknown>;
+    }
+    return undefined;
+  }
+
+  private coerceString(value: unknown): string | undefined {
+    if (typeof value === 'string') {
+      return value;
+    }
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return String(value);
+    }
+    return undefined;
+  }
+
+  private coerceNumber(value: unknown): number | undefined {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === 'string' && value.trim().length > 0) {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+    return undefined;
   }
 }

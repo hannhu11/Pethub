@@ -1,8 +1,44 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { ArrowLeft, CheckCircle2, Mail, MessageSquare, Send } from 'lucide-react';
-import { mockPets, mockUsers } from './data';
-import { createReminder, reminderTemplates } from './manager-reminders-store';
+import type { ApiCustomer, ApiPet } from '../types';
+import { extractApiError } from '../lib/api-client';
+import { createReminderFromTemplate, listCustomers, listPets } from '../lib/pethub-api';
+
+type LocalReminderTemplate = {
+  id: string;
+  name: string;
+  type: string;
+  channelDefaults: Array<'email' | 'sms'>;
+  messageTemplate: string;
+};
+
+const reminderTemplates: LocalReminderTemplate[] = [
+  {
+    id: 'tpl-vaccine',
+    name: 'Nhắc tiêm phòng',
+    type: 'vaccine',
+    channelDefaults: ['email', 'sms'],
+    messageTemplate:
+      'Kính gửi [Customer Name], bé [Pet Name] đã đến lịch tiêm phòng. Vui lòng đặt lịch tại PetHub để được hỗ trợ kịp thời.',
+  },
+  {
+    id: 'tpl-checkup',
+    name: 'Nhắc tái khám',
+    type: 'checkup',
+    channelDefaults: ['email'],
+    messageTemplate:
+      'Kính gửi [Customer Name], bé [Pet Name] sắp đến lịch tái khám định kỳ. PetHub khuyến nghị đặt lịch trong tuần này.',
+  },
+  {
+    id: 'tpl-grooming',
+    name: 'Theo dõi grooming',
+    type: 'grooming',
+    channelDefaults: ['sms'],
+    messageTemplate:
+      'PetHub xin nhắc [Customer Name]: bé [Pet Name] đã đến kỳ grooming để giữ lông và da khỏe mạnh.',
+  },
+];
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -16,32 +52,54 @@ function applyPlaceholders(template: string, customerName: string, petName: stri
 
 export function ManagerReminderTemplatesPage() {
   const navigate = useNavigate();
-  const customers = mockUsers.filter((user) => user.role === 'customer');
-
+  const [customers, setCustomers] = useState<ApiCustomer[]>([]);
+  const [pets, setPets] = useState<ApiPet[]>([]);
   const [templateId, setTemplateId] = useState(reminderTemplates[0]?.id ?? '');
   const [customerId, setCustomerId] = useState('');
   const [petId, setPetId] = useState('');
   const [channel, setChannel] = useState<'email' | 'sms'>('email');
   const [scheduledDate, setScheduledDate] = useState(todayISO());
   const [message, setMessage] = useState('');
+  const [saving, setSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState('');
+  const [error, setError] = useState('');
 
   const selectedTemplate = reminderTemplates.find((item) => item.id === templateId) ?? reminderTemplates[0];
   const selectedCustomer = customers.find((item) => item.id === customerId);
-  const customerPets = useMemo(() => mockPets.filter((pet) => pet.ownerId === customerId), [customerId]);
+  const customerPets = useMemo(() => pets.filter((pet) => pet.customerId === customerId), [pets, customerId]);
   const selectedPet = customerPets.find((pet) => pet.id === petId);
 
   const hydrateMessage = (nextTemplateId: string, nextCustomerId: string, nextPetId: string) => {
     const nextTemplate = reminderTemplates.find((item) => item.id === nextTemplateId);
     const nextCustomer = customers.find((item) => item.id === nextCustomerId);
-    const nextPet = mockPets.find((item) => item.id === nextPetId);
-    const nextMessage = applyPlaceholders(
-      nextTemplate?.messageTemplate ?? '',
-      nextCustomer?.name ?? '',
-      nextPet?.name ?? '',
+    const nextPet = pets.find((item) => item.id === nextPetId);
+    setMessage(
+      applyPlaceholders(nextTemplate?.messageTemplate ?? '', nextCustomer?.name ?? '', nextPet?.name ?? ''),
     );
-    setMessage(nextMessage);
   };
+
+  useEffect(() => {
+    let mounted = true;
+    const run = async () => {
+      setError('');
+      try {
+        const [customerData, petData] = await Promise.all([listCustomers(), listPets()]);
+        if (!mounted) {
+          return;
+        }
+        setCustomers(customerData);
+        setPets(petData);
+      } catch (apiError) {
+        if (mounted) {
+          setError(extractApiError(apiError));
+        }
+      }
+    };
+    void run();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleTemplateChange = (nextTemplateId: string) => {
     setTemplateId(nextTemplateId);
@@ -59,27 +117,34 @@ export function ManagerReminderTemplatesPage() {
     hydrateMessage(templateId, customerId, nextPetId);
   };
 
-  const submitReminder = (mode: 'sent' | 'scheduled') => {
-    if (!selectedTemplate || !selectedCustomer || !selectedPet || !message.trim()) return;
-    const dateValue = mode === 'sent' ? todayISO() : scheduledDate || todayISO();
-    createReminder({
-      customerId: selectedCustomer.id,
-      customerName: selectedCustomer.name,
-      customerPhone: selectedCustomer.phone,
-      petId: selectedPet.id,
-      petName: selectedPet.name,
-      type: selectedTemplate.type,
-      typeName: selectedTemplate.name,
-      status: mode,
-      scheduledDate: dateValue,
-      sentDate: mode === 'sent' ? dateValue : undefined,
-      channel,
-      message: message.trim(),
-    });
-    setSavedMessage(mode === 'sent' ? 'Đã gửi nhắc nhở (mock)' : 'Đã lên lịch nhắc nhở');
-    window.setTimeout(() => {
-      navigate('/manager/reminders');
-    }, 550);
+  const submitReminder = async (sendNow: boolean) => {
+    if (!selectedTemplate || !selectedCustomer || !selectedPet || !message.trim()) {
+      setError('Vui lòng chọn mẫu, khách hàng, thú cưng và nhập nội dung.');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+    setSavedMessage('');
+    try {
+      await createReminderFromTemplate({
+        templateName: selectedTemplate.name,
+        customerId: selectedCustomer.id,
+        petId: selectedPet.id,
+        channel,
+        sendNow,
+        scheduleAt: sendNow ? undefined : new Date(`${scheduledDate}T09:00:00`).toISOString(),
+        overrideMessage: message.trim(),
+      });
+      setSavedMessage(sendNow ? 'Đã gửi nhắc nhở.' : 'Đã lên lịch nhắc nhở.');
+      window.setTimeout(() => {
+        navigate('/manager/reminders');
+      }, 550);
+    } catch (apiError) {
+      setError(extractApiError(apiError));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -97,9 +162,11 @@ export function ManagerReminderTemplatesPage() {
           <h1 className='text-2xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
             Tạo nhắc nhở từ mẫu
           </h1>
-          <p className='text-sm text-[#7a756e] mt-1'>Chọn mẫu, review nội dung rồi gửi Gmail/SMS theo mock workflow</p>
+          <p className='text-sm text-[#7a756e] mt-1'>Template chuẩn hóa, gửi bằng dữ liệu thật từ backend.</p>
         </div>
       </div>
+
+      {error ? <div className='rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-700'>{error}</div> : null}
 
       <div className='grid lg:grid-cols-[300px_minmax(0,1fr)] gap-5'>
         <div className='bg-white border border-[#2d2a26] rounded-2xl p-4 space-y-3'>
@@ -115,7 +182,9 @@ export function ManagerReminderTemplatesPage() {
                 templateId === item.id ? 'border-[#6b8f5e] bg-[#6b8f5e]/10' : 'border-[#2d2a26]/20 bg-white hover:bg-[#faf9f6]'
               }`}
             >
-              <p className='text-sm text-[#2d2a26]' style={{ fontWeight: 600 }}>{item.name}</p>
+              <p className='text-sm text-[#2d2a26]' style={{ fontWeight: 600 }}>
+                {item.name}
+              </p>
               <p className='text-xs text-[#7a756e] mt-1'>Kênh gợi ý: {item.channelDefaults.join(' + ')}</p>
             </button>
           ))}
@@ -131,9 +200,9 @@ export function ManagerReminderTemplatesPage() {
                 className='w-full p-3 border border-[#2d2a26] rounded-xl text-sm bg-white'
               >
                 <option value=''>Chọn khách hàng...</option>
-                {customers.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name} — {item.phone}
+                {customers.map((customer) => (
+                  <option key={customer.id} value={customer.id}>
+                    {customer.name} — {customer.phone}
                   </option>
                 ))}
               </select>
@@ -146,9 +215,9 @@ export function ManagerReminderTemplatesPage() {
                 className='w-full p-3 border border-[#2d2a26] rounded-xl text-sm bg-white'
               >
                 <option value=''>Chọn thú cưng...</option>
-                {customerPets.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name} ({item.breed})
+                {customerPets.map((pet) => (
+                  <option key={pet.id} value={pet.id}>
+                    {pet.name} ({pet.breed || pet.species})
                   </option>
                 ))}
               </select>
@@ -224,20 +293,22 @@ export function ManagerReminderTemplatesPage() {
           <div className='grid sm:grid-cols-2 gap-2 pt-1'>
             <button
               type='button'
-              onClick={() => submitReminder('scheduled')}
-              className='inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-[#2d2a26] bg-white hover:-translate-y-0.5 transition-all text-sm'
+              onClick={() => void submitReminder(false)}
+              disabled={saving}
+              className='inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-[#2d2a26] bg-white hover:-translate-y-0.5 transition-all text-sm disabled:opacity-60'
               style={{ fontWeight: 600 }}
             >
               Lên lịch gửi
             </button>
             <button
               type='button'
-              onClick={() => submitReminder('sent')}
-              className='inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-[#2d2a26] bg-[#6b8f5e] text-white hover:-translate-y-0.5 transition-all text-sm'
+              onClick={() => void submitReminder(true)}
+              disabled={saving}
+              className='inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-[#2d2a26] bg-[#6b8f5e] text-white hover:-translate-y-0.5 transition-all text-sm disabled:opacity-60'
               style={{ fontWeight: 700 }}
             >
               <Send className='w-4 h-4' />
-              Gửi ngay (mock)
+              Gửi ngay
             </button>
           </div>
         </div>
@@ -245,4 +316,3 @@ export function ManagerReminderTemplatesPage() {
     </div>
   );
 }
-

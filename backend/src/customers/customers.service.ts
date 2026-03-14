@@ -2,11 +2,58 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CustomerSegment } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { CustomersQueryDto } from './dto/customers-query.dto';
+import { CreateCustomerDto } from './dto/create-customer.dto';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
 
 @Injectable()
 export class CustomersService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async create(currentUser: AuthUser, dto: CreateCustomerDto) {
+    const normalizedName = dto.name.trim();
+    const normalizedPhone = dto.phone.trim();
+    const normalizedEmail = dto.email?.trim().toLowerCase() || null;
+
+    const existingByPhone = await this.prisma.customer.findFirst({
+      where: {
+        clinicId: currentUser.clinicId,
+        phone: normalizedPhone,
+      },
+      include: {
+        pets: true,
+      },
+    });
+    if (existingByPhone) {
+      return existingByPhone;
+    }
+
+    if (normalizedEmail) {
+      const existingByEmail = await this.prisma.customer.findFirst({
+        where: {
+          clinicId: currentUser.clinicId,
+          email: normalizedEmail,
+        },
+        include: {
+          pets: true,
+        },
+      });
+      if (existingByEmail) {
+        return existingByEmail;
+      }
+    }
+
+    return this.prisma.customer.create({
+      data: {
+        clinicId: currentUser.clinicId,
+        name: normalizedName,
+        phone: normalizedPhone,
+        email: normalizedEmail,
+      },
+      include: {
+        pets: true,
+      },
+    });
+  }
 
   async list(currentUser: AuthUser, query: CustomersQueryDto) {
     const customers = await this.prisma.customer.findMany({

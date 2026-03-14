@@ -1,38 +1,94 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Bell, CheckCheck, Circle, Filter } from 'lucide-react';
-import { getNotifications, markAllNotificationsAsRead, markNotificationAsRead, subscribeNotificationUpdates } from './manager-notifications-store';
+import { extractApiError } from '../lib/api-client';
+import {
+  listNotifications,
+  markAllNotificationsAsRead,
+  markNotificationAsRead,
+  type ApiNotification,
+} from '../lib/pethub-api';
 
 type NotificationFilter = 'all' | 'unread' | 'read';
+
+function formatTimeAgo(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString('vi-VN');
+}
 
 export function ManagerNotificationsPage() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState<NotificationFilter>('all');
-  const [notifications, setNotifications] = useState(getNotifications());
+  const [notifications, setNotifications] = useState<ApiNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const loadNotifications = useMemo(
+    () => async (targetFilter: NotificationFilter, silent = false) => {
+      if (!silent) {
+        setLoading(true);
+        setError('');
+      }
+      try {
+        const data = await listNotifications(targetFilter);
+        setNotifications(data.items);
+        setUnreadCount(data.unread);
+      } catch (apiError) {
+        if (!silent) {
+          setError(extractApiError(apiError));
+        }
+      } finally {
+        if (!silent) {
+          setLoading(false);
+        }
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
-    return subscribeNotificationUpdates(() => {
-      setNotifications(getNotifications());
-    });
-  }, []);
+    void loadNotifications(filter);
+  }, [filter, loadNotifications]);
 
-  const unreadCount = notifications.filter((item) => !item.read).length;
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      void loadNotifications(filter, true);
+    }, 15000);
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [filter, loadNotifications]);
+
   const filterOptions: Array<{ id: NotificationFilter; label: string; count: number }> = [
     { id: 'all', label: 'Tất cả', count: notifications.length },
-    { id: 'unread', label: 'Chưa đọc', count: unreadCount },
-    { id: 'read', label: 'Đã đọc', count: notifications.length - unreadCount },
+    { id: 'unread', label: 'Chưa đọc', count: notifications.filter((item) => !item.read).length },
+    { id: 'read', label: 'Đã đọc', count: notifications.filter((item) => item.read).length },
   ];
   const selectedFilterLabel = filterOptions.find((item) => item.id === filter)?.label ?? 'Tất cả';
 
-  const filtered = useMemo(() => {
-    if (filter === 'unread') return notifications.filter((item) => !item.read);
-    if (filter === 'read') return notifications.filter((item) => item.read);
-    return notifications;
-  }, [filter, notifications]);
+  const openNotification = async (notification: ApiNotification) => {
+    if (!notification.read) {
+      try {
+        const data = await markNotificationAsRead(notification.id);
+        setUnreadCount(data.unread);
+      } catch {
+        // Keep navigation even if mark-read fails.
+      }
+    }
+    navigate(notification.linkTo || '/manager');
+  };
 
-  const openNotification = (notificationId: number, to: string) => {
-    markNotificationAsRead(notificationId);
-    navigate(to);
+  const markAll = async () => {
+    try {
+      await markAllNotificationsAsRead();
+      await loadNotifications(filter, true);
+    } catch (apiError) {
+      setError(extractApiError(apiError));
+    }
   };
 
   return (
@@ -42,11 +98,11 @@ export function ManagerNotificationsPage() {
           <h1 className='text-2xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
             Trung tâm thông báo
           </h1>
-          <p className='text-sm text-[#7a756e] mt-1'>Quản lý toàn bộ thông báo vận hành theo thời gian thực</p>
+          <p className='text-sm text-[#7a756e] mt-1'>Dữ liệu realtime từ backend, không dùng mock notifications.</p>
         </div>
         <button
           type='button'
-          onClick={markAllNotificationsAsRead}
+          onClick={() => void markAll()}
           className='inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[#2d2a26] bg-white hover:-translate-y-0.5 transition-all text-sm'
           style={{ fontWeight: 600 }}
         >
@@ -54,6 +110,8 @@ export function ManagerNotificationsPage() {
           Đánh dấu tất cả đã đọc
         </button>
       </div>
+
+      {error ? <div className='rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-700'>{error}</div> : null}
 
       <div className='bg-white border border-[#2d2a26] rounded-2xl p-3 flex flex-wrap items-center gap-2'>
         <div className='inline-flex items-center gap-1 text-xs text-[#7a756e] mr-2'>
@@ -64,12 +122,7 @@ export function ManagerNotificationsPage() {
           <button
             key={item.id}
             type='button'
-            aria-pressed={filter === item.id}
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              setFilter(item.id);
-            }}
+            onClick={() => setFilter(item.id)}
             className={`px-3 py-1.5 rounded-xl text-xs border transition-all ${
               filter === item.id
                 ? 'bg-[#6b8f5e] text-white border-[#2d2a26]'
@@ -80,22 +133,24 @@ export function ManagerNotificationsPage() {
             {item.label} ({item.count})
           </button>
         ))}
-        <span className='ml-auto text-xs text-[#7a756e]'>Đang xem: {selectedFilterLabel}</span>
+        <span className='ml-auto text-xs text-[#7a756e]'>Đang xem: {selectedFilterLabel} • {unreadCount} chưa đọc</span>
       </div>
 
       <div className='bg-white border border-[#2d2a26] rounded-2xl overflow-hidden'>
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className='py-12 text-center text-sm text-[#7a756e]'>Đang tải thông báo...</div>
+        ) : notifications.length === 0 ? (
           <div className='py-16 text-center text-[#7a756e]'>
             <Bell className='w-12 h-12 mx-auto mb-3 opacity-30' />
             <p>Không có thông báo phù hợp</p>
           </div>
         ) : (
           <div className='divide-y divide-[#2d2a26]/10'>
-            {filtered.map((item) => (
+            {notifications.map((item) => (
               <button
                 key={item.id}
                 type='button'
-                onClick={() => openNotification(item.id, item.to)}
+                onClick={() => void openNotification(item)}
                 className='w-full text-left px-4 py-4 hover:bg-[#faf9f6] transition-colors'
               >
                 <div className='flex items-start gap-3'>
@@ -111,7 +166,7 @@ export function ManagerNotificationsPage() {
                       {item.title}
                     </p>
                     <p className='text-sm text-[#7a756e] mt-0.5'>{item.body}</p>
-                    <p className='text-xs text-[#9b948b] mt-1'>{item.createdAt}</p>
+                    <p className='text-xs text-[#9b948b] mt-1'>{formatTimeAgo(item.createdAt)}</p>
                   </div>
                 </div>
               </button>

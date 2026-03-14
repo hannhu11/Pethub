@@ -201,6 +201,8 @@ export class PosService {
           amount: grandTotal,
           orderCode: pendingOrderCode ?? undefined,
           description: `Thanh toan hoa don ${data.invoiceNo}`,
+          returnUrl: dto.returnUrl,
+          cancelUrl: dto.cancelUrl,
         });
 
     this.realtimeService.emitSubscriptionUpdated({
