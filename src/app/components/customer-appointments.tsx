@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router';
 import type { ApiAppointment, ApiPet, ApiService, BookingDraft, CancelDialogState } from '../types';
 import { cancelAppointment, createAppointment, listAppointments, listCatalogServices, listPets } from '../lib/pethub-api';
 import { extractApiError } from '../lib/api-client';
+import { useAuthSession } from '../auth-session';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,10 +51,6 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 }
 
-function isUpcoming(iso: string) {
-  return new Date(iso).getTime() >= Date.now();
-}
-
 function isActiveAppointment(status: ApiAppointment['status']) {
   return status === 'pending' || status === 'confirmed';
 }
@@ -74,7 +71,18 @@ function statusClass(status: ApiAppointment['status']) {
   return 'border-[#2d2a26]/20 bg-white text-[#2d2a26]';
 }
 
+function dedupeAppointments(items: ApiAppointment[]) {
+  const byId = new Map<string, ApiAppointment>();
+  for (const item of items) {
+    byId.set(item.id, item);
+  }
+  return Array.from(byId.values()).sort(
+    (a, b) => new Date(b.appointmentAt).getTime() - new Date(a.appointmentAt).getTime(),
+  );
+}
+
 export function CustomerAppointmentsPage() {
+  const { session } = useAuthSession();
   const [searchParams] = useSearchParams();
   const [appointments, setAppointments] = useState<ApiAppointment[]>([]);
   const [services, setServices] = useState<ApiService[]>([]);
@@ -91,14 +99,33 @@ export function CustomerAppointmentsPage() {
   const serviceIdFromQuery = searchParams.get('serviceId')?.trim() || '';
 
   const loadData = async () => {
-    const [appointmentData, serviceData, petData] = await Promise.all([
+    const [appointmentResult, serviceResult, petResult] = await Promise.allSettled([
       listAppointments(),
       listCatalogServices(),
       listPets(),
     ]);
-    setAppointments(appointmentData);
-    setServices(serviceData);
-    setPets(petData);
+
+    if (appointmentResult.status === 'fulfilled') {
+      setAppointments(dedupeAppointments(appointmentResult.value));
+    }
+    if (serviceResult.status === 'fulfilled') {
+      setServices(serviceResult.value);
+    }
+    if (petResult.status === 'fulfilled') {
+      setPets(petResult.value);
+    }
+
+    const firstError =
+      appointmentResult.status === 'rejected'
+        ? appointmentResult.reason
+        : serviceResult.status === 'rejected'
+          ? serviceResult.reason
+          : petResult.status === 'rejected'
+            ? petResult.reason
+            : null;
+    if (firstError) {
+      throw firstError;
+    }
   };
 
   useEffect(() => {
@@ -106,6 +133,7 @@ export function CustomerAppointmentsPage() {
     const run = async () => {
       setLoading(true);
       setError('');
+      setAppointments([]);
       try {
         await loadData();
       } catch (apiError) {
@@ -124,7 +152,7 @@ export function CustomerAppointmentsPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [session.user?.userId]);
 
   useEffect(() => {
     if (!serviceIdFromQuery || services.length === 0) {
@@ -181,12 +209,8 @@ export function CustomerAppointmentsPage() {
         appointmentAt: iso,
         note: draft.note?.trim() || undefined,
       });
-      setAppointments((prev) =>
-        [created, ...prev.filter((item) => item.id !== created.id)].sort(
-          (a, b) => new Date(b.appointmentAt).getTime() - new Date(a.appointmentAt).getTime(),
-        ),
-      );
-      void loadData();
+      setAppointments((prev) => dedupeAppointments([created, ...prev]));
+      void loadData().catch(() => undefined);
       setMessage('Đặt lịch thành công.');
       setDraft({ date: toDateInputValue(new Date()) });
       setFilter('upcoming');
@@ -204,7 +228,7 @@ export function CustomerAppointmentsPage() {
 
     try {
       await cancelAppointment(cancelDialog.appointmentId);
-      await loadData();
+      void loadData().catch(() => undefined);
       setMessage('Đã hủy lịch hẹn.');
       setCancelDialog({ open: false, appointmentId: null });
     } catch (apiError) {
@@ -402,7 +426,7 @@ export function CustomerAppointmentsPage() {
               </thead>
               <tbody>
                 {filteredAppointments.map((item) => {
-                  const canCancel = isActiveAppointment(item.status) && isUpcoming(item.appointmentAt);
+                  const canCancel = item.status === 'pending';
                   return (
                     <tr key={item.id} className='border-b border-[#2d2a26]/10'>
                       <td className='py-3 px-2'>{formatDate(item.appointmentAt)}</td>

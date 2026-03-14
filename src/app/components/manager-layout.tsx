@@ -179,28 +179,47 @@ export function ManagerLayout() {
       if (!silent) {
         setLoadError('');
       }
-      try {
-        const [notificationData, customers, pets, appointments] = await Promise.all([
+      const [notificationResult, customersResult, petsResult, appointmentsResult] =
+        await Promise.allSettled([
           listNotifications('all'),
           listCustomers(),
           listPets(),
           listAppointments(),
         ]);
-        if (!mounted) {
-          return;
-        }
-        setNotifications(notificationData.items.slice(0, 20));
-        setUnreadCount(notificationData.unread);
-        setQuickSearchData({
-          pets: pets.slice(0, 12),
-          customers: customers.slice(0, 12),
-          appointments: appointments.slice(0, 12),
-        });
-      } catch (apiError) {
-        if (!mounted || silent) {
-          return;
-        }
-        setLoadError(extractApiError(apiError));
+
+      if (!mounted) {
+        return;
+      }
+
+      if (notificationResult.status === 'fulfilled') {
+        setNotifications(notificationResult.value.items.slice(0, 20));
+        setUnreadCount(notificationResult.value.unread);
+      }
+
+      setQuickSearchData((previous) => ({
+        customers:
+          customersResult.status === 'fulfilled'
+            ? customersResult.value.slice(0, 12)
+            : previous.customers,
+        pets: petsResult.status === 'fulfilled' ? petsResult.value.slice(0, 12) : previous.pets,
+        appointments:
+          appointmentsResult.status === 'fulfilled'
+            ? appointmentsResult.value.slice(0, 12)
+            : previous.appointments,
+      }));
+
+      const firstError =
+        notificationResult.status === 'rejected'
+          ? notificationResult.reason
+          : customersResult.status === 'rejected'
+            ? customersResult.reason
+            : petsResult.status === 'rejected'
+              ? petsResult.reason
+              : appointmentsResult.status === 'rejected'
+                ? appointmentsResult.reason
+                : null;
+      if (firstError && !silent) {
+        setLoadError(extractApiError(firstError));
       }
     };
 
@@ -231,8 +250,8 @@ export function ManagerLayout() {
     navigate('/manager/settings?tab=profile');
   };
 
-  const doLogout = () => {
-    logout();
+  const doLogout = async () => {
+    await logout();
     navigate('/', { replace: true });
   };
 
@@ -312,7 +331,7 @@ export function ManagerLayout() {
                 Thông tin phòng khám
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem variant='destructive' onClick={doLogout}>
+              <DropdownMenuItem variant='destructive' onClick={() => void doLogout()}>
                 <LogOut className='w-4 h-4' />
                 Đăng xuất
               </DropdownMenuItem>
@@ -321,7 +340,7 @@ export function ManagerLayout() {
 
           <button
             type='button'
-            onClick={doLogout}
+            onClick={() => void doLogout()}
             className='w-full flex items-center gap-2 px-4 py-2 rounded-xl text-sm text-red-600 hover:bg-red-50 transition-all'
           >
             <LogOut className='w-4 h-4' />
@@ -377,7 +396,7 @@ export function ManagerLayout() {
               </button>
               <button
                 className='w-full flex items-center gap-2 px-4 py-2 rounded-xl text-sm text-red-600 hover:bg-red-50'
-                onClick={doLogout}
+                onClick={() => void doLogout()}
               >
                 <LogOut className='w-4 h-4' /> Đăng xuất
               </button>

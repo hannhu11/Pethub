@@ -2,11 +2,13 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import axios from 'axios';
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { PaymentMethod, PaymentStatus, Prisma } from '@prisma/client';
+import { NotificationTarget, PaymentMethod, PaymentStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { CreatePayosLinkDto } from './dto/create-payos-link.dto';
 import { RealtimeService } from '../realtime/realtime.service';
@@ -35,10 +37,54 @@ type NormalizedWebhookPayload = {
 
 @Injectable()
 export class PaymentsService {
+  private readonly logger = new Logger(PaymentsService.name);
+  private readonly syncCooldownMs = Number(process.env.PAYOS_SYNC_COOLDOWN_MS ?? 3000);
+  private readonly lastClinicSyncAt = new Map<string, number>();
+  private backgroundSyncRunning = false;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly realtimeService: RealtimeService,
   ) {}
+
+  @Cron('*/20 * * * * *')
+  async backgroundSyncPendingPayosTransactions() {
+    if (this.backgroundSyncRunning || !this.canCallPayosStatusApi()) {
+      return;
+    }
+
+    this.backgroundSyncRunning = true;
+    try {
+      const clinics = await this.prisma.paymentTransaction.findMany({
+        where: {
+          status: PaymentStatus.unpaid,
+          providerRef: { not: null },
+          OR: [
+            { provider: 'payos' },
+            { paymentMethod: PaymentMethod.payos },
+            { paymentMethod: PaymentMethod.transfer },
+          ],
+        },
+        distinct: ['clinicId'],
+        select: { clinicId: true },
+        take: 100,
+      });
+
+      for (const clinic of clinics) {
+        try {
+          await this.syncPendingPayosTransactions(clinic.clinicId, 40, { force: true });
+        } catch (error) {
+          this.logger.warn(
+            `Background payOS sync failed for clinic=${clinic.clinicId}: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          );
+        }
+      }
+    } finally {
+      this.backgroundSyncRunning = false;
+    }
+  }
 
   async createPayosLink(dto: CreatePayosLinkDto, currentUser: AuthUser) {
     if (currentUser.role !== 'manager') {
@@ -114,8 +160,9 @@ export class PaymentsService {
     };
   }
 
-  async handlePayosWebhook(rawPayload: Record<string, unknown>) {
-    const dto = this.normalizeWebhookPayload(rawPayload);
+  async handlePayosWebhook(rawPayload: unknown, signatureHeader?: string) {
+    const payloadRecord = this.toPayloadRecord(rawPayload);
+    const dto = this.normalizeWebhookPayload(payloadRecord, signatureHeader);
     if (this.isWebhookConnectivityProbe(dto)) {
       return {
         success: true,
@@ -149,17 +196,65 @@ export class PaymentsService {
       };
     }
 
-    this.verifyWebhookSignature(dto);
-
+    const signatureValid = this.verifyWebhookSignature(dto);
     const expectedAmount = Math.round(Number(txn.amount ?? 0));
-    if (expectedAmount > 0 && Math.round(payload.amount) !== expectedAmount) {
-      throw new BadRequestException('Webhook amount mismatch');
+    let resolvedAmount = payload.amount;
+    let paid = this.resolvePaidState(payload.status, dto);
+
+    if (!signatureValid) {
+      const payosStatus = await this.requestPayosPaymentStatus(payload.orderCode);
+      if (!payosStatus) {
+        return {
+          success: true,
+          ignored: true,
+          reason: 'invalid_signature',
+          orderCode: payload.orderCode,
+        };
+      }
+
+      const normalizedPayosStatus: NormalizedWebhookPayload = {
+        orderCode: payload.orderCode,
+        status: payosStatus.status,
+        amount: payosStatus.amount,
+        code: payosStatus.code,
+        desc: payosStatus.desc,
+        success: payosStatus.success,
+        data: payosStatus.data,
+      };
+
+      paid = this.resolvePaidState(payosStatus.status ?? '', normalizedPayosStatus);
+      resolvedAmount = payosStatus.amount;
+      if (!paid) {
+        return {
+          success: true,
+          ignored: true,
+          reason: 'invalid_signature',
+          orderCode: payload.orderCode,
+        };
+      }
+
+      this.logger.warn(
+        `Accepted payOS webhook with invalid signature after status verification. orderCode=${payload.orderCode}`,
+      );
     }
 
-    const paid = payload.status.toUpperCase() === 'PAID' || payload.status.toUpperCase() === 'SUCCESS';
+    const webhookAmount = Math.round(resolvedAmount);
+    if (expectedAmount > 0 && Math.abs(webhookAmount - expectedAmount) > 1) {
+      return {
+        success: true,
+        ignored: true,
+        reason: 'amount_mismatch',
+        orderCode: payload.orderCode,
+      };
+    }
     const now = new Date();
 
-    if (paid && txn.status === PaymentStatus.paid) {
+    if (txn.status === PaymentStatus.paid) {
+      await this.syncPaidInvoiceState({
+        clinicId: txn.clinicId,
+        invoiceId: txn.invoiceId,
+        paidAt: now,
+      });
       return {
         success: true,
         transactionId: txn.id,
@@ -176,39 +271,17 @@ export class PaymentsService {
           paidAt: paid ? now : null,
           metadata: {
             ...(typeof txn.metadata === 'object' && txn.metadata ? txn.metadata : {}),
-            webhook: this.toJsonObject(rawPayload),
+            webhook: this.toJsonObject(payloadRecord),
+            signatureVerified: signatureValid,
           } as Prisma.JsonObject,
         },
       });
 
       if (paid && txn.invoiceId) {
-        const invoice = await tx.invoice.update({
-          where: { id: txn.invoiceId },
-          data: {
-            paymentStatus: PaymentStatus.paid,
-          },
-          include: {
-            appointment: true,
-          },
-        });
-
-        if (invoice.appointmentId) {
-          await tx.appointment.update({
-            where: { id: invoice.appointmentId },
-            data: {
-              paymentStatus: PaymentStatus.paid,
-              paidAt: now,
-            },
-          });
-        }
-
-        await tx.customer.update({
-          where: { id: invoice.customerId },
-          data: {
-            totalSpent: { increment: invoice.grandTotal },
-            totalVisits: { increment: 1 },
-            lastVisitAt: now,
-          },
+        await this.syncPaidInvoiceStateTx(tx, {
+          clinicId: txn.clinicId,
+          invoiceId: txn.invoiceId,
+          paidAt: now,
         });
       } else if (paid) {
         await tx.subscription.upsert({
@@ -241,6 +314,17 @@ export class PaymentsService {
       orderCode: payload.orderCode,
       transactionId: updated.id,
     });
+    if (paid) {
+      this.realtimeService.emitAppointmentUpdated({
+        type: 'payment.paid',
+        orderCode: payload.orderCode,
+      });
+      this.realtimeService.emitNotificationCreated({
+        type: 'payment.paid',
+        orderCode: payload.orderCode,
+        clinicId: txn.clinicId,
+      });
+    }
 
     return {
       success: true,
@@ -248,6 +332,341 @@ export class PaymentsService {
       status: updated.status,
       idempotent: false,
     };
+  }
+
+  async syncInvoicePaymentStatusIfNeeded(clinicId: string, invoiceId: string) {
+    const txn = await this.prisma.paymentTransaction.findFirst({
+      where: {
+        clinicId,
+        invoiceId,
+        status: PaymentStatus.unpaid,
+        providerRef: { not: null },
+        OR: [
+          { provider: 'payos' },
+          { paymentMethod: PaymentMethod.payos },
+          { paymentMethod: PaymentMethod.transfer },
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!txn?.id) {
+      return;
+    }
+
+    await this.syncTransactionStatusFromPayos(txn.id);
+  }
+
+  async syncPendingPayosTransactions(
+    clinicId: string,
+    limit = 8,
+    options?: { force?: boolean },
+  ) {
+    if (!this.shouldRunClinicSync(clinicId, Boolean(options?.force))) {
+      await this.reconcilePaidTransactionStates(clinicId, Math.max(20, limit * 8));
+      await this.reconcileAppointmentPaymentStatus(clinicId, Math.max(20, limit * 6));
+      return;
+    }
+
+    const txns = await this.prisma.paymentTransaction.findMany({
+      where: {
+        clinicId,
+        status: PaymentStatus.unpaid,
+        providerRef: { not: null },
+        OR: [
+          { provider: 'payos' },
+          { paymentMethod: PaymentMethod.payos },
+          { paymentMethod: PaymentMethod.transfer },
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+      take: Math.max(1, Math.min(limit, 50)),
+      select: { id: true },
+    });
+
+    for (const txn of txns) {
+      await this.syncTransactionStatusFromPayos(txn.id);
+    }
+
+    await this.reconcilePaidTransactionStates(clinicId, Math.max(20, limit * 8));
+    await this.reconcileAppointmentPaymentStatus(clinicId, Math.max(20, limit * 6));
+  }
+
+  private async reconcilePaidTransactionStates(clinicId: string, limit = 120) {
+    const paidTransactions = await this.prisma.paymentTransaction.findMany({
+      where: {
+        clinicId,
+        status: PaymentStatus.paid,
+        invoiceId: { not: null },
+      },
+      orderBy: [{ paidAt: 'desc' }, { updatedAt: 'desc' }],
+      take: Math.max(10, Math.min(limit, 500)),
+      select: {
+        invoiceId: true,
+        paidAt: true,
+      },
+    });
+
+    for (const txn of paidTransactions) {
+      if (!txn.invoiceId) {
+        continue;
+      }
+
+      await this.syncPaidInvoiceState({
+        clinicId,
+        invoiceId: txn.invoiceId,
+        paidAt: txn.paidAt ?? new Date(),
+      });
+    }
+  }
+
+  async reconcileAppointmentPaymentStatus(clinicId: string, limit = 120) {
+    const paidInvoices = await this.prisma.invoice.findMany({
+      where: {
+        clinicId,
+        paymentStatus: PaymentStatus.paid,
+        appointmentId: { not: null },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: Math.max(10, Math.min(limit, 500)),
+      select: {
+        appointmentId: true,
+        updatedAt: true,
+        issuedAt: true,
+        appointment: {
+          select: {
+            id: true,
+            paymentStatus: true,
+            paidAt: true,
+          },
+        },
+      },
+    });
+
+    for (const invoice of paidInvoices) {
+      const appointmentId = invoice.appointmentId;
+      if (!appointmentId || !invoice.appointment) {
+        continue;
+      }
+
+      if (
+        invoice.appointment.paymentStatus === PaymentStatus.paid &&
+        invoice.appointment.paidAt
+      ) {
+        continue;
+      }
+
+      const paidAt = invoice.appointment.paidAt ?? invoice.updatedAt ?? invoice.issuedAt ?? new Date();
+
+      await this.prisma.appointment.update({
+        where: { id: appointmentId },
+        data: {
+          paymentStatus: PaymentStatus.paid,
+          paidAt,
+        },
+      });
+
+      this.realtimeService.emitAppointmentUpdated({
+        type: 'payment.reconciled',
+        appointmentId,
+      });
+    }
+  }
+
+  private async syncTransactionStatusFromPayos(txnId: string) {
+    const txn = await this.prisma.paymentTransaction.findUnique({
+      where: { id: txnId },
+      include: {
+        invoice: {
+          include: {
+            appointment: true,
+          },
+        },
+      },
+    });
+
+    if (!txn) {
+      return;
+    }
+
+    if (txn.status === PaymentStatus.paid) {
+      await this.syncPaidInvoiceState({
+        clinicId: txn.clinicId,
+        invoiceId: txn.invoiceId,
+        paidAt: txn.paidAt ?? new Date(),
+      });
+      return;
+    }
+
+    const orderCode = txn.providerRef?.trim();
+    if (!orderCode) {
+      return;
+    }
+
+    const payosStatus = await this.requestPayosPaymentStatus(orderCode);
+    if (!payosStatus) {
+      return;
+    }
+
+    const normalizedPayload: NormalizedWebhookPayload = {
+      orderCode,
+      status: payosStatus.status,
+      amount: payosStatus.amount,
+      code: payosStatus.code,
+      desc: payosStatus.desc,
+      success: payosStatus.success,
+      data: payosStatus.data,
+    };
+
+    const paid = this.resolvePaidState(payosStatus.status ?? '', normalizedPayload);
+    if (!paid) {
+      return;
+    }
+
+    const expectedAmount = Math.round(Number(txn.amount ?? 0));
+    const payosAmount = Math.round(payosStatus.amount);
+    if (expectedAmount > 0 && Math.abs(payosAmount - expectedAmount) > 1) {
+      this.logger.warn(
+        `Skipped payOS sync due to amount mismatch. orderCode=${orderCode} expected=${expectedAmount} actual=${Math.round(
+          payosStatus.amount,
+        )}`,
+      );
+      return;
+    }
+
+    const now = new Date();
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const currentTxn = await tx.paymentTransaction.findUnique({
+        where: { id: txn.id },
+      });
+
+      if (!currentTxn) {
+        return null;
+      }
+
+      if (currentTxn.status === PaymentStatus.paid) {
+        await this.syncPaidInvoiceStateTx(tx, {
+          clinicId: txn.clinicId,
+          invoiceId: currentTxn.invoiceId,
+          paidAt: currentTxn.paidAt ?? now,
+        });
+        return currentTxn;
+      }
+
+      const updatedTxn = await tx.paymentTransaction.update({
+        where: { id: txn.id },
+        data: {
+          status: PaymentStatus.paid,
+          paidAt: now,
+          metadata: {
+            ...(typeof currentTxn.metadata === 'object' && currentTxn.metadata ? currentTxn.metadata : {}),
+            payosStatus: this.toJsonObject(payosStatus.raw),
+          } as Prisma.JsonObject,
+        },
+      });
+
+      if (updatedTxn.invoiceId) {
+        await this.syncPaidInvoiceStateTx(tx, {
+          clinicId: txn.clinicId,
+          invoiceId: updatedTxn.invoiceId,
+          paidAt: now,
+        });
+      }
+
+      return updatedTxn;
+    });
+
+    if (!updated) {
+      return;
+    }
+
+    this.realtimeService.emitSubscriptionUpdated({
+      type: 'payment.paid',
+      orderCode,
+      transactionId: updated.id,
+    });
+    this.realtimeService.emitAppointmentUpdated({
+      type: 'payment.paid',
+      orderCode,
+    });
+    this.realtimeService.emitNotificationCreated({
+      type: 'payment.paid',
+      orderCode,
+      clinicId: txn.clinicId,
+    });
+  }
+
+  private async requestPayosPaymentStatus(orderCode: string): Promise<{
+    status: string;
+    amount: number;
+    code?: string;
+    desc?: string;
+    success?: boolean;
+    data?: Record<string, unknown>;
+    raw: Record<string, unknown>;
+  } | null> {
+    const clientId = process.env.PAYOS_CLIENT_ID?.trim();
+    const apiKey = process.env.PAYOS_API_KEY?.trim();
+    if (!clientId || !apiKey) {
+      return null;
+    }
+
+    try {
+      const response = await axios.get(
+        `https://api-merchant.payos.vn/v2/payment-requests/${encodeURIComponent(orderCode)}`,
+        {
+          headers: {
+            'x-client-id': clientId,
+            'x-api-key': apiKey,
+          },
+          timeout: 12000,
+        },
+      );
+
+      const raw = this.toJsonObject(response.data ?? {});
+      const data = this.asRecord((response.data as Record<string, unknown> | undefined)?.data) ?? {};
+      const status =
+        this.coerceString(data.status) ||
+        this.coerceString(data.code) ||
+        this.coerceString((response.data as Record<string, unknown> | undefined)?.status) ||
+        '';
+      const amount =
+        this.coerceNumber(data.amount) ??
+        this.coerceNumber((response.data as Record<string, unknown> | undefined)?.amount) ??
+        0;
+
+      return {
+        status,
+        amount,
+        code:
+          this.coerceString(data.code) ||
+          this.coerceString((response.data as Record<string, unknown> | undefined)?.code),
+        desc:
+          this.coerceString(data.desc) ||
+          this.coerceString((response.data as Record<string, unknown> | undefined)?.desc),
+        success:
+          typeof data.success === 'boolean'
+            ? data.success
+            : typeof (response.data as Record<string, unknown> | undefined)?.success === 'boolean'
+              ? Boolean((response.data as Record<string, unknown>).success)
+              : undefined,
+        data,
+        raw,
+      };
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const statusCode = error.response?.status;
+        if (statusCode === 404) {
+          return null;
+        }
+      }
+      this.logger.warn(
+        `payOS status check failed for orderCode=${orderCode}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return null;
+    }
   }
 
   private async requestPayosCheckoutLink(input: {
@@ -315,32 +734,37 @@ export class PaymentsService {
     };
   }
 
-  private verifyWebhookSignature(dto: NormalizedWebhookPayload) {
+  private verifyWebhookSignature(dto: NormalizedWebhookPayload): boolean {
     const checksumKey = process.env.PAYOS_CHECKSUM_KEY?.trim();
     const providedSignature = dto.signature?.trim();
     if (!checksumKey || !providedSignature) {
-      throw new BadRequestException('Invalid webhook signature');
+      return false;
     }
 
     const targetData =
       dto.data && Object.keys(dto.data).length > 0
-        ? dto.data
+        ? { ...dto.data }
         : {
             orderCode: dto.orderCode,
             amount: dto.amount,
             status: dto.status,
           };
+    delete (targetData as Record<string, unknown>).signature;
+    delete (targetData as Record<string, unknown>).sign;
 
-    const expected = this.signPayload(targetData as Record<string, unknown>, checksumKey);
-    const expectedBuffer = Buffer.from(expected, 'utf8');
     const providedBuffer = Buffer.from(providedSignature, 'utf8');
+    const signatureCandidates = this.buildSignatureCandidates(targetData as Record<string, unknown>);
 
-    if (
-      expectedBuffer.length !== providedBuffer.length ||
-      !timingSafeEqual(expectedBuffer, providedBuffer)
-    ) {
-      throw new BadRequestException('Webhook signature verification failed');
-    }
+    const valid = signatureCandidates.some((candidate) => {
+      const expected = this.signPayload(candidate, checksumKey);
+      const expectedBuffer = Buffer.from(expected, 'utf8');
+      if (expectedBuffer.length !== providedBuffer.length) {
+        return false;
+      }
+      return timingSafeEqual(expectedBuffer, providedBuffer);
+    });
+
+    return valid;
   }
 
   private extractWebhookPayload(dto: NormalizedWebhookPayload):
@@ -351,7 +775,10 @@ export class PaymentsService {
       }
     | null {
     const rawOrderCode = this.getWebhookField(dto, 'orderCode') ?? '';
-    const rawStatus = this.getWebhookField(dto, 'status') ?? '';
+    const rawStatus =
+      this.getWebhookField(dto, 'status') ??
+      this.getWebhookField(dto, 'code') ??
+      '';
     const rawAmount = this.getWebhookField(dto, 'amount') ?? 0;
 
     const orderCode = `${rawOrderCode}`.trim();
@@ -465,15 +892,19 @@ export class PaymentsService {
     }
   }
 
-  private normalizeWebhookPayload(rawPayload: Record<string, unknown>): NormalizedWebhookPayload {
+  private normalizeWebhookPayload(
+    rawPayload: Record<string, unknown>,
+    signatureHeader?: string,
+  ): NormalizedWebhookPayload {
     const data = this.asRecord(rawPayload.data);
     const successValue = rawPayload.success;
+    const signatureFromBody = this.coerceString(rawPayload.signature)?.trim();
 
     return {
       orderCode: this.coerceString(rawPayload.orderCode),
       status: this.coerceString(rawPayload.status),
       amount: this.coerceNumber(rawPayload.amount),
-      signature: this.coerceString(rawPayload.signature),
+      signature: signatureFromBody || signatureHeader?.trim(),
       code: this.coerceString(rawPayload.code),
       desc: this.coerceString(rawPayload.desc),
       success:
@@ -484,6 +915,225 @@ export class PaymentsService {
             : undefined,
       data,
     };
+  }
+
+  private toPayloadRecord(rawPayload: unknown): Record<string, unknown> {
+    if (rawPayload && typeof rawPayload === 'object' && !Array.isArray(rawPayload)) {
+      return rawPayload as Record<string, unknown>;
+    }
+
+    if (typeof rawPayload === 'string') {
+      const normalized = rawPayload.trim();
+      if (normalized) {
+        try {
+          const parsed = JSON.parse(normalized);
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            return parsed as Record<string, unknown>;
+          }
+        } catch {
+          // keep fallback record
+        }
+      }
+
+      return { raw: rawPayload };
+    }
+
+    if (typeof rawPayload === 'number' || typeof rawPayload === 'boolean') {
+      return { raw: rawPayload };
+    }
+
+    return {};
+  }
+
+  private resolvePaidState(status: string, dto: NormalizedWebhookPayload): boolean {
+    const normalizedStatus = status.trim().toUpperCase();
+    if (
+      [
+        'PAID',
+        'SUCCESS',
+        'SUCCEEDED',
+        'COMPLETED',
+        'DONE',
+        'APPROVED',
+      ].includes(normalizedStatus)
+    ) {
+      return true;
+    }
+
+    const code = this.getWebhookField(dto, 'code');
+    const normalizedCode = `${code ?? dto.code ?? ''}`.trim();
+    if (normalizedCode === '00' && dto.success !== false) {
+      return true;
+    }
+
+    const desc = `${this.getWebhookField(dto, 'desc') ?? dto.desc ?? ''}`
+      .trim()
+      .toLowerCase();
+    if (
+      ['success', 'paid', 'succeeded', 'completed', 'thanh cong', 'da thanh toan'].includes(
+        desc,
+      ) &&
+      dto.success !== false
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  private buildSignatureCandidates(data: Record<string, unknown>): Record<string, unknown>[] {
+    const normalizedEntries = Object.entries(data).filter(([key]) => key !== 'signature' && key !== 'sign');
+    const normalized = Object.fromEntries(normalizedEntries);
+
+    const payosPreferredOrder = [
+      'id',
+      'orderCode',
+      'amount',
+      'description',
+      'accountNumber',
+      'reference',
+      'transactionDateTime',
+      'currency',
+      'paymentLinkId',
+      'code',
+      'desc',
+      'status',
+      'counterAccountBankId',
+      'counterAccountBankName',
+      'counterAccountName',
+      'counterAccountNumber',
+      'virtualAccountName',
+      'virtualAccountNumber',
+      'cancel',
+    ];
+
+    const payosCandidate: Record<string, unknown> = {};
+    for (const key of payosPreferredOrder) {
+      if (key in normalized) {
+        payosCandidate[key] = normalized[key];
+      }
+    }
+
+    if (Object.keys(payosCandidate).length === 0) {
+      return [normalized];
+    }
+
+    return [payosCandidate, normalized];
+  }
+
+  private async createPaymentNotifications(
+    tx: Prisma.TransactionClient,
+    clinicId: string,
+    customerId: string,
+    invoiceNo: string,
+    paidAt: Date,
+  ) {
+    const customer = await tx.customer.findUnique({
+      where: { id: customerId },
+      select: { userId: true, name: true },
+    });
+
+    await tx.notification.create({
+      data: {
+        clinicId,
+        customerId,
+        target: NotificationTarget.manager,
+        title: 'Thanh toán hoàn tất',
+        body: `Hóa đơn #${invoiceNo} đã thanh toán thành công.`,
+        linkTo: '/manager/pos',
+        read: false,
+      },
+    });
+
+    if (customer?.userId) {
+      await tx.notification.create({
+        data: {
+          clinicId,
+          customerId,
+          userId: customer.userId,
+          target: NotificationTarget.customer,
+          title: 'Đã ghi nhận thanh toán',
+          body: `PetHub đã xác nhận hóa đơn #${invoiceNo} lúc ${paidAt.toLocaleTimeString('vi-VN')}.`,
+          linkTo: '/customer/appointments',
+          read: false,
+        },
+      });
+    }
+  }
+
+  private async syncPaidInvoiceState(input: {
+    clinicId: string;
+    invoiceId: string | null;
+    paidAt: Date;
+  }) {
+    if (!input.invoiceId) {
+      return;
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await this.syncPaidInvoiceStateTx(tx, input);
+    });
+  }
+
+  private async syncPaidInvoiceStateTx(
+    tx: Prisma.TransactionClient,
+    input: {
+      clinicId: string;
+      invoiceId: string | null;
+      paidAt: Date;
+    },
+  ) {
+    if (!input.invoiceId) {
+      return;
+    }
+
+    const invoice = await tx.invoice.findUnique({
+      where: { id: input.invoiceId },
+      include: {
+        appointment: true,
+      },
+    });
+
+    if (!invoice) {
+      return;
+    }
+
+    const wasInvoicePaid = invoice.paymentStatus === PaymentStatus.paid;
+    if (!wasInvoicePaid) {
+      await tx.invoice.update({
+        where: { id: invoice.id },
+        data: {
+          paymentStatus: PaymentStatus.paid,
+        },
+      });
+
+      await tx.customer.update({
+        where: { id: invoice.customerId },
+        data: {
+          totalSpent: { increment: invoice.grandTotal },
+          totalVisits: { increment: 1 },
+          lastVisitAt: input.paidAt,
+        },
+      });
+
+      await this.createPaymentNotifications(
+        tx,
+        input.clinicId,
+        invoice.customerId,
+        invoice.invoiceNo,
+        input.paidAt,
+      );
+    }
+
+    if (invoice.appointmentId && invoice.appointment?.paymentStatus !== PaymentStatus.paid) {
+      await tx.appointment.update({
+        where: { id: invoice.appointmentId },
+        data: {
+          paymentStatus: PaymentStatus.paid,
+          paidAt: input.paidAt,
+        },
+      });
+    }
   }
 
   private getWebhookField(dto: NormalizedWebhookPayload, field: string): unknown {
@@ -521,5 +1171,30 @@ export class PaymentsService {
       }
     }
     return undefined;
+  }
+
+  private shouldRunClinicSync(clinicId: string, force: boolean): boolean {
+    if (force) {
+      this.lastClinicSyncAt.set(clinicId, Date.now());
+      return true;
+    }
+
+    if (!Number.isFinite(this.syncCooldownMs) || this.syncCooldownMs <= 0) {
+      return true;
+    }
+
+    const now = Date.now();
+    const last = this.lastClinicSyncAt.get(clinicId) ?? 0;
+    if (now - last < this.syncCooldownMs) {
+      return false;
+    }
+    this.lastClinicSyncAt.set(clinicId, now);
+    return true;
+  }
+
+  private canCallPayosStatusApi(): boolean {
+    const clientId = process.env.PAYOS_CLIENT_ID?.trim();
+    const apiKey = process.env.PAYOS_API_KEY?.trim();
+    return Boolean(clientId && apiKey);
   }
 }

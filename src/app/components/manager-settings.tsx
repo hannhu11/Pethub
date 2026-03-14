@@ -320,7 +320,7 @@ export function ManagerSettingsPage() {
                   </div>
                 </div>
                 {passwordError ? <p className="text-xs text-red-600">{passwordError}</p> : null}
-                {passwordSaved ? <p className="text-xs text-emerald-700">Đã cập nhật mật khẩu thành công (mock).</p> : null}
+                {passwordSaved ? <p className="text-xs text-emerald-700">Đã cập nhật mật khẩu thành công.</p> : null}
                 <div className="pt-2">
                   <button onClick={savePassword}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#6b8f5e] text-white text-sm hover:-translate-y-0.5 transition-all border border-[#2d2a26]">

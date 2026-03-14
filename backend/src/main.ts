@@ -1,6 +1,7 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
+import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -17,6 +18,10 @@ async function bootstrap() {
     origin: corsOrigin === '*' ? true : corsOrigins,
     credentials: false,
   });
+
+  // Allow image/base64 payloads for pet profile upload and similar forms.
+  app.use(json({ limit: '5mb' }));
+  app.use(urlencoded({ extended: true, limit: '5mb' }));
 
   app.useGlobalPipes(
     new ValidationPipe({

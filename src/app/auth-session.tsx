@@ -224,9 +224,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(async () => {
-    await signOut(firebaseAuth);
-    setApiAccessToken(null);
-    setSession(unauthenticatedSession);
+    try {
+      await signOut(firebaseAuth);
+    } finally {
+      setApiAccessToken(null);
+      window.localStorage.clear();
+      window.sessionStorage.clear();
+      setSession(unauthenticatedSession);
+    }
   }, []);
 
   const sendResetPasswordEmail = useCallback(async (email: string) => {

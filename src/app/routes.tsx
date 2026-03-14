@@ -14,6 +14,7 @@ import { ManagerReminderTemplatesPage } from './components/manager-reminder-temp
 import { ManagerSettingsPage } from './components/manager-settings';
 import { ManagerUpgradePremiumPage } from './components/manager-upgrade-premium';
 import { ManagerPOSPage } from './components/manager-pos';
+import { ManagerPosTransactionStatusPage } from './components/manager-pos-transaction';
 import { ManagerInvoicePage } from './components/manager-invoice';
 import { ManagerNotificationsPage } from './components/manager-notifications';
 import { RequireCustomerGuard, RequireManagerGuard, useAuthSession } from './auth-session';
@@ -117,6 +118,7 @@ export const router = createBrowserRouter([
         children: [
           { index: true, Component: ManagerDashboardPage, handle: { access: access.manager } },
           { path: 'pos', Component: ManagerPOSPage, handle: { access: access.manager } },
+          { path: 'pos/transaction/:invoiceId', Component: ManagerPosTransactionStatusPage, handle: { access: access.manager } },
           { path: 'bookings', Component: ManagerBookingsPage, handle: { access: access.manager } },
           { path: 'customers', Component: ManagerCustomersPage, handle: { access: access.manager } },
           { path: 'pets', Component: ManagerPetsPage, handle: { access: access.manager } },

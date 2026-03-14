@@ -7,7 +7,7 @@ import {
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Prisma, Role, type User } from '@prisma/client';
+import { Role, type User } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
 import { FirebaseAdminService } from './firebase-admin.service';
@@ -258,16 +258,11 @@ export class AuthService {
       return;
     }
 
-    const filters: Prisma.CustomerWhereInput[] = [{ email: user.email }];
-    if (phone.length > 0) {
-      filters.push({ phone });
-    }
-
     const candidate = await this.prisma.customer.findFirst({
       where: {
         clinicId: user.clinicId,
         userId: null,
-        OR: filters,
+        email: user.email,
       },
       orderBy: { createdAt: 'asc' },
     });

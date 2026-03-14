@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ReminderStatus } from '@prisma/client';
+import { NotificationTarget, ReminderChannel, ReminderStatus } from '@prisma/client';
+import axios from 'axios';
 import { PrismaService } from '../database/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { RemindersQueryDto } from './dto/reminders-query.dto';
@@ -107,7 +108,24 @@ export class RemindersService {
 
     const scheduleAt = dto.scheduleAt ? new Date(dto.scheduleAt) : null;
     const sendNow = dto.sendNow ?? false;
-    const status = sendNow ? ReminderStatus.sent : ReminderStatus.scheduled;
+    let status: ReminderStatus = sendNow ? ReminderStatus.sent : ReminderStatus.scheduled;
+    let sentAt: Date | null = sendNow ? new Date() : null;
+    let failedReason: string | null = null;
+
+    if (sendNow) {
+      const delivery = await this.dispatchReminder({
+        channel: dto.channel,
+        toEmail: customer.email,
+        customerName: customer.name,
+        petName: pet.name,
+        message,
+      });
+      if (!delivery.sent) {
+        status = ReminderStatus.failed;
+        sentAt = null;
+        failedReason = delivery.reason;
+      }
+    }
 
     const reminder = await this.prisma.reminder.create({
       data: {
@@ -118,7 +136,8 @@ export class RemindersService {
         templateName: template?.name ?? dto.templateName ?? 'manual-template',
         message,
         scheduledAt: sendNow ? new Date() : scheduleAt,
-        sentAt: sendNow ? new Date() : null,
+        sentAt,
+        failedReason,
         status,
       },
       include: {
@@ -146,6 +165,9 @@ export class RemindersService {
       reminderId: reminder.id,
       status: reminder.status,
     });
+    if (sendNow) {
+      await this.createReminderNotifications(currentUser, reminder);
+    }
 
     return {
       reminder,
@@ -195,5 +217,131 @@ export class RemindersService {
     return {
       reminder: updated,
     };
+  }
+
+  private async dispatchReminder(input: {
+    channel: ReminderChannel;
+    toEmail: string | null;
+    customerName: string;
+    petName: string;
+    message: string;
+  }): Promise<{ sent: boolean; reason: string | null }> {
+    if (input.channel === ReminderChannel.email) {
+      return this.dispatchEmailReminder(input.toEmail, input.message);
+    }
+
+    return {
+      sent: false,
+      reason: 'Kênh SMS chưa cấu hình nhà cung cấp. Vui lòng cấu hình gateway SMS.',
+    };
+  }
+
+  private async dispatchEmailReminder(
+    toEmail: string | null,
+    message: string,
+  ): Promise<{ sent: boolean; reason: string | null }> {
+    if (!toEmail) {
+      return { sent: false, reason: 'Khách hàng chưa có email để nhận nhắc nhở.' };
+    }
+
+    const apiKey = process.env.RESEND_API_KEY?.trim();
+    const from = process.env.RESEND_FROM_EMAIL?.trim() || process.env.RESEND_FROM?.trim();
+    if (!apiKey || !from) {
+      return {
+        sent: false,
+        reason: 'Thiếu cấu hình RESEND_API_KEY hoặc RESEND_FROM_EMAIL trên máy chủ.',
+      };
+    }
+
+    try {
+      await axios.post(
+        'https://api.resend.com/emails',
+        {
+          from,
+          to: [toEmail],
+          subject: 'PetHub - Nhắc lịch chăm sóc thú cưng',
+          text: message,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: 20000,
+        },
+      );
+
+      return { sent: true, reason: null };
+    } catch (error) {
+      return {
+        sent: false,
+        reason: this.extractDeliveryError(error),
+      };
+    }
+  }
+
+  private extractDeliveryError(error: unknown): string {
+    if (axios.isAxiosError(error)) {
+      const message =
+        (error.response?.data as { message?: string; error?: string } | undefined)?.message ||
+        (error.response?.data as { message?: string; error?: string } | undefined)?.error ||
+        error.message;
+      return `Gửi email thất bại: ${message}`;
+    }
+    if (error instanceof Error) {
+      return `Gửi email thất bại: ${error.message}`;
+    }
+    return 'Gửi email thất bại do lỗi không xác định.';
+  }
+
+  private async createReminderNotifications(
+    currentUser: AuthUser,
+    reminder: {
+      id: string;
+      status: ReminderStatus;
+      channel: ReminderChannel;
+      failedReason: string | null;
+      customerId: string;
+      customer: { id: string; userId: string | null; name: string };
+      pet: { name: string };
+    },
+  ) {
+    const managerTitle = reminder.status === ReminderStatus.sent ? 'Nhắc nhở đã gửi' : 'Nhắc nhở gửi thất bại';
+    const managerBody =
+      reminder.status === ReminderStatus.sent
+        ? `Đã gửi nhắc nhở ${reminder.channel.toUpperCase()} cho ${reminder.customer.name} (${reminder.pet.name}).`
+        : `Nhắc nhở ${reminder.channel.toUpperCase()} cho ${reminder.customer.name} thất bại: ${reminder.failedReason || 'không rõ lý do'}.`;
+
+    await this.prisma.notification.create({
+      data: {
+        clinicId: currentUser.clinicId,
+        customerId: reminder.customerId,
+        target: NotificationTarget.manager,
+        title: managerTitle,
+        body: managerBody,
+        linkTo: '/manager/reminders',
+      },
+    });
+
+    if (reminder.status === ReminderStatus.sent && reminder.customer.userId) {
+      await this.prisma.notification.create({
+        data: {
+          clinicId: currentUser.clinicId,
+          customerId: reminder.customerId,
+          userId: reminder.customer.userId,
+          target: NotificationTarget.customer,
+          title: 'Bạn có nhắc nhở mới',
+          body: `PetHub vừa gửi nhắc nhở chăm sóc cho thú cưng ${reminder.pet.name}.`,
+          linkTo: '/customer/appointments',
+        },
+      });
+    }
+
+    this.realtimeService.emitNotificationCreated({
+      type: 'reminder.notification',
+      reminderId: reminder.id,
+      status: reminder.status,
+      clinicId: currentUser.clinicId,
+    });
   }
 }

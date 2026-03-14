@@ -4,10 +4,14 @@ import { PrismaService } from '../database/prisma.service';
 import { CustomersQueryDto } from './dto/customers-query.dto';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
+import { PaymentsService } from '../payments/payments.service';
 
 @Injectable()
 export class CustomersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly paymentsService: PaymentsService,
+  ) {}
 
   async create(currentUser: AuthUser, dto: CreateCustomerDto) {
     const normalizedName = dto.name.trim();
@@ -56,6 +60,10 @@ export class CustomersService {
   }
 
   async list(currentUser: AuthUser, query: CustomersQueryDto) {
+    if (currentUser.role === 'manager') {
+      await this.paymentsService.syncPendingPayosTransactions(currentUser.clinicId, 16);
+    }
+
     const customers = await this.prisma.customer.findMany({
       where: {
         clinicId: currentUser.clinicId,
@@ -92,6 +100,10 @@ export class CustomersService {
   }
 
   async getById(currentUser: AuthUser, id: string) {
+    if (currentUser.role === 'manager') {
+      await this.paymentsService.syncPendingPayosTransactions(currentUser.clinicId, 12);
+    }
+
     const customer = await this.prisma.customer.findFirst({
       where: {
         id,

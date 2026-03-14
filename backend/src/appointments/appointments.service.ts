@@ -5,41 +5,53 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AppointmentStatus, PaymentStatus, Prisma } from '@prisma/client';
+import { AppointmentStatus, NotificationTarget, PaymentStatus, Prisma } from '@prisma/client';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
 import { PrismaService } from '../database/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentStatusDto } from './dto/update-appointment-status.dto';
 import { AppointmentQueryDto } from './dto/appointment-query.dto';
+import { PaymentsService } from '../payments/payments.service';
+
+type AppointmentListItem = Prisma.AppointmentGetPayload<{
+  include: {
+    customer: true;
+    pet: true;
+    service: true;
+  };
+}>;
 
 @Injectable()
 export class AppointmentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly realtimeService: RealtimeService,
+    private readonly paymentsService: PaymentsService,
   ) {}
 
   async list(currentUser: AuthUser, query: AppointmentQueryDto) {
+    const managerView = currentUser.role === 'manager';
+    await this.paymentsService.syncPendingPayosTransactions(currentUser.clinicId, managerView ? 20 : 8, {
+      force: managerView,
+    });
+    if (managerView) {
+      await this.paymentsService.reconcileAppointmentPaymentStatus(currentUser.clinicId, 500);
+    }
+
     const where: Prisma.AppointmentWhereInput = {
       clinicId: currentUser.clinicId,
       ...(query.status ? { status: query.status } : {}),
     };
 
     if (currentUser.role === 'customer') {
-      const customer = await this.prisma.customer.findFirst({
-        where: {
-          clinicId: currentUser.clinicId,
-          userId: currentUser.userId,
-        },
-      });
-      if (!customer) {
-        return [];
-      }
-      where.customerId = customer.id;
+      where.customer = {
+        clinicId: currentUser.clinicId,
+        userId: currentUser.userId,
+      };
     }
 
-    return this.prisma.appointment.findMany({
+    const appointments = await this.prisma.appointment.findMany({
       where,
       include: {
         customer: true,
@@ -51,6 +63,8 @@ export class AppointmentsService {
       },
       take: 300,
     });
+
+    return this.reconcilePaymentStatusFromInvoices(currentUser.clinicId, appointments);
   }
 
   async create(dto: CreateAppointmentDto, currentUser: AuthUser) {
@@ -85,7 +99,7 @@ export class AppointmentsService {
       throw new NotFoundException('Service not found');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const appointment = await this.prisma.$transaction(async (tx) => {
       const collision = await tx.appointment.findFirst({
         where: {
           clinicId: currentUser.clinicId,
@@ -124,8 +138,35 @@ export class AppointmentsService {
         appointment,
       });
 
+      await this.createAppointmentNotification(tx, {
+        clinicId: currentUser.clinicId,
+        customerId: appointment.customerId,
+        title: 'Lịch hẹn mới',
+        body: `${appointment.customer.name} vừa đặt lịch cho ${appointment.pet.name}.`,
+        target: NotificationTarget.manager,
+        linkTo: '/manager/bookings',
+      });
+
+      await this.createAppointmentNotification(tx, {
+        clinicId: currentUser.clinicId,
+        customerId: appointment.customerId,
+        userId: currentUser.role === 'customer' ? currentUser.userId : undefined,
+        title: 'Đặt lịch thành công',
+        body: `Lịch hẹn ${appointment.service.name} cho ${appointment.pet.name} đã được ghi nhận.`,
+        target: NotificationTarget.customer,
+        linkTo: '/customer/appointments',
+      });
+
       return appointment;
     });
+
+    this.realtimeService.emitNotificationCreated({
+      type: 'appointment.notification',
+      clinicId: currentUser.clinicId,
+      appointmentId: appointment.id,
+    });
+
+    return appointment;
   }
 
   async updateStatus(id: string, dto: UpdateAppointmentStatusDto, currentUser: AuthUser) {
@@ -165,11 +206,26 @@ export class AppointmentsService {
         await this.upsertMedicalRecordFromCompletedAppointment(tx, result.id, currentUser.userId);
       }
 
+      await this.createAppointmentNotification(tx, {
+        clinicId: currentUser.clinicId,
+        customerId: result.customerId,
+        title: 'Cập nhật lịch hẹn',
+        body: `Lịch hẹn ${result.service.name} của ${result.pet.name} đã chuyển sang "${this.statusLabel(dto.status)}".`,
+        target: NotificationTarget.customer,
+        linkTo: '/customer/appointments',
+      });
+
       return result;
     });
 
     this.realtimeService.emitAppointmentUpdated({
       type: 'status',
+      appointmentId: id,
+      status: dto.status,
+    });
+    this.realtimeService.emitNotificationCreated({
+      type: 'appointment.notification',
+      clinicId: currentUser.clinicId,
       appointmentId: id,
       status: dto.status,
     });
@@ -207,8 +263,15 @@ export class AppointmentsService {
     }
 
     if (currentUser.role === 'customer') {
-      const customer = await this.prisma.customer.findUnique({
-        where: { userId: currentUser.userId },
+      if (current.status !== AppointmentStatus.pending) {
+        throw new BadRequestException('Customer can only cancel pending appointment');
+      }
+
+      const customer = await this.prisma.customer.findFirst({
+        where: {
+          clinicId: currentUser.clinicId,
+          userId: currentUser.userId,
+        },
         select: { id: true },
       });
 
@@ -232,6 +295,22 @@ export class AppointmentsService {
 
     this.realtimeService.emitAppointmentUpdated({
       type: 'status',
+      appointmentId: id,
+      status: AppointmentStatus.cancelled,
+    });
+
+    await this.createAppointmentNotification(this.prisma, {
+      clinicId: currentUser.clinicId,
+      customerId: appointment.customerId,
+      title: 'Lịch hẹn đã hủy',
+      body: `${appointment.service.name} cho ${appointment.pet.name} đã bị hủy.`,
+      target: currentUser.role === 'manager' ? NotificationTarget.customer : NotificationTarget.manager,
+      userId: currentUser.role === 'customer' ? currentUser.userId : undefined,
+      linkTo: currentUser.role === 'manager' ? '/customer/appointments' : '/manager/bookings',
+    });
+    this.realtimeService.emitNotificationCreated({
+      type: 'appointment.notification',
+      clinicId: currentUser.clinicId,
       appointmentId: id,
       status: AppointmentStatus.cancelled,
     });
@@ -334,6 +413,115 @@ export class AppointmentsService {
     await tx.pet.update({
       where: { id: appointment.petId },
       data: { lastCheckupAt: recordedAt },
+    });
+  }
+
+  private async createAppointmentNotification(
+    tx: Prisma.TransactionClient | PrismaService,
+    input: {
+      clinicId: string;
+      customerId: string;
+      target: NotificationTarget;
+      title: string;
+      body: string;
+      linkTo?: string;
+      userId?: string;
+    },
+  ) {
+    const customer = await tx.customer.findUnique({
+      where: { id: input.customerId },
+      select: { userId: true },
+    });
+
+    await tx.notification.create({
+      data: {
+        clinicId: input.clinicId,
+        customerId: input.customerId,
+        userId: input.userId ?? customer?.userId ?? null,
+        target: input.target,
+        title: input.title,
+        body: input.body,
+        linkTo: input.linkTo ?? null,
+      },
+    });
+  }
+
+  private statusLabel(status: AppointmentStatus) {
+    if (status === AppointmentStatus.pending) return 'Chờ xác nhận';
+    if (status === AppointmentStatus.confirmed) return 'Đã xác nhận';
+    if (status === AppointmentStatus.completed) return 'Hoàn thành';
+    return 'Đã hủy';
+  }
+
+  private async reconcilePaymentStatusFromInvoices(
+    clinicId: string,
+    appointments: AppointmentListItem[],
+  ): Promise<AppointmentListItem[]> {
+    if (appointments.length === 0) {
+      return appointments;
+    }
+
+    const appointmentIds = appointments.map((appointment) => appointment.id);
+    const paidInvoices = await this.prisma.invoice.findMany({
+      where: {
+        clinicId,
+        appointmentId: { in: appointmentIds },
+        paymentStatus: PaymentStatus.paid,
+      },
+      select: {
+        appointmentId: true,
+        updatedAt: true,
+      },
+    });
+
+    if (paidInvoices.length === 0) {
+      return appointments;
+    }
+
+    const paidAtByAppointmentId = new Map<string, Date>();
+    for (const invoice of paidInvoices) {
+      if (!invoice.appointmentId) {
+        continue;
+      }
+      const current = paidAtByAppointmentId.get(invoice.appointmentId);
+      if (!current || invoice.updatedAt > current) {
+        paidAtByAppointmentId.set(invoice.appointmentId, invoice.updatedAt);
+      }
+    }
+
+    const needsPatchIds = appointments
+      .filter(
+        (appointment) =>
+          paidAtByAppointmentId.has(appointment.id) &&
+          (appointment.paymentStatus !== PaymentStatus.paid || !appointment.paidAt),
+      )
+      .map((appointment) => appointment.id);
+
+    if (needsPatchIds.length > 0) {
+      const patchPaidAt = new Date();
+      await this.prisma.appointment.updateMany({
+        where: {
+          id: { in: needsPatchIds },
+          paymentStatus: { not: PaymentStatus.paid },
+        },
+        data: {
+          paymentStatus: PaymentStatus.paid,
+          paidAt: patchPaidAt,
+        },
+      });
+    }
+
+    return appointments.map((appointment) => {
+      const invoicePaidAt = paidAtByAppointmentId.get(appointment.id);
+      if (!invoicePaidAt) {
+        return appointment;
+      }
+
+      return {
+        ...appointment,
+        paymentStatus: PaymentStatus.paid,
+        paidAt: appointment.paidAt ?? invoicePaidAt,
+      };
     });
   }
 }

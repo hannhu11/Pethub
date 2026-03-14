@@ -216,6 +216,13 @@ export function CustomerLayout() {
 
   const isActive = (path: string) => location.pathname === path;
 
+  const handleLogout = async () => {
+    await logout();
+    setUserMenuOpen(false);
+    setMenuOpen(false);
+    navigate('/login', { replace: true });
+  };
+
   return (
     <div className='min-h-screen flex flex-col bg-[#faf9f6]'>
       <div className='h-1 bg-[#6b8f5e]' />
@@ -274,9 +281,7 @@ export function CustomerLayout() {
                     <button
                       className='w-full text-left px-4 py-3 text-sm hover:bg-[#f0ede8] transition-colors text-[#c44040]'
                       onClick={() => {
-                        setUserMenuOpen(false);
-                        logout();
-                        navigate('/login');
+                        void handleLogout();
                       }}
                     >
                       Đăng xuất
@@ -313,9 +318,7 @@ export function CustomerLayout() {
             <button
               className='w-full text-left px-6 py-3 hover:bg-[#f0ede8] text-[#c44040]'
               onClick={() => {
-                setMenuOpen(false);
-                logout();
-                navigate('/login');
+                void handleLogout();
               }}
             >
               Đăng xuất

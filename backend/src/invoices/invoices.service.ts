@@ -1,13 +1,20 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { PaymentMethod } from '@prisma/client';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { PrismaService } from '../database/prisma.service';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
+import { PaymentsService } from '../payments/payments.service';
 
 @Injectable()
 export class InvoicesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly paymentsService: PaymentsService,
+  ) {}
 
   async getById(id: string, currentUser: AuthUser) {
+    await this.paymentsService.syncInvoicePaymentStatusIfNeeded(currentUser.clinicId, id);
+
     const invoice = await this.prisma.invoice.findFirst({
       where: {
         id,
@@ -16,6 +23,11 @@ export class InvoicesService {
       include: {
         customer: true,
         items: true,
+        paymentTxns: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+        },
         appointment: {
           include: {
             pet: true,
@@ -47,8 +59,11 @@ export class InvoicesService {
       orderBy: { updatedAt: 'desc' },
     });
 
+    const paymentAction = this.resolvePayosAction(invoice.paymentTxns);
+
     return {
       invoice,
+      paymentAction,
       clinic,
     };
   }
@@ -113,5 +128,64 @@ export class InvoicesService {
 
     const bytes = await pdfDoc.save();
     return Buffer.from(bytes);
+  }
+
+  private resolvePayosAction(
+    transactions: Array<{
+      provider: string;
+      providerRef: string | null;
+      paymentMethod: PaymentMethod;
+      amount: unknown;
+      metadata: unknown;
+    }>,
+  ) {
+    const tx = transactions.find(
+      (item) =>
+        item.provider === 'payos' ||
+        item.paymentMethod === PaymentMethod.payos ||
+        item.paymentMethod === PaymentMethod.transfer,
+    );
+    if (!tx) {
+      return null;
+    }
+
+    const metadata = this.toRecord(tx.metadata);
+    const payosPayload = this.toRecord(metadata?.payos ?? metadata);
+    const payosData = this.toRecord(payosPayload?.data ?? payosPayload);
+
+    const checkoutUrl = this.toStringValue(payosData?.checkoutUrl ?? payosData?.checkout_url);
+    if (!checkoutUrl) {
+      return null;
+    }
+
+    const qrCode = this.toStringValue(payosData?.qrCode ?? payosData?.qr_code);
+    const orderCode = this.toStringValue(payosData?.orderCode) || tx.providerRef || '';
+    const amount = Number(tx.amount ?? 0);
+
+    return {
+      provider: 'payos' as const,
+      orderCode,
+      amount: Number.isFinite(amount) ? amount : 0,
+      checkoutUrl,
+      qrCode,
+    };
+  }
+
+  private toRecord(value: unknown): Record<string, unknown> | null {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return null;
+    }
+    return value as Record<string, unknown>;
+  }
+
+  private toStringValue(value: unknown): string | null {
+    if (typeof value === 'string') {
+      const normalized = value.trim();
+      return normalized.length > 0 ? normalized : null;
+    }
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return String(value);
+    }
+    return null;
   }
 }

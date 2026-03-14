@@ -60,6 +60,27 @@ export function ManagerBookingsPage() {
 
   useEffect(() => {
     void loadBookings();
+
+    const onFocus = () => {
+      void loadBookings();
+    };
+    window.addEventListener('focus', onFocus);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void loadBookings();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    const timer = window.setInterval(() => {
+      void loadBookings();
+    }, 3000);
+
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.clearInterval(timer);
+    };
   }, [loadBookings]);
 
   const filtered = bookings.filter((booking) => {

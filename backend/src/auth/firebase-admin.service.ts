@@ -28,7 +28,7 @@ export class FirebaseAdminService {
       throw new UnauthorizedException('Missing Firebase token');
     }
 
-    const allowMock = (this.configService.get<string>('AUTH_MOCK_ENABLED') ?? 'true') === 'true';
+    const allowMock = (this.configService.get<string>('AUTH_MOCK_ENABLED') ?? 'false') === 'true';
     if (allowMock && token.startsWith('dev-')) {
       return this.mockToken(token);
     }
