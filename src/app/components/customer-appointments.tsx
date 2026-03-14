@@ -54,6 +54,10 @@ function isUpcoming(iso: string) {
   return new Date(iso).getTime() >= Date.now();
 }
 
+function isActiveAppointment(status: ApiAppointment['status']) {
+  return status === 'pending' || status === 'confirmed';
+}
+
 function statusLabel(status: ApiAppointment['status']) {
   if (status === 'pending') return 'Chờ xác nhận';
   if (status === 'confirmed') return 'Đã xác nhận';
@@ -141,13 +145,17 @@ export function CustomerAppointmentsPage() {
   const canSubmit = Boolean(hasServices && hasPets && draft.serviceId && draft.petId && draft.date && draft.time);
 
   const filteredAppointments = useMemo(() => {
+    const sorted = [...appointments].sort(
+      (a, b) => new Date(b.appointmentAt).getTime() - new Date(a.appointmentAt).getTime(),
+    );
+
     if (filter === 'all') {
-      return appointments;
+      return sorted;
     }
     if (filter === 'upcoming') {
-      return appointments.filter((item) => isUpcoming(item.appointmentAt));
+      return sorted.filter((item) => isActiveAppointment(item.status));
     }
-    return appointments.filter((item) => !isUpcoming(item.appointmentAt));
+    return sorted.filter((item) => !isActiveAppointment(item.status));
   }, [appointments, filter]);
 
   const appointmentToCancel = useMemo(
@@ -167,13 +175,18 @@ export function CustomerAppointmentsPage() {
 
     try {
       const iso = new Date(`${draft.date}T${draft.time}:00`).toISOString();
-      await createAppointment({
+      const created = await createAppointment({
         petId: draft.petId!,
         serviceId: draft.serviceId!,
         appointmentAt: iso,
         note: draft.note?.trim() || undefined,
       });
-      await loadData();
+      setAppointments((prev) =>
+        [created, ...prev.filter((item) => item.id !== created.id)].sort(
+          (a, b) => new Date(b.appointmentAt).getTime() - new Date(a.appointmentAt).getTime(),
+        ),
+      );
+      void loadData();
       setMessage('Đặt lịch thành công.');
       setDraft({ date: toDateInputValue(new Date()) });
       setFilter('upcoming');
@@ -389,7 +402,7 @@ export function CustomerAppointmentsPage() {
               </thead>
               <tbody>
                 {filteredAppointments.map((item) => {
-                  const canCancel = (item.status === 'pending' || item.status === 'confirmed') && isUpcoming(item.appointmentAt);
+                  const canCancel = isActiveAppointment(item.status) && isUpcoming(item.appointmentAt);
                   return (
                     <tr key={item.id} className='border-b border-[#2d2a26]/10'>
                       <td className='py-3 px-2'>{formatDate(item.appointmentAt)}</td>

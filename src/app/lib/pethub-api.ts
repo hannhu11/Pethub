@@ -74,6 +74,8 @@ export interface PosCheckoutPayload {
   paymentMethod: 'cash' | 'transfer' | 'card' | 'payos' | 'momo' | 'zalopay';
   items: PosCheckoutItemPayload[];
   taxPercent?: number;
+  returnUrl?: string;
+  cancelUrl?: string;
 }
 
 export interface PosCheckoutResponse {
@@ -337,6 +339,22 @@ export interface ApiDigitalCard {
   };
 }
 
+export interface CreateCustomerPayload {
+  name: string;
+  phone: string;
+  email?: string;
+}
+
+export interface UpsertMedicalRecordPayload {
+  appointmentId?: string;
+  doctorName?: string;
+  diagnosis: string;
+  treatment: string;
+  notes?: string;
+  nextVisitAt?: string;
+  recordedAt?: string;
+}
+
 export async function syncFirebaseUser(payload: SyncFirebasePayload): Promise<AuthSessionPayload> {
   const { data } = await apiClient.post<AuthSessionPayload>('/auth/sync-firebase', payload);
   return data;
@@ -383,6 +401,11 @@ export async function listCustomers(segment?: CustomerSegment): Promise<ApiCusto
   return data;
 }
 
+export async function createCustomer(payload: CreateCustomerPayload): Promise<ApiCustomer> {
+  const { data } = await apiClient.post<ApiCustomer>('/customers', payload);
+  return data;
+}
+
 export async function getCustomerById(id: string): Promise<ApiCustomer> {
   const { data } = await apiClient.get<ApiCustomer>(`/customers/${id}`);
   return data;
@@ -405,8 +428,43 @@ export async function listMedicalRecords(petId: string): Promise<ApiMedicalRecor
   return data;
 }
 
+export async function createMedicalRecord(
+  petId: string,
+  payload: UpsertMedicalRecordPayload,
+): Promise<ApiMedicalRecord> {
+  const { data } = await apiClient.post<ApiMedicalRecord>(`/pets/${petId}/medical-records`, payload);
+  return data;
+}
+
+export async function updateMedicalRecord(
+  petId: string,
+  recordId: string,
+  payload: UpsertMedicalRecordPayload,
+): Promise<ApiMedicalRecord> {
+  const { data } = await apiClient.put<ApiMedicalRecord>(`/pets/${petId}/medical-records/${recordId}`, payload);
+  return data;
+}
+
+export async function deleteMedicalRecord(
+  petId: string,
+  recordId: string,
+): Promise<{ success: boolean }> {
+  const { data } = await apiClient.delete<{ success: boolean }>(`/pets/${petId}/medical-records/${recordId}`);
+  return data;
+}
+
 export async function getPetDigitalCard(petId: string): Promise<ApiDigitalCard> {
   const { data } = await apiClient.get<ApiDigitalCard>(`/pets/${petId}/digital-card`);
+  return data;
+}
+
+export async function regeneratePetDigitalCard(
+  petId: string,
+  note?: string,
+): Promise<ApiDigitalCard> {
+  const { data } = await apiClient.post<ApiDigitalCard>(`/pets/${petId}/digital-card/regenerate`, {
+    note,
+  });
   return data;
 }
 

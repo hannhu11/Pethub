@@ -17,7 +17,7 @@ function getPetAgeLabel(dob: string) {
     return 'Chưa rõ';
   }
 
-  const now = new Date('2026-03-10T00:00:00');
+  const now = new Date();
   let years = now.getFullYear() - birthDate.getFullYear();
   let months = now.getMonth() - birthDate.getMonth();
 

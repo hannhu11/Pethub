@@ -30,6 +30,7 @@ type CartItem = {
 };
 
 const DEFAULT_TAX_PERCENT = 8;
+const LAST_POS_CHECKOUT_STORAGE_KEY = 'pethub:last-pos-checkout';
 
 function formatCurrency(value: number | string) {
   const normalized = Number(value ?? 0);
@@ -63,6 +64,7 @@ export function ManagerPOSPage() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const appointmentId = searchParams.get('appointmentId')?.trim() || '';
+  const paymentFlag = searchParams.get('payment')?.trim() || '';
 
   useEffect(() => {
     let mounted = true;
@@ -100,6 +102,32 @@ export function ManagerPOSPage() {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    const raw = window.sessionStorage.getItem(LAST_POS_CHECKOUT_STORAGE_KEY);
+    if (!raw) {
+      if (paymentFlag === 'success') {
+        setMessage('Thanh toán đã hoàn tất trên payOS. Hệ thống đang xác minh trạng thái hóa đơn...');
+      }
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as PosCheckoutResponse;
+      if (parsed?.invoiceId) {
+        setCheckoutResult(parsed);
+      }
+    } catch {
+      window.sessionStorage.removeItem(LAST_POS_CHECKOUT_STORAGE_KEY);
+    }
+
+    if (paymentFlag === 'success') {
+      setMessage('Thanh toán đã hoàn tất trên payOS. Hệ thống đang xác minh trạng thái hóa đơn...');
+    }
+    if (paymentFlag === 'cancel') {
+      setMessage('Khách đã hủy thanh toán trên payOS. Hóa đơn vẫn ở trạng thái chờ.');
+    }
+  }, [paymentFlag]);
 
   useEffect(() => {
     if (!appointmentId) {
@@ -200,6 +228,7 @@ export function ManagerPOSPage() {
                 }
               : prev,
           );
+          setCart([]);
           setMessage('payOS đã xác nhận giao dịch. Hóa đơn đã chuyển sang ĐÃ THANH TOÁN.');
           setCheckingPayment(false);
         }
@@ -212,7 +241,7 @@ export function ManagerPOSPage() {
 
     const timer = setInterval(() => {
       void poll();
-    }, 5000);
+    }, 3000);
 
     void poll();
 
@@ -222,6 +251,20 @@ export function ManagerPOSPage() {
       clearInterval(timer);
     };
   }, [checkoutResult?.invoiceId, checkoutResult?.paymentAction, checkoutResult?.paymentStatus]);
+
+  useEffect(() => {
+    if (!checkoutResult) {
+      window.sessionStorage.removeItem(LAST_POS_CHECKOUT_STORAGE_KEY);
+      return;
+    }
+
+    if (checkoutResult.paymentStatus === 'paid') {
+      window.sessionStorage.removeItem(LAST_POS_CHECKOUT_STORAGE_KEY);
+      return;
+    }
+
+    window.sessionStorage.setItem(LAST_POS_CHECKOUT_STORAGE_KEY, JSON.stringify(checkoutResult));
+  }, [checkoutResult]);
 
   const visibleItems = useMemo(() => {
     const keyword = search.trim().toLowerCase();
@@ -306,6 +349,8 @@ export function ManagerPOSPage() {
         petId: selectedPetId || undefined,
         paymentMethod,
         taxPercent: DEFAULT_TAX_PERCENT,
+        returnUrl: `${window.location.origin}/manager/pos?payment=success`,
+        cancelUrl: `${window.location.origin}/manager/pos?payment=cancel`,
         items: cart.map((item) => ({
           itemType: item.itemType,
           serviceId: item.itemType === 'service' ? item.id : undefined,
@@ -320,6 +365,7 @@ export function ManagerPOSPage() {
       if (result.paymentStatus === 'paid') {
         setMessage('Thanh toán thành công. Hóa đơn đã được ghi nhận.');
         setCart([]);
+        window.sessionStorage.removeItem(LAST_POS_CHECKOUT_STORAGE_KEY);
       } else {
         setMessage('Đã tạo hóa đơn chờ thanh toán. Khách vui lòng quét QR payOS để chuyển khoản.');
       }

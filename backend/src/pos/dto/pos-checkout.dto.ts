@@ -61,4 +61,12 @@ export class PosCheckoutDto {
   @IsNumber()
   @Min(0)
   taxPercent?: number;
+
+  @IsOptional()
+  @IsString()
+  returnUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  cancelUrl?: string;
 }

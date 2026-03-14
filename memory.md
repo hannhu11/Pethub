@@ -296,3 +296,72 @@
   - `GET /api/health` => `200`
   - `GET /api/payments/payos/webhook` => `200`
   - `POST /api/payments/payos/webhook` with `{}` => `200`
+
+## Iteration Update 2026-03-14 (PayOS Redirect + CRM/Pets Restore + Booking Sync)
+- Branch:
+  - `codex/backend-stabilization-phase1`
+- Scope completed this round:
+  - Fixed payOS return/cancel URL flow to avoid redirecting to dead domain.
+  - Hardened POS pending->paid UX with stronger persistence/polling behavior.
+  - Restored manager CRM/Pets feature surface (Quick Add Walk-in, profile edit, medical record CRUD, digital card refresh/regenerate/download).
+  - Improved customer appointment list consistency after booking (including when note is present).
+  - Re-cleansed VPS database to production blank state while preserving only one manager account.
+
+- Code changes (backend):
+  - `backend/src/pos/dto/pos-checkout.dto.ts`
+    - Added optional `returnUrl` and `cancelUrl` in checkout contract.
+  - `backend/src/pos/pos.service.ts`
+    - Forwarded `returnUrl/cancelUrl` from POS checkout to payOS link creation.
+  - `backend/src/payments/payments.service.ts`
+    - Added URL sanitizer + redirect resolver for payOS `returnUrl/cancelUrl`.
+    - Keeps fallback to env/default but now safely accepts frontend-provided runtime URL.
+  - `backend/src/payments/payments.controller.ts`
+    - Webhook endpoints accept raw payload object and remain available on both:
+      - `POST /api/payments/payos/webhook`
+      - `POST /api/payments/payos-webhook`
+    - Health check GET route retained for dashboard testing.
+
+- Code changes (frontend):
+  - `src/app/lib/pethub-api.ts`
+    - Extended `PosCheckoutPayload` with `returnUrl/cancelUrl`.
+  - `src/app/components/manager-pos.tsx`
+    - Sends dynamic runtime return/cancel URLs from `window.location.origin`.
+    - Keeps last unpaid checkout in session storage to survive payOS redirect round-trip.
+    - Polls invoice status every 3s and auto-switches UI to paid when webhook updates DB.
+  - `src/app/components/manager-crm.tsx`
+    - Added deep manager pets detail panel workflow:
+      - Hồ sơ / Bệnh án / Digital Card tabs.
+      - Medical record create/update/delete.
+      - Digital card refresh/regenerate/export PNG.
+      - Quick Add Walk-in owner mode (`existing`/`new`) and owner creation (`POST /customers`).
+    - Added quick-search deep link support:
+      - `/manager/pets?action=quick-add` auto-opens walk-in drawer.
+    - Fixed PNG export file name sanitization regex.
+  - `src/app/components/customer-appointments.tsx`
+    - On successful booking, inserts created appointment immediately into list state (optimistic consistency), then re-fetches in background.
+    - Upcoming/past filtering now follows appointment workflow status (`pending/confirmed` as upcoming).
+  - `src/app/components/pet-profile-detail-panel.tsx`
+    - Removed hardcoded age reference date; now uses current date.
+
+- Deploy & runtime checks on VPS:
+  - Synced modified files to `/home/ubuntu/pethub`.
+  - Rebuilt/restarted: `api`, `worker`, `web`, `nginx`.
+  - Verified routes:
+    - `GET /api/health` => `200`
+    - `GET /api/payments/payos/webhook` => `200`
+    - `POST /api/payments/payos/webhook` with `{}` => `200`
+    - `POST /api/payments/payos-webhook` with `{}` => `200`
+
+- Data cleanup executed (VPS DB):
+  - Truncated all domain tables (customers/pets/appointments/invoices/services/products/reminders/notifications/etc.).
+  - Re-seeded minimal baseline only:
+    - clinic: `default`
+    - manager user: `mnu3032004@gmail.com` (role `manager`)
+  - Final counts:
+    - users: 1
+    - customers: 0
+    - pets: 0
+    - appointments: 0
+    - invoices: 0
+    - services: 0
+    - products: 0
