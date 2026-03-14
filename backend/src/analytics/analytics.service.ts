@@ -3,12 +3,21 @@ import { PaymentStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
 import { AnalyticsQueryDto } from './dto/analytics-query.dto';
+import { PaymentsService } from '../payments/payments.service';
 
 @Injectable()
 export class AnalyticsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly paymentsService: PaymentsService,
+  ) {}
 
   async getOverview(currentUser: AuthUser, query: AnalyticsQueryDto) {
+    await this.paymentsService.syncPendingPayosTransactions(currentUser.clinicId, 24, {
+      force: true,
+    });
+    await this.paymentsService.reconcileAppointmentPaymentStatus(currentUser.clinicId, 500);
+
     const range = this.resolveDateRange(query);
     const chartEnd = range.lte ?? new Date();
     const chartStart = this.startOfMonthMonthsAgo(chartEnd, 5);
@@ -97,6 +106,10 @@ export class AnalyticsService {
   }
 
   async getCustomerLtvSummary(currentUser: AuthUser) {
+    await this.paymentsService.syncPendingPayosTransactions(currentUser.clinicId, 24, {
+      force: true,
+    });
+
     const customers = await this.prisma.customer.findMany({
       where: {
         clinicId: currentUser.clinicId,

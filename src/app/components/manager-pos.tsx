@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Banknote, CreditCard, QrCode, Receipt, Search, ShoppingBag, Stethoscope, Trash2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { useSearchParams } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import {
   checkoutPos,
   getPosPrefill,
@@ -46,6 +46,7 @@ function resolveQrValue(result: PosCheckoutResponse | null): string | null {
 }
 
 export function ManagerPOSPage() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState<CatalogTab>('service');
   const [search, setSearch] = useState('');
@@ -116,6 +117,14 @@ export function ManagerPOSPage() {
       const parsed = JSON.parse(raw) as PosCheckoutResponse;
       if (parsed?.invoiceId) {
         setCheckoutResult(parsed);
+        if (parsed.paymentStatus === 'paid') {
+          navigate(`/manager/invoice/${parsed.invoiceId}`, { replace: true });
+          return;
+        }
+        if (parsed.paymentAction) {
+          navigate(`/manager/pos/transaction/${parsed.invoiceId}`, { replace: true });
+          return;
+        }
       }
     } catch {
       window.sessionStorage.removeItem(LAST_POS_CHECKOUT_STORAGE_KEY);
@@ -127,7 +136,7 @@ export function ManagerPOSPage() {
     if (paymentFlag === 'cancel') {
       setMessage('Khách đã hủy thanh toán trên payOS. Hóa đơn vẫn ở trạng thái chờ.');
     }
-  }, [paymentFlag]);
+  }, [navigate, paymentFlag]);
 
   useEffect(() => {
     if (!appointmentId) {
@@ -231,6 +240,9 @@ export function ManagerPOSPage() {
           setCart([]);
           setMessage('payOS đã xác nhận giao dịch. Hóa đơn đã chuyển sang ĐÃ THANH TOÁN.');
           setCheckingPayment(false);
+          window.sessionStorage.removeItem(LAST_POS_CHECKOUT_STORAGE_KEY);
+          navigate(`/manager/invoice/${data.invoice.id}`, { replace: true });
+          return;
         }
       } catch {
         if (mounted) {
@@ -250,7 +262,7 @@ export function ManagerPOSPage() {
       setCheckingPayment(false);
       clearInterval(timer);
     };
-  }, [checkoutResult?.invoiceId, checkoutResult?.paymentAction, checkoutResult?.paymentStatus]);
+  }, [checkoutResult?.invoiceId, checkoutResult?.paymentAction, checkoutResult?.paymentStatus, navigate]);
 
   useEffect(() => {
     if (!checkoutResult) {
@@ -345,6 +357,7 @@ export function ManagerPOSPage() {
 
     try {
       const result = await checkoutPos({
+        appointmentId: appointmentId || undefined,
         customerId: selectedCustomerId,
         petId: selectedPetId || undefined,
         paymentMethod,
@@ -366,8 +379,12 @@ export function ManagerPOSPage() {
         setMessage('Thanh toán thành công. Hóa đơn đã được ghi nhận.');
         setCart([]);
         window.sessionStorage.removeItem(LAST_POS_CHECKOUT_STORAGE_KEY);
+        navigate(`/manager/invoice/${result.invoiceId}`);
       } else {
         setMessage('Đã tạo hóa đơn chờ thanh toán. Khách vui lòng quét QR payOS để chuyển khoản.');
+        if (result.paymentAction) {
+          navigate(`/manager/pos/transaction/${result.invoiceId}`);
+        }
       }
     } catch (apiError) {
       setError(extractApiError(apiError));

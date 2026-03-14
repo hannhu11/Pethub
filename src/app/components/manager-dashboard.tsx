@@ -72,12 +72,18 @@ export function ManagerDashboardPage() {
 
     void run(false);
 
+    const onFocus = () => {
+      void run(true);
+    };
+    window.addEventListener('focus', onFocus);
+
     const timer = window.setInterval(() => {
       void run(true);
-    }, 30000);
+    }, 10000);
 
     return () => {
       mounted = false;
+      window.removeEventListener('focus', onFocus);
       window.clearInterval(timer);
     };
   }, []);

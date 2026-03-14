@@ -191,6 +191,13 @@ export interface InvoiceDetailsResponse {
       total: number | string;
     }>;
   };
+  paymentAction: {
+    provider: 'payos';
+    orderCode: string;
+    amount: number;
+    checkoutUrl: string;
+    qrCode: string | null;
+  } | null;
   clinic: {
     clinicName: string;
     phone: string;

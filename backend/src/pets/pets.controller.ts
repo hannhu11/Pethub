@@ -43,6 +43,8 @@ export class PetsController {
   }
 
   @Post()
+  @UseGuards(RolesGuard)
+  @Roles('manager')
   async create(@CurrentUser() user: AuthUser | null, @Body() dto: UpsertPetDto) {
     if (!user) {
       return null;

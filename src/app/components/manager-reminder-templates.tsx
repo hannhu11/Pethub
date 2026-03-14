@@ -127,7 +127,7 @@ export function ManagerReminderTemplatesPage() {
     setError('');
     setSavedMessage('');
     try {
-      await createReminderFromTemplate({
+      const result = await createReminderFromTemplate({
         templateName: selectedTemplate.name,
         customerId: selectedCustomer.id,
         petId: selectedPet.id,
@@ -136,6 +136,10 @@ export function ManagerReminderTemplatesPage() {
         scheduleAt: sendNow ? undefined : new Date(`${scheduledDate}T09:00:00`).toISOString(),
         overrideMessage: message.trim(),
       });
+      if (sendNow && result.reminder.status !== 'sent') {
+        setError(result.reminder.failedReason || 'Gửi nhắc nhở thất bại. Vui lòng kiểm tra cấu hình email/SMS.');
+        return;
+      }
       setSavedMessage(sendNow ? 'Đã gửi nhắc nhở.' : 'Đã lên lịch nhắc nhở.');
       window.setTimeout(() => {
         navigate('/manager/reminders');

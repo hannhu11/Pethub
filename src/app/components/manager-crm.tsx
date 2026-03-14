@@ -1,5 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { CalendarDays, Download, Edit3, Plus, Search, Sparkles, Trash2, UserPlus, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import {
+  CalendarDays,
+  Download,
+  Edit3,
+  Mail,
+  MoreHorizontal,
+  Phone,
+  Plus,
+  Search,
+  Sparkles,
+  Trash2,
+  UserPlus,
+  X,
+} from 'lucide-react';
 import { useSearchParams } from 'react-router';
 import type { ApiCustomer, ApiPet, CustomerSegment } from '../types';
 import type { Pet } from './pet-types';
@@ -33,6 +46,7 @@ type PetFormState = {
   ownerName: string;
   ownerPhone: string;
   ownerEmail: string;
+  imageUrl: string;
   petName: string;
   petSpecies: string;
   petBreed: string;
@@ -52,6 +66,7 @@ const emptyPetForm: PetFormState = {
   ownerName: '',
   ownerPhone: '',
   ownerEmail: '',
+  imageUrl: '',
   petName: '',
   petSpecies: 'Chó',
   petBreed: '',
@@ -110,6 +125,15 @@ function toDateInput(value: string | null | undefined) {
 
 function toIsoStartOfDay(value: string) {
   return `${value}T00:00:00.000Z`;
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Không thể đọc ảnh.'));
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+    reader.readAsDataURL(file);
+  });
 }
 
 function formatRecordDate(value: string) {
@@ -210,7 +234,7 @@ export function ManagerPetsPage() {
           if (current && petData.some((pet) => pet.id === current)) {
             return current;
           }
-          return petData[0]?.id ?? null;
+          return null;
         });
       } catch (apiError) {
         setError(extractApiError(apiError));
@@ -331,6 +355,7 @@ export function ManagerPetsPage() {
       ownerName: pet.customer?.name ?? '',
       ownerPhone: pet.customer?.phone ?? '',
       ownerEmail: pet.customer?.email ?? '',
+      imageUrl: pet.imageUrl ?? '',
       petName: pet.name,
       petSpecies: pet.species,
       petBreed: pet.breed ?? '',
@@ -344,6 +369,25 @@ export function ManagerPetsPage() {
       specialNotes: pet.specialNotes ?? '',
     });
     setDrawerOpen(true);
+  };
+
+  const handlePetImageUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      setForm((prev) => ({
+        ...prev,
+        imageUrl: dataUrl,
+      }));
+    } catch (apiError) {
+      setError(extractApiError(apiError));
+    } finally {
+      event.target.value = '';
+    }
   };
 
   const savePet = async () => {
@@ -379,6 +423,7 @@ export function ManagerPetsPage() {
 
       const payload = {
         customerId,
+        imageUrl: form.imageUrl.trim() || undefined,
         name: form.petName.trim(),
         species: form.petSpecies.trim(),
         breed: form.petBreed.trim() || undefined,
@@ -389,7 +434,7 @@ export function ManagerPetsPage() {
         bloodType: form.bloodType.trim() || undefined,
         neutered: form.neutered,
         microchipId: form.microchipId.trim() || undefined,
-        specialNotes: form.specialNotes.trim() || undefined,
+        specialNotes: form.specialNotes.trim().slice(0, 55) || undefined,
       };
 
       if (form.id) {
@@ -599,20 +644,15 @@ export function ManagerPetsPage() {
       {error ? <div className='rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-700'>{error}</div> : null}
       {message ? <div className='rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-700'>{message}</div> : null}
 
-      <div className='grid lg:grid-cols-[1fr_1.1fr] gap-5'>
+      <div className={`grid gap-5 ${selectedPet ? 'lg:grid-cols-[1fr_1.1fr]' : 'lg:grid-cols-1'}`}>
         <div>
           <div className='grid md:grid-cols-2 gap-4'>
             {filteredPets.map((pet) => {
               const view = mapApiPetToCardView(pet);
               const selected = selectedPetId === pet.id;
               return (
-                <button
+                <div
                   key={pet.id}
-                  type='button'
-                  onClick={() => {
-                    setSelectedPetId(pet.id);
-                    setDetailTab('info');
-                  }}
                   className={`text-left bg-white border rounded-2xl p-4 transition ${
                     selected ? 'border-[#6b8f5e] shadow-sm' : 'border-[#2d2a26]'
                   }`}
@@ -622,7 +662,17 @@ export function ManagerPetsPage() {
                       <ImageWithFallback src={view.image} alt={view.name} className='w-full h-full object-cover' />
                     </div>
                     <div className='flex-1'>
-                      <h3 className='text-sm text-[#2d2a26]' style={{ fontWeight: 700 }}>{pet.name}</h3>
+                      <button
+                        type='button'
+                        onClick={() => {
+                          setSelectedPetId(pet.id);
+                          setDetailTab('info');
+                        }}
+                        className='text-sm text-[#2d2a26] hover:text-[#6b8f5e] transition-colors'
+                        style={{ fontWeight: 700 }}
+                      >
+                        {pet.name}
+                      </button>
                       <p className='text-xs text-[#7a756e]'>{pet.species} • {pet.breed || 'Chưa cập nhật giống'}</p>
                       <p className='text-xs text-[#7a756e]'>{pet.customer?.name || 'Chưa có chủ'}</p>
                     </div>
@@ -637,7 +687,7 @@ export function ManagerPetsPage() {
                   >
                     Sửa hồ sơ
                   </button>
-                </button>
+                </div>
               );
             })}
           </div>
@@ -650,10 +700,8 @@ export function ManagerPetsPage() {
           ) : null}
         </div>
 
-        <div className='bg-white border border-[#2d2a26] rounded-2xl overflow-hidden'>
-          {!selectedPet || !selectedUiPet ? (
-            <div className='p-5 text-sm text-[#7a756e]'>Chọn một thú cưng để xem hồ sơ chi tiết.</div>
-          ) : (
+        {selectedPet && selectedUiPet ? (
+          <div className='bg-white border border-[#2d2a26] rounded-2xl overflow-hidden'>
             <>
               <div className='p-4 border-b border-[#2d2a26]/10 flex items-center justify-between gap-3'>
                 <div className='flex items-center gap-3 min-w-0'>
@@ -675,6 +723,14 @@ export function ManagerPetsPage() {
                 >
                   <Edit3 className='w-4 h-4' />
                   Sửa hồ sơ
+                </button>
+                <button
+                  type='button'
+                  onClick={() => setSelectedPetId(null)}
+                  className='inline-flex items-center justify-center w-9 h-9 rounded-xl border border-[#2d2a26]/20 text-sm hover:bg-[#f0ede8]'
+                  aria-label='Đóng chi tiết thú cưng'
+                >
+                  <X className='w-4 h-4' />
                 </button>
               </div>
 
@@ -867,8 +923,8 @@ export function ManagerPetsPage() {
                 ) : null}
               </div>
             </>
-          )}
-        </div>
+          </div>
+        ) : null}
       </div>
 
       {drawerOpen ? (
@@ -948,6 +1004,24 @@ export function ManagerPetsPage() {
                 </div>
               )}
 
+              <div className='rounded-2xl border border-[#2d2a26]/15 bg-white p-3'>
+                <p className='text-[10px] text-[#7a756e] uppercase tracking-wider mb-2'>Ảnh thú cưng</p>
+                <div className='flex items-center gap-3'>
+                  <div className='w-16 h-16 rounded-xl overflow-hidden border border-[#2d2a26]/20 bg-[#faf9f6] flex items-center justify-center'>
+                    {form.imageUrl ? (
+                      <ImageWithFallback src={form.imageUrl} alt='Pet preview' className='w-full h-full object-cover' />
+                    ) : (
+                      <span className='text-[10px] text-[#7a756e]'>No image</span>
+                    )}
+                  </div>
+                  <label className='inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-[#2d2a26]/25 text-xs bg-white cursor-pointer hover:bg-[#f0ede8]'>
+                    <Plus className='w-3 h-3' />
+                    Upload ảnh
+                    <input type='file' accept='image/*' onChange={handlePetImageUpload} className='hidden' />
+                  </label>
+                </div>
+              </div>
+
               <div className='grid grid-cols-2 gap-3'>
                 <input value={form.petName} onChange={(event) => setForm((prev) => ({ ...prev, petName: event.target.value }))} placeholder='Tên thú cưng' className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white' />
                 <input value={form.petSpecies} onChange={(event) => setForm((prev) => ({ ...prev, petSpecies: event.target.value }))} placeholder='Loài' className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white' />
@@ -971,7 +1045,20 @@ export function ManagerPetsPage() {
                   <option value='no'>Chưa triệt sản</option>
                 </select>
               </div>
-              <textarea rows={3} value={form.specialNotes} onChange={(event) => setForm((prev) => ({ ...prev, specialNotes: event.target.value }))} placeholder='Ghi chú' className='w-full p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white resize-none' />
+              <div className='space-y-1'>
+                <div className='flex items-center justify-between'>
+                  <p className='text-[10px] text-[#7a756e] uppercase tracking-wider'>Ghi chú</p>
+                  <span className='text-[10px] text-[#7a756e]'>{form.specialNotes.length}/55</span>
+                </div>
+                <textarea
+                  rows={3}
+                  value={form.specialNotes}
+                  maxLength={55}
+                  onChange={(event) => setForm((prev) => ({ ...prev, specialNotes: event.target.value }))}
+                  placeholder='Lưu ý dưới 55 ký tự'
+                  className='w-full p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white resize-none'
+                />
+              </div>
               <button onClick={() => void savePet()} disabled={saving} className='w-full py-3 rounded-xl bg-[#6b8f5e] text-white text-sm border border-[#2d2a26] disabled:opacity-60'>
                 {saving ? 'Đang lưu...' : 'Lưu hồ sơ'}
               </button>
@@ -986,6 +1073,7 @@ export function ManagerPetsPage() {
 export function ManagerCustomersPage() {
   const [customers, setCustomers] = useState<ApiCustomer[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [detail, setDetail] = useState<ApiCustomer | null>(null);
   const [search, setSearch] = useState('');
   const [segmentFilter, setSegmentFilter] = useState<'all' | CustomerSegment>('all');
@@ -1001,7 +1089,12 @@ export function ManagerCustomersPage() {
         const data = await listCustomers(segmentFilter === 'all' ? undefined : segmentFilter);
         if (mounted) {
           setCustomers(data);
-          setSelectedId((current) => current || data[0]?.id || null);
+          setSelectedId((current) => {
+            if (!current) {
+              return null;
+            }
+            return data.some((item) => item.id === current) ? current : null;
+          });
         }
       } catch (apiError) {
         if (mounted) {
@@ -1020,8 +1113,19 @@ export function ManagerCustomersPage() {
   }, [segmentFilter]);
 
   useEffect(() => {
+    if (selectedId && !customers.some((item) => item.id === selectedId)) {
+      setSelectedId(null);
+      setDetailOpen(false);
+      setDetail(null);
+    }
+  }, [customers, selectedId]);
+
+  useEffect(() => {
     if (!selectedId) {
       setDetail(null);
+      return;
+    }
+    if (!detailOpen) {
       return;
     }
     let mounted = true;
@@ -1041,7 +1145,7 @@ export function ManagerCustomersPage() {
     return () => {
       mounted = false;
     };
-  }, [selectedId]);
+  }, [detailOpen, selectedId]);
 
   const filtered = useMemo(() => {
     const keyword = search.trim().toLowerCase();
@@ -1063,6 +1167,12 @@ export function ManagerCustomersPage() {
       totalLtv: customers.reduce((sum, customer) => sum + Number(customer.totalSpent || 0), 0),
     };
   }, [customers]);
+
+  const openDetail = (customerId: string) => {
+    setSelectedId(customerId);
+    setDetail(null);
+    setDetailOpen(true);
+  };
 
   return (
     <div className='space-y-6'>
@@ -1110,68 +1220,182 @@ export function ManagerCustomersPage() {
         ))}
       </div>
 
-      <div className='grid lg:grid-cols-[1fr_1.05fr] gap-5'>
-        <div className='bg-white border border-[#2d2a26] rounded-2xl divide-y divide-[#2d2a26]/10 min-h-[340px]'>
-          {filtered.map((customer) => (
-            <button
-              key={customer.id}
-              onClick={() => setSelectedId(customer.id)}
-              className={`w-full text-left p-4 hover:bg-[#faf9f6] ${selectedId === customer.id ? 'bg-[#f8fbf6]' : ''}`}
-            >
-              <div className='flex items-start justify-between gap-2'>
-                <div className='min-w-0'>
-                  <p className='text-xl text-[#2d2a26] truncate' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
-                    {customer.name}
-                  </p>
-                  <p className='text-sm text-[#7a756e] truncate'>{customer.phone} • {customer.email || '--'}</p>
-                  <p className='text-sm text-[#6b8f5e] mt-1' style={{ fontWeight: 700 }}>
-                    LTV: {formatCurrency(customer.totalSpent)}
-                  </p>
-                </div>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full border ${segmentClass(customer.segment)}`}>{segmentLabel(customer.segment)}</span>
-              </div>
-            </button>
-          ))}
-          {loading ? <p className='p-4 text-sm text-[#7a756e]'>Đang tải danh sách khách hàng...</p> : null}
-          {!loading && filtered.length === 0 ? <p className='p-4 text-sm text-[#7a756e]'>Không có khách hàng phù hợp.</p> : null}
+      <div className='flex flex-col lg:flex-row gap-5'>
+        <div className={`${detailOpen ? 'lg:w-[45%]' : 'w-full'} transition-all`}>
+          <div className='bg-white border border-[#2d2a26] rounded-2xl overflow-hidden min-h-[340px]'>
+            <div className='divide-y divide-[#2d2a26]/10'>
+              {filtered.map((customer) => {
+                const isSelected = selectedId === customer.id;
+                const petCount = customer.pets?.length ?? 0;
+                return (
+                  <div
+                    key={customer.id}
+                    onClick={() => openDetail(customer.id)}
+                    className={`p-4 cursor-pointer transition-all hover:bg-[#faf9f6] ${
+                      isSelected ? 'bg-[#6b8f5e]/5 border-l-[3px] border-l-[#6b8f5e]' : ''
+                    }`}
+                  >
+                    <div className='flex items-center gap-3'>
+                      <div className='w-10 h-10 rounded-full bg-[#c67d5b] flex items-center justify-center flex-shrink-0 border border-[#2d2a26]/20'>
+                        <span className='text-white text-xs' style={{ fontWeight: 600 }}>
+                          {customer.name.split(' ').filter(Boolean).slice(-1)[0]?.charAt(0).toUpperCase() || 'K'}
+                        </span>
+                      </div>
+                      <div className='flex-1 min-w-0'>
+                        <div className='flex items-center gap-2'>
+                          <h3 className='text-xl text-[#2d2a26] truncate' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                            {customer.name}
+                          </h3>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full border ${segmentClass(customer.segment)}`} style={{ fontWeight: 600 }}>
+                            {segmentLabel(customer.segment)}
+                          </span>
+                        </div>
+                        <div className='flex items-center gap-3 text-sm text-[#7a756e] mt-0.5'>
+                          <span>{customer.phone}</span>
+                          <span>{petCount} thú cưng</span>
+                        </div>
+                      </div>
+                      <div className='text-right hidden sm:block'>
+                        <p className='text-xs text-[#7a756e]'>LTV</p>
+                        <p className='text-3xl text-[#6b8f5e]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                          {formatCurrency(customer.totalSpent)}
+                        </p>
+                      </div>
+                      <button
+                        type='button'
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openDetail(customer.id);
+                        }}
+                        className='p-1.5 rounded-lg border border-[#2d2a26]/20 hover:bg-[#f0ede8] transition-colors'
+                        aria-label='Xem chi tiết khách hàng'
+                      >
+                        <MoreHorizontal className='w-4 h-4 text-[#7a756e]' />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {loading ? <p className='p-4 text-sm text-[#7a756e]'>Đang tải danh sách khách hàng...</p> : null}
+            {!loading && filtered.length === 0 ? <p className='p-4 text-sm text-[#7a756e]'>Không có khách hàng phù hợp.</p> : null}
+          </div>
         </div>
 
-        <div className='bg-white border border-[#2d2a26] rounded-2xl p-5'>
-          {!detail ? (
-            <p className='text-sm text-[#7a756e]'>Chọn một khách hàng để xem chi tiết.</p>
-          ) : (
-            <div className='space-y-4'>
-              <div>
-                <h2 className='text-4xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>{detail.name}</h2>
-                <p className='text-lg text-[#7a756e] mt-1'>LTV: {formatCurrency(detail.totalSpent)} • Visits: {detail.totalVisits}</p>
-              </div>
-              <div>
-                <p className='text-3xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Thú cưng ({detail.pets?.length || 0})</p>
-                <div className='space-y-2 mt-2'>
-                  {(detail.pets || []).map((pet) => (
-                    <div key={pet.id} className='text-sm border border-[#2d2a26]/10 rounded-xl p-2'>
-                      {pet.name} • {pet.species} • {pet.breed || 'Chưa rõ'}
+        {detailOpen && selectedId && detail ? (
+          <div className='lg:w-[55%] space-y-4'>
+            <div className='bg-white border border-[#2d2a26] rounded-2xl p-5'>
+              <div className='flex items-start justify-between gap-3'>
+                <div className='flex items-center gap-4'>
+                  <div className='w-14 h-14 rounded-full bg-[#c67d5b] flex items-center justify-center border-2 border-[#2d2a26]'>
+                    <span className='text-white text-lg' style={{ fontWeight: 700 }}>
+                      {detail.name.split(' ').filter(Boolean).slice(-1)[0]?.charAt(0).toUpperCase() || 'K'}
+                    </span>
+                  </div>
+                  <div>
+                    <div className='flex items-center gap-2'>
+                      <h2 className='text-4xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                        {detail.name}
+                      </h2>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full border ${segmentClass(detail.segment)}`} style={{ fontWeight: 600 }}>
+                        {segmentLabel(detail.segment)}
+                      </span>
                     </div>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p className='text-3xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Lịch sử gần nhất</p>
-                <div className='space-y-2 mt-2'>
-                  {(detail.appointments || []).slice(0, 8).map((appointment) => (
-                    <div key={appointment.id} className='text-sm border border-[#2d2a26]/10 rounded-xl p-2'>
-                      <div className='flex items-center justify-between gap-2'>
-                        <span>{appointment.service?.name || 'Dịch vụ'} • {appointment.pet?.name || 'Thú cưng'}</span>
-                        <span className={`px-2 py-0.5 rounded-full border text-xs ${getStatusColor(appointment.status)}`}>{getStatusLabel(appointment.status)}</span>
-                      </div>
-                      <p className='text-[#7a756e] mt-1 text-xs'>{toDateLabel(appointment.appointmentAt)} {toTimeLabel(appointment.appointmentAt)}</p>
+                    <div className='flex items-center gap-4 text-sm text-[#7a756e] mt-1'>
+                      <span className='inline-flex items-center gap-1'>
+                        <Mail className='w-4 h-4' />
+                        {detail.email || '--'}
+                      </span>
+                      <span className='inline-flex items-center gap-1'>
+                        <Phone className='w-4 h-4' />
+                        {detail.phone}
+                      </span>
                     </div>
-                  ))}
+                  </div>
                 </div>
+                <button
+                  onClick={() => {
+                    setDetailOpen(false);
+                    setDetail(null);
+                  }}
+                  className='p-1 hover:bg-[#f0ede8] rounded-lg'
+                >
+                  <X className='w-5 h-5 text-[#7a756e]' />
+                </button>
               </div>
             </div>
-          )}
-        </div>
+
+            <div className='grid grid-cols-3 gap-3'>
+              <div className='bg-white border border-[#2d2a26] rounded-2xl p-4 text-center'>
+                <p className='text-[10px] text-[#7a756e] uppercase tracking-wider'>Lifetime Value</p>
+                <p className='text-3xl text-[#2d2a26] mt-1' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                  {formatCurrency(detail.totalSpent)}
+                </p>
+              </div>
+              <div className='bg-white border border-[#2d2a26] rounded-2xl p-4 text-center'>
+                <p className='text-[10px] text-[#7a756e] uppercase tracking-wider'>Lượt ghé thăm</p>
+                <p className='text-3xl text-[#2d2a26] mt-1' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                  {detail.totalVisits}
+                </p>
+              </div>
+              <div className='bg-white border border-[#2d2a26] rounded-2xl p-4 text-center'>
+                <p className='text-[10px] text-[#7a756e] uppercase tracking-wider'>Lần cuối</p>
+                <p className='text-lg text-[#2d2a26] mt-1' style={{ fontWeight: 600 }}>
+                  {detail.lastVisitAt ? toDateLabel(detail.lastVisitAt) : '—'}
+                </p>
+              </div>
+            </div>
+
+            <div className='bg-white border border-[#2d2a26] rounded-2xl p-5'>
+              <h3 className='text-3xl text-[#2d2a26] mb-3' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                Thú cưng ({detail.pets?.length || 0})
+              </h3>
+              <div className='flex gap-3 overflow-x-auto pb-1'>
+                {(detail.pets || []).map((pet) => (
+                  <div key={pet.id} className='flex-shrink-0 w-44 border border-[#2d2a26]/20 rounded-xl p-3 bg-[#faf9f6]'>
+                    <div className='w-14 h-14 rounded-full overflow-hidden border border-[#2d2a26]/20 mx-auto mb-2'>
+                      <ImageWithFallback src={pet.imageUrl || ''} alt={pet.name} className='w-full h-full object-cover' />
+                    </div>
+                    <p className='text-sm text-center' style={{ fontWeight: 700 }}>{pet.name}</p>
+                    <p className='text-xs text-[#7a756e] text-center'>{pet.species} • {pet.breed || 'Chưa rõ'}</p>
+                    <a
+                      href={`/manager/pets?petId=${pet.id}`}
+                      className='w-full mt-1.5 inline-flex items-center justify-center py-1 rounded-lg border border-[#2d2a26]/30 text-[11px] text-[#6b8f5e] hover:bg-[#6b8f5e]/10 transition-all'
+                      style={{ fontWeight: 600 }}
+                    >
+                      Digital Card
+                    </a>
+                  </div>
+                ))}
+                {(detail.pets || []).length === 0 ? (
+                  <p className='text-xs text-[#7a756e] py-4 w-full text-center'>Chưa có thú cưng nào</p>
+                ) : null}
+              </div>
+            </div>
+
+            <div className='bg-white border border-[#2d2a26] rounded-2xl p-5'>
+              <h3 className='text-3xl text-[#2d2a26] mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                Lịch sử hoạt động
+              </h3>
+              <div className='space-y-2'>
+                {(detail.appointments || []).slice(0, 10).map((appointment) => (
+                  <div key={appointment.id} className='text-sm border border-[#2d2a26]/10 rounded-xl p-3'>
+                    <div className='flex items-center justify-between gap-2'>
+                      <span>{appointment.service?.name || 'Dịch vụ'} • {appointment.pet?.name || 'Thú cưng'}</span>
+                      <span className={`px-2 py-0.5 rounded-full border text-xs ${getStatusColor(appointment.status)}`}>
+                        {getStatusLabel(appointment.status)}
+                      </span>
+                    </div>
+                    <p className='text-[#7a756e] mt-1 text-xs'>{toDateLabel(appointment.appointmentAt)} {toTimeLabel(appointment.appointmentAt)}</p>
+                  </div>
+                ))}
+                {(detail.appointments || []).length === 0 ? (
+                  <p className='text-xs text-[#7a756e] text-center py-4'>Chưa có hoạt động nào</p>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

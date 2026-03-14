@@ -160,7 +160,7 @@ export function ManagerRemindersPage() {
     setError('');
     setMessage('');
     try {
-      await createReminderFromTemplate({
+      const result = await createReminderFromTemplate({
         templateName: formData.typeName || reminderTypes[formData.type],
         customerId: formData.customerId,
         petId: formData.petId,
@@ -169,6 +169,11 @@ export function ManagerRemindersPage() {
         scheduleAt: sendNow ? undefined : new Date(`${formData.scheduledDate}T09:00:00`).toISOString(),
         overrideMessage: formData.message.trim(),
       });
+      if (sendNow && result.reminder.status !== 'sent') {
+        await loadData();
+        setError(result.reminder.failedReason || 'Gửi nhắc nhở thất bại. Vui lòng kiểm tra cấu hình email/SMS.');
+        return;
+      }
       await loadData();
       setShowForm(false);
       setFormData({
@@ -208,7 +213,7 @@ export function ManagerRemindersPage() {
     setError('');
     setMessage('');
     try {
-      await createReminderFromTemplate({
+      const result = await createReminderFromTemplate({
         templateName: item.templateName ?? 'manual-template',
         customerId: item.customerId,
         petId: item.petId,
@@ -217,6 +222,11 @@ export function ManagerRemindersPage() {
         scheduleAt: sendNow ? undefined : item.scheduledAt ?? new Date().toISOString(),
         overrideMessage: item.message,
       });
+      if (sendNow && result.reminder.status !== 'sent') {
+        await loadData();
+        setError(result.reminder.failedReason || 'Gửi nhắc nhở thất bại. Vui lòng kiểm tra cấu hình email/SMS.');
+        return;
+      }
       await loadData();
       setMessage(sendNow ? 'Đã gửi nhắc nhở.' : 'Đã lên lịch lại nhắc nhở.');
     } catch (apiError) {

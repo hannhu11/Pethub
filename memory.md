@@ -365,3 +365,76 @@
     - invoices: 0
     - services: 0
     - products: 0
+
+## Iteration Update 2026-03-14 (QR/payOS reconciliation hardening + VPS redeploy)
+- Branch:
+  - `codex/backend-stabilization-phase1`
+- Problem addressed this round:
+  - QR/payOS payments sometimes remained `unpaid` in overview + bookings until manual open/check.
+  - Payment webhook endpoint could error on non-object payload probe.
+  - Some paid invoices were not always reflected to linked appointment `paymentStatus`.
+
+- Backend changes:
+  - `backend/src/payments/payments.service.ts`
+    - Hardened `handlePayosWebhook`:
+      - Accepts `unknown` payload safely (non-object payload no longer crashes).
+      - If webhook signature is invalid, falls back to querying payOS order status API.
+      - Accepts webhook only when payOS status verification confirms paid.
+      - Keeps strict amount mismatch guard.
+      - Writes `signatureVerified` metadata for audit.
+    - `syncPendingPayosTransactions` now also runs appointment payment reconciliation.
+    - Added `reconcileAppointmentPaymentStatus(clinicId, limit)`:
+      - scans paid invoices with appointment links,
+      - forces linked appointments to `paymentStatus=paid` + `paidAt` if stale.
+  - `backend/src/payments/payments.controller.ts`
+    - Webhook body type relaxed to `unknown` for fail-safe handling.
+  - `backend/src/appointments/appointments.service.ts`
+    - Increased payOS sync sweep on manager list load from `5` -> `30`.
+    - Tightened customer cancel ownership lookup with `clinicId + userId`.
+  - `backend/src/analytics/analytics.service.ts`
+    - Increased pre-aggregate payOS sync sweep from `5` -> `30`.
+    - Added same sync before `getCustomerLtvSummary` so summary/overview stay aligned.
+
+- Build status (local):
+  - `backend npm run build`: PASS
+  - `frontend npm run build`: PASS
+
+- VPS deploy status:
+  - Synced latest source into `/home/ubuntu/pethub`.
+  - Rebuilt/restarted:
+    - `sudo docker compose --env-file .env.production -f docker-compose.production.yml up -d --build api worker web nginx`
+  - Health checks:
+    - `GET /api/health` => `200`
+    - `GET /api/payments/payos/webhook` => `200`
+    - `POST /api/payments/payos/webhook` with `{}` => `200`
+    - `POST /api/payments/payos/webhook` with `text/plain` probe => `200` (fixed from server error)
+
+## Thread Handover Snapshot 2026-03-14 (for next thread)
+- Workspace code repo:
+  - `C:\Users\ADMIN\Downloads\pethub\Pethub-main`
+- Git remote:
+  - `https://github.com/hannhu11/Pethub.git`
+- Active working branch:
+  - `codex/backend-stabilization-phase1`
+- Deployment target:
+  - VPS host: `140.245.119.189`
+  - App dir on VPS: `/home/ubuntu/pethub`
+
+### SSH / Deploy quick commands
+- SSH (operator local command):
+  - `ssh -i "C:\Users\ADMIN\Downloads\Open-claw\ssh-key-2026-03-01.key" ubuntu@140.245.119.189`
+- Restart stack on VPS:
+  - `cd /home/ubuntu/pethub && sudo docker compose --env-file .env.production -f docker-compose.production.yml up -d --build api worker web nginx`
+- Check API logs quickly:
+  - `cd /home/ubuntu/pethub && sudo docker compose --env-file .env.production -f docker-compose.production.yml logs --tail=120 api`
+
+### Known priorities to continue in new thread
+1. Finalize/verify payOS paid-state propagation to all screens (overview, bookings payment badge, POS receipt transition) under repeated real QR tests.
+2. Restore exact “golden backup” UI only for manager `Khách hàng` + `Thú cưng` (3-dot interaction, side detail panel behavior, image upload UX, note-limit UX), keep other pages unchanged.
+3. Verify customer RBAC for pet creation (customer must not create pets) and cross-account appointment isolation (no bleed after logout/login switching).
+4. Verify reminders email delivery in production path (Resend domain/config + scheduling flow), and sync notification center with real backend events.
+
+### Security reminders (must keep)
+- Never commit `.env`, private keys, firebase key files, payOS raw credentials, or SSH key material.
+- Secret files found outside repo root must stay untracked.
+- Before each push: run secret scan + verify `git status` excludes sensitive files.
