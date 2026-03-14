@@ -7,16 +7,28 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
-  const corsOrigin = (configService.get<string>('CORS_ORIGIN') ?? '*').trim();
-  const corsOrigins = corsOrigin
+  const corsOriginRaw = (configService.get<string>('CORS_ORIGIN') ?? '').trim();
+  const envOrigins = corsOriginRaw
     .split(',')
     .map((origin) => origin.trim())
     .filter((origin) => origin.length > 0);
+  const allowedOrigins = Array.from(
+    new Set(['https://pethubvn.store', 'https://www.pethubvn.store', ...envOrigins]),
+  );
 
   app.setGlobalPrefix('api');
   app.enableCors({
-    origin: corsOrigin === '*' ? true : corsOrigins,
-    credentials: false,
+    origin: (
+      origin: string | undefined,
+      callback: (error: Error | null, allow?: boolean) => void,
+    ) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error(`Origin ${origin} is not allowed by CORS`));
+    },
+    credentials: true,
   });
 
   // Allow image/base64 payloads for pet profile upload and similar forms.

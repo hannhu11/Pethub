@@ -2,9 +2,25 @@ import axios from 'axios';
 
 let accessToken: string | null = null;
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ??
-  (import.meta.env.PROD ? '/api' : 'http://localhost:4000/api');
+function resolveApiBaseUrl(): string {
+  const configured = import.meta.env.VITE_API_BASE_URL?.trim();
+  const devDefault = 'http://localhost:4000/api';
+  const prodDefault = '/api';
+
+  const fallback = import.meta.env.PROD ? prodDefault : devDefault;
+  if (!configured) {
+    return fallback;
+  }
+
+  // Guard against stale build/env values that point to insecure HTTP IPs.
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:' && configured.startsWith('http://')) {
+    return prodDefault;
+  }
+
+  return configured;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,

@@ -9,6 +9,13 @@ function resolveSocketBaseUrl(): string {
 
   try {
     const parsed = new URL(configured);
+    if (
+      typeof window !== 'undefined' &&
+      window.location.protocol === 'https:' &&
+      parsed.protocol === 'http:'
+    ) {
+      return window.location.origin;
+    }
     return parsed.origin;
   } catch {
     return '';
