@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { Package, Plus, ShoppingBag, Stethoscope, X } from 'lucide-react';
 import { extractApiError } from '../lib/api-client';
@@ -91,6 +91,7 @@ export function ManagerCatalogPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const loadInFlightRef = useRef(false);
 
   const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
   const [productDialogOpen, setProductDialogOpen] = useState(false);
@@ -98,9 +99,15 @@ export function ManagerCatalogPage() {
   const [productForm, setProductForm] = useState<ProductFormState>(emptyProductForm);
 
   const loadCatalog = useMemo(
-    () => async () => {
-      setLoading(true);
-      setError('');
+    () => async (silent = false) => {
+      if (loadInFlightRef.current) {
+        return;
+      }
+      loadInFlightRef.current = true;
+      if (!silent) {
+        setLoading(true);
+        setError('');
+      }
       try {
         const [serviceData, productData] = await Promise.all([
           listCatalogServices(),
@@ -108,17 +115,36 @@ export function ManagerCatalogPage() {
         ]);
         setServices(serviceData);
         setProducts(productData);
+        setError('');
       } catch (apiError) {
-        setError(extractApiError(apiError));
+        if (!silent) {
+          setError(extractApiError(apiError));
+        }
       } finally {
-        setLoading(false);
+        loadInFlightRef.current = false;
+        if (!silent) {
+          setLoading(false);
+        }
       }
     },
     [],
   );
 
   useEffect(() => {
-    void loadCatalog();
+    void loadCatalog(false);
+    const onFocus = () => {
+      void loadCatalog(true);
+    };
+    window.addEventListener('focus', onFocus);
+
+    const timer = window.setInterval(() => {
+      void loadCatalog(true);
+    }, 15000);
+
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      window.clearInterval(timer);
+    };
   }, [loadCatalog]);
 
   const openCreateService = () => {
@@ -232,7 +258,7 @@ export function ManagerCatalogPage() {
         </div>
         <button
           type='button'
-          onClick={() => void loadCatalog()}
+          onClick={() => void loadCatalog(false)}
           className='px-4 py-2.5 rounded-xl border border-[#2d2a26] bg-white hover:-translate-y-0.5 transition-all text-sm'
         >
           Làm mới dữ liệu

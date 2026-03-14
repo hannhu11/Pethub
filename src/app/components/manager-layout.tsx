@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router';
 import {
   PawPrint,
@@ -20,13 +20,19 @@ import {
   Inbox,
 } from 'lucide-react';
 import { useAuthSession } from '../auth-session';
-import { getClinicSettings, getProfileSettings, subscribeManagerSettingsUpdates } from './manager-settings-store';
+import {
+  getClinicSettings,
+  getProfileSettings,
+  hydrateManagerSettings,
+  subscribeManagerSettingsUpdates,
+} from './manager-settings-store';
 import {
   listAppointments,
   listCustomers,
   listNotifications,
   listPets,
   markNotificationAsRead,
+  getManagerSettings,
   type ApiNotification,
 } from '../lib/pethub-api';
 import type { ApiAppointment, ApiCustomer, ApiPet } from '../types';
@@ -159,6 +165,7 @@ export function ManagerLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, session } = useAuthSession();
+  const liveDataInFlightRef = useRef(false);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -175,46 +182,63 @@ export function ManagerLayout() {
   }, []);
 
   const loadLiveData = useCallback(async (silent = false) => {
+    if (liveDataInFlightRef.current) {
+      return;
+    }
+    liveDataInFlightRef.current = true;
     if (!silent) {
       setLoadError('');
     }
-    const [notificationResult, customersResult, petsResult, appointmentsResult] =
-      await Promise.allSettled([
-        listNotifications('all'),
-        listCustomers(),
-        listPets(),
-        listAppointments(),
-      ]);
+    try {
+      const [notificationResult, customersResult, petsResult, appointmentsResult] =
+        await Promise.allSettled([
+          listNotifications('all'),
+          listCustomers(),
+          listPets(),
+          listAppointments(),
+        ]);
 
-    if (notificationResult.status === 'fulfilled') {
-      setNotifications(notificationResult.value.items.slice(0, 20));
-      setUnreadCount(notificationResult.value.unread);
-    }
+      if (notificationResult.status === 'fulfilled') {
+        setNotifications(notificationResult.value.items.slice(0, 20));
+        setUnreadCount(notificationResult.value.unread);
+      }
 
-    setQuickSearchData((previous) => ({
-      customers:
-        customersResult.status === 'fulfilled'
-          ? customersResult.value.slice(0, 12)
-          : previous.customers,
-      pets: petsResult.status === 'fulfilled' ? petsResult.value.slice(0, 12) : previous.pets,
-      appointments:
-        appointmentsResult.status === 'fulfilled'
-          ? appointmentsResult.value.slice(0, 12)
-          : previous.appointments,
-    }));
+      setQuickSearchData((previous) => ({
+        customers:
+          customersResult.status === 'fulfilled'
+            ? customersResult.value.slice(0, 12)
+            : previous.customers,
+        pets: petsResult.status === 'fulfilled' ? petsResult.value.slice(0, 12) : previous.pets,
+        appointments:
+          appointmentsResult.status === 'fulfilled'
+            ? appointmentsResult.value.slice(0, 12)
+            : previous.appointments,
+      }));
 
-    const firstError =
-      notificationResult.status === 'rejected'
-        ? notificationResult.reason
-        : customersResult.status === 'rejected'
-          ? customersResult.reason
-          : petsResult.status === 'rejected'
-            ? petsResult.reason
-            : appointmentsResult.status === 'rejected'
-              ? appointmentsResult.reason
-              : null;
-    if (firstError && !silent) {
-      setLoadError(extractApiError(firstError));
+      const allRejected =
+        notificationResult.status === 'rejected' &&
+        customersResult.status === 'rejected' &&
+        petsResult.status === 'rejected' &&
+        appointmentsResult.status === 'rejected';
+
+      const firstError =
+        notificationResult.status === 'rejected'
+          ? notificationResult.reason
+          : customersResult.status === 'rejected'
+            ? customersResult.reason
+            : petsResult.status === 'rejected'
+              ? petsResult.reason
+              : appointmentsResult.status === 'rejected'
+                ? appointmentsResult.reason
+                : null;
+
+      if (allRejected && firstError && !silent) {
+        setLoadError(extractApiError(firstError));
+      } else {
+        setLoadError('');
+      }
+    } finally {
+      liveDataInFlightRef.current = false;
     }
   }, []);
 
@@ -237,6 +261,56 @@ export function ManagerLayout() {
       window.clearInterval(timer);
     };
   }, [loadLiveData, session.user?.userId]);
+
+  useEffect(() => {
+    let mounted = true;
+    const run = async () => {
+      try {
+        const data = await getManagerSettings();
+        if (!mounted) {
+          return;
+        }
+        hydrateManagerSettings({
+          profile: {
+            name: data.profile.name,
+            email: data.profile.email,
+            phone: data.profile.phone,
+            role: data.profile.role === 'manager' ? 'Quản trị viên' : 'Khách hàng',
+          },
+          clinic: {
+            name: data.clinic?.clinicName ?? '',
+            taxId: data.clinic?.taxId ?? '',
+            phone: data.clinic?.phone ?? '',
+            address: data.clinic?.address ?? '',
+            invoiceNote: data.clinic?.invoiceNote ?? '',
+          },
+          subscription: {
+            plan:
+              data.subscription?.isActive ||
+              data.subscription?.planCode?.toLowerCase().includes('premium') ||
+              data.subscription?.planName?.toLowerCase().includes('premium')
+                ? 'premium'
+                : 'basic',
+            amount: Number(data.subscription?.amount ?? 249000),
+            currency: 'VND',
+            billingCycle: 'monthly',
+            paymentMethod: null,
+            activatedAt: data.subscription?.startedAt
+              ? new Date(data.subscription.startedAt).toLocaleDateString('vi-VN')
+              : undefined,
+          },
+        });
+      } catch {
+        // Keep UI usable with current session fallback even if settings endpoint is temporarily unavailable.
+      }
+    };
+
+    void run();
+
+    return () => {
+      mounted = false;
+    };
+  }, [session.user?.userId]);
 
   useEffect(() => {
     let active = true;

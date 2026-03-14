@@ -131,7 +131,7 @@ export class AuthService {
   }
 
   async verifyAndResolveUser(idToken: string): Promise<AuthUser> {
-    const decoded = await this.firebaseAdminService.verifyIdToken(idToken);
+    const decoded = await this.verifyIdTokenWithTimeout(idToken);
     const email = decoded.email ?? `${decoded.uid}@pethub.vn`;
     const user = await this.resolveUserByUidOrEmail(decoded.uid, email);
     if (!user) {

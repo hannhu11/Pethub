@@ -217,15 +217,22 @@ export function ManagerPetsPage() {
   const [digitalCardLoading, setDigitalCardLoading] = useState(false);
   const [digitalCardSyncing, setDigitalCardSyncing] = useState(false);
   const cardCaptureRef = useRef<HTMLDivElement | null>(null);
+  const loadInFlightRef = useRef(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
   const loadData = useMemo(
-    () => async () => {
-      setLoading(true);
-      setError('');
+    () => async (silent = false) => {
+      if (loadInFlightRef.current) {
+        return;
+      }
+      loadInFlightRef.current = true;
+      if (!silent) {
+        setLoading(true);
+        setError('');
+      }
       try {
         const [petData, customerData] = await Promise.all([listPets(), listCustomers()]);
         setPets(petData);
@@ -236,17 +243,37 @@ export function ManagerPetsPage() {
           }
           return null;
         });
+        setError('');
       } catch (apiError) {
-        setError(extractApiError(apiError));
+        if (!silent) {
+          setError(extractApiError(apiError));
+        }
       } finally {
-        setLoading(false);
+        loadInFlightRef.current = false;
+        if (!silent) {
+          setLoading(false);
+        }
       }
     },
     [],
   );
 
   useEffect(() => {
-    void loadData();
+    void loadData(false);
+
+    const onFocus = () => {
+      void loadData(true);
+    };
+    window.addEventListener('focus', onFocus);
+
+    const timer = window.setInterval(() => {
+      void loadData(true);
+    }, 15000);
+
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      window.clearInterval(timer);
+    };
   }, [loadData]);
 
   useEffect(() => {

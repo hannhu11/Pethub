@@ -305,6 +305,48 @@ export interface ApiNotificationSettings {
   updatedAt: string | null;
 }
 
+export interface ApiSettingsProfile {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: 'customer' | 'manager';
+}
+
+export interface ApiSettingsClinic {
+  id: string;
+  clinicId: string;
+  clinicName: string;
+  taxId: string | null;
+  phone: string;
+  address: string;
+  invoiceNote: string | null;
+  timezone: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ApiSettingsSubscription {
+  id: string;
+  clinicId: string;
+  planCode: string;
+  planName: string;
+  amount: number | string;
+  currency: string;
+  isActive: boolean;
+  startedAt: string | null;
+  expiresAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ApiManagerSettingsResponse {
+  profile: ApiSettingsProfile;
+  clinic: ApiSettingsClinic | null;
+  subscription: ApiSettingsSubscription | null;
+  notifications: ApiNotificationSettings;
+}
+
 export interface ApiMedicalRecord {
   id: string;
   appointmentId: string | null;
@@ -616,6 +658,52 @@ export async function updateNotificationSettings(payload: {
 }): Promise<{ notifications: ApiNotificationSettings }> {
   const { data } = await apiClient.put<{ notifications: ApiNotificationSettings }>(
     '/settings/notifications',
+    payload,
+  );
+  return data;
+}
+
+export async function getManagerSettings(): Promise<ApiManagerSettingsResponse> {
+  const { data } = await apiClient.get<ApiManagerSettingsResponse>('/settings');
+  return data;
+}
+
+export async function updateProfileSettings(payload: {
+  name: string;
+  email: string;
+  phone: string;
+  confirmPassword: string;
+}): Promise<{ profile: ApiSettingsProfile }> {
+  const { data } = await apiClient.put<{ profile: ApiSettingsProfile }>(
+    '/settings/profile',
+    payload,
+  );
+  return data;
+}
+
+export async function updateClinicSettings(payload: {
+  clinicName: string;
+  taxId?: string;
+  phone: string;
+  address: string;
+  invoiceNote?: string;
+  timezone?: string;
+  confirmPassword: string;
+}): Promise<{ clinic: ApiSettingsClinic }> {
+  const { data } = await apiClient.put<{ clinic: ApiSettingsClinic }>(
+    '/settings/clinic',
+    payload,
+  );
+  return data;
+}
+
+export async function updatePasswordSettings(payload: {
+  currentPassword: string;
+  newPassword: string;
+  confirmNewPassword: string;
+}): Promise<{ success: boolean; changedAt: string }> {
+  const { data } = await apiClient.put<{ success: boolean; changedAt: string }>(
+    '/settings/password',
     payload,
   );
   return data;

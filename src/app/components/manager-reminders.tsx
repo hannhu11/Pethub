@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import {
@@ -99,6 +99,7 @@ export function ManagerRemindersPage() {
   const [workingReminderId, setWorkingReminderId] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const loadInFlightRef = useRef(false);
   const [formData, setFormData] = useState({
     customerId: '',
     petId: '',
@@ -110,9 +111,15 @@ export function ManagerRemindersPage() {
   });
 
   const loadData = useMemo(
-    () => async () => {
-      setLoading(true);
-      setError('');
+    () => async (silent = false) => {
+      if (loadInFlightRef.current) {
+        return;
+      }
+      loadInFlightRef.current = true;
+      if (!silent) {
+        setLoading(true);
+        setError('');
+      }
       try {
         const [reminderData, customerData, petData] = await Promise.all([
           listManagerReminders(),
@@ -123,17 +130,37 @@ export function ManagerRemindersPage() {
         setMetrics(reminderData.metrics);
         setCustomers(customerData);
         setPets(petData);
+        setError('');
       } catch (apiError) {
-        setError(extractApiError(apiError));
+        if (!silent) {
+          setError(extractApiError(apiError));
+        }
       } finally {
-        setLoading(false);
+        loadInFlightRef.current = false;
+        if (!silent) {
+          setLoading(false);
+        }
       }
     },
     [],
   );
 
   useEffect(() => {
-    void loadData();
+    void loadData(false);
+
+    const onFocus = () => {
+      void loadData(true);
+    };
+    window.addEventListener('focus', onFocus);
+
+    const timer = window.setInterval(() => {
+      void loadData(true);
+    }, 15000);
+
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      window.clearInterval(timer);
+    };
   }, [loadData]);
 
   const customerPets = useMemo(
@@ -243,7 +270,7 @@ export function ManagerRemindersPage() {
           <h1 className='text-2xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
             Smart Reminders & Automations
           </h1>
-          <p className='text-sm text-[#7a756e]'>Nguồn dữ liệu backend thật. Không còn mock reminders.</p>
+          <p className='text-sm text-[#7a756e]'>Tự động nhắc lịch hẹn đa kênh và theo dõi trạng thái gửi theo thời gian thực.</p>
         </div>
         <div className='flex flex-wrap items-center gap-2'>
           <button

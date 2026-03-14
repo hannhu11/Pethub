@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Bell, CheckCheck, Circle, Filter } from 'lucide-react';
 import { extractApiError } from '../lib/api-client';
@@ -27,9 +27,14 @@ export function ManagerNotificationsPage() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const loadInFlightRef = useRef(false);
 
   const loadNotifications = useMemo(
     () => async (targetFilter: NotificationFilter, silent = false) => {
+      if (loadInFlightRef.current) {
+        return;
+      }
+      loadInFlightRef.current = true;
       if (!silent) {
         setLoading(true);
         setError('');
@@ -38,11 +43,13 @@ export function ManagerNotificationsPage() {
         const data = await listNotifications(targetFilter);
         setNotifications(data.items);
         setUnreadCount(data.unread);
+        setError('');
       } catch (apiError) {
         if (!silent) {
           setError(extractApiError(apiError));
         }
       } finally {
+        loadInFlightRef.current = false;
         if (!silent) {
           setLoading(false);
         }

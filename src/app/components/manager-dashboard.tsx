@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { AlertTriangle, DollarSign, FileText, Stethoscope, Users } from 'lucide-react';
 import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -30,11 +30,16 @@ export function ManagerDashboardPage() {
   const [ltvSummary, setLtvSummary] = useState<AnalyticsLtvSummaryResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const loadInFlightRef = useRef(false);
 
   useEffect(() => {
     let mounted = true;
 
     const run = async (silent = false) => {
+      if (loadInFlightRef.current) {
+        return;
+      }
+      loadInFlightRef.current = true;
       if (!silent) {
         setLoading(true);
         setError('');
@@ -59,11 +64,13 @@ export function ManagerDashboardPage() {
 
         setOverview(overviewData);
         setLtvSummary(ltvData);
+        setError('');
       } catch (apiError) {
         if (mounted && !silent) {
           setError(extractApiError(apiError));
         }
       } finally {
+        loadInFlightRef.current = false;
         if (mounted && !silent) {
           setLoading(false);
         }

@@ -34,7 +34,19 @@ export class FirebaseAdminService {
     }
 
     const auth = this.getFirebaseAuth();
-    return auth.verifyIdToken(token, true);
+    const checkRevokedRaw = (this.configService.get<string>('AUTH_CHECK_REVOKED') ?? 'false')
+      .trim()
+      .toLowerCase();
+    const checkRevoked = checkRevokedRaw === 'true';
+    try {
+      return await auth.verifyIdToken(token, checkRevoked);
+    } catch (error) {
+      const errorMessage =
+        (error as { errorInfo?: { message?: string } }).errorInfo?.message ??
+        (error instanceof Error ? error.message : 'Invalid Firebase token');
+      this.logger.warn(`Firebase token verification failed: ${errorMessage}`);
+      throw new UnauthorizedException('Invalid or expired Firebase token');
+    }
   }
 
   private getFirebaseAuth() {
