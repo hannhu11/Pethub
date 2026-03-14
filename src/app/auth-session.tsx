@@ -230,6 +230,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setApiAccessToken(null);
       window.localStorage.clear();
       window.sessionStorage.clear();
+      if ('caches' in window) {
+        void caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key))));
+      }
       setSession(unauthenticatedSession);
     }
   }, []);

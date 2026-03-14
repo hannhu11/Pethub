@@ -119,6 +119,7 @@ export const router = createBrowserRouter([
           { index: true, Component: ManagerDashboardPage, handle: { access: access.manager } },
           { path: 'pos', Component: ManagerPOSPage, handle: { access: access.manager } },
           { path: 'pos/transaction/:invoiceId', Component: ManagerPosTransactionStatusPage, handle: { access: access.manager } },
+          { path: 'pos/receipt/:invoiceId', Component: ManagerInvoicePage, handle: { access: access.manager } },
           { path: 'bookings', Component: ManagerBookingsPage, handle: { access: access.manager } },
           { path: 'customers', Component: ManagerCustomersPage, handle: { access: access.manager } },
           { path: 'pets', Component: ManagerPetsPage, handle: { access: access.manager } },

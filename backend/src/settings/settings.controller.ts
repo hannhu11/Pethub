@@ -6,6 +6,7 @@ import type { AuthUser } from '../common/interfaces/auth-user.interface';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateClinicDto } from './dto/update-clinic.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
+import { UpdateNotificationSettingsDto } from './dto/update-notification-settings.dto';
 
 @Controller('settings')
 @UseGuards(FirebaseAuthGuard)
@@ -42,5 +43,24 @@ export class SettingsController {
       return null;
     }
     return this.settingsService.updatePassword(user, dto);
+  }
+
+  @Get('notifications')
+  async getNotificationSettings(@CurrentUser() user: AuthUser | null) {
+    if (!user) {
+      return null;
+    }
+    return this.settingsService.getNotificationSettings(user);
+  }
+
+  @Put('notifications')
+  async updateNotificationSettings(
+    @CurrentUser() user: AuthUser | null,
+    @Body() dto: UpdateNotificationSettingsDto,
+  ) {
+    if (!user) {
+      return null;
+    }
+    return this.settingsService.updateNotificationSettings(user, dto);
   }
 }

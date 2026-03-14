@@ -84,6 +84,7 @@ export class NotificationsService {
     });
 
     this.realtimeService.emitNotificationRead({
+      clinicId: currentUser.clinicId,
       id: item.id,
       unread,
       userId: currentUser.userId,
@@ -110,6 +111,7 @@ export class NotificationsService {
     });
 
     this.realtimeService.emitNotificationRead({
+      clinicId: currentUser.clinicId,
       userId: currentUser.userId,
       unread: 0,
       markAll: true,

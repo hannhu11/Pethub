@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { NotificationTarget, ReminderChannel, ReminderStatus } from '@prisma/client';
 import axios from 'axios';
 import { PrismaService } from '../database/prisma.service';
@@ -9,10 +10,66 @@ import type { AuthUser } from '../common/interfaces/auth-user.interface';
 
 @Injectable()
 export class RemindersService {
+  private readonly logger = new Logger(RemindersService.name);
+  private readonly defaultNotificationSettings = {
+    emailBooking: true,
+    emailReminder: true,
+    smsBooking: false,
+    smsReminder: true,
+    dailyReport: true,
+    weeklyReport: false,
+  } as const;
+  private scheduledDispatchRunning = false;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly realtimeService: RealtimeService,
   ) {}
+
+  private get notificationSettingsModel() {
+    return (this.prisma as unknown as { notificationSettings: any }).notificationSettings;
+  }
+
+  @Cron('*/30 * * * * *')
+  async backgroundDispatchScheduledReminders() {
+    if (!this.isSchedulerEnabled()) {
+      return;
+    }
+
+    if (this.scheduledDispatchRunning) {
+      return;
+    }
+
+    this.scheduledDispatchRunning = true;
+    try {
+      const dueReminders = await this.prisma.reminder.findMany({
+        where: {
+          status: ReminderStatus.scheduled,
+          OR: [{ scheduledAt: null }, { scheduledAt: { lte: new Date() } }],
+        },
+        include: {
+          customer: true,
+          pet: true,
+        },
+        orderBy: [{ scheduledAt: 'asc' }, { createdAt: 'asc' }],
+        take: 100,
+      });
+
+      for (const reminder of dueReminders) {
+        try {
+          await this.deliverScheduledReminder(reminder.id);
+        } catch (error) {
+          this.logger.warn(
+            `Scheduled reminder delivery failed id=${reminder.id}: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          );
+        }
+      }
+    } finally {
+      this.scheduledDispatchRunning = false;
+    }
+  }
 
   async list(_currentUser: AuthUser, query: RemindersQueryDto) {
     const clinicId = _currentUser.clinicId;
@@ -108,12 +165,14 @@ export class RemindersService {
 
     const scheduleAt = dto.scheduleAt ? new Date(dto.scheduleAt) : null;
     const sendNow = dto.sendNow ?? false;
+    const scheduledAt = sendNow ? new Date() : scheduleAt ?? new Date();
     let status: ReminderStatus = sendNow ? ReminderStatus.sent : ReminderStatus.scheduled;
     let sentAt: Date | null = sendNow ? new Date() : null;
     let failedReason: string | null = null;
 
     if (sendNow) {
       const delivery = await this.dispatchReminder({
+        clinicId: currentUser.clinicId,
         channel: dto.channel,
         toEmail: customer.email,
         customerName: customer.name,
@@ -135,7 +194,7 @@ export class RemindersService {
         channel: dto.channel,
         templateName: template?.name ?? dto.templateName ?? 'manual-template',
         message,
-        scheduledAt: sendNow ? new Date() : scheduleAt,
+        scheduledAt,
         sentAt,
         failedReason,
         status,
@@ -162,11 +221,15 @@ export class RemindersService {
 
     this.realtimeService.emitReminderUpdated({
       type: 'created',
+      clinicId: currentUser.clinicId,
       reminderId: reminder.id,
       status: reminder.status,
     });
     if (sendNow) {
-      await this.createReminderNotifications(currentUser, reminder);
+      await this.createReminderNotifications({
+        clinicId: currentUser.clinicId,
+        reminder,
+      });
     }
 
     return {
@@ -210,6 +273,7 @@ export class RemindersService {
 
     this.realtimeService.emitReminderUpdated({
       type: 'cancelled',
+      clinicId: currentUser.clinicId,
       reminderId: id,
       status: updated.status,
     });
@@ -219,13 +283,76 @@ export class RemindersService {
     };
   }
 
+  private async deliverScheduledReminder(reminderId: string) {
+    const reminder = await this.prisma.reminder.findUnique({
+      where: { id: reminderId },
+      include: {
+        customer: true,
+        pet: true,
+      },
+    });
+    if (!reminder || reminder.status !== ReminderStatus.scheduled) {
+      return;
+    }
+
+    const delivery = await this.dispatchReminder({
+      clinicId: reminder.clinicId,
+      channel: reminder.channel,
+      toEmail: reminder.customer.email,
+      customerName: reminder.customer.name,
+      petName: reminder.pet.name,
+      message: reminder.message,
+    });
+
+    const status = delivery.sent ? ReminderStatus.sent : ReminderStatus.failed;
+    const sentAt = delivery.sent ? new Date() : null;
+    const failedReason = delivery.sent ? null : delivery.reason;
+
+    const updated = await this.prisma.reminder.update({
+      where: { id: reminder.id },
+      data: {
+        status,
+        sentAt,
+        failedReason,
+      },
+      include: {
+        customer: true,
+        pet: true,
+      },
+    });
+
+    this.realtimeService.emitReminderUpdated({
+      type: 'scheduled.dispatch',
+      clinicId: updated.clinicId,
+      reminderId: updated.id,
+      status: updated.status,
+    });
+
+    await this.createReminderNotifications({
+      clinicId: updated.clinicId,
+      reminder: updated,
+    });
+  }
+
   private async dispatchReminder(input: {
+    clinicId: string;
     channel: ReminderChannel;
     toEmail: string | null;
     customerName: string;
     petName: string;
     message: string;
   }): Promise<{ sent: boolean; reason: string | null }> {
+    const notificationSettings = await this.getNotificationSettings(input.clinicId);
+    if (!this.isReminderChannelEnabled(notificationSettings, input.channel)) {
+      return {
+        sent: false,
+        reason:
+          input.channel === ReminderChannel.email
+            ? 'Kênh email nhắc lịch đang tắt trong Cài đặt > Thông báo.'
+            : 'Kênh SMS nhắc lịch đang tắt trong Cài đặt > Thông báo.',
+      };
+    }
+
     if (input.channel === ReminderChannel.email) {
       return this.dispatchEmailReminder(input.toEmail, input.message);
     }
@@ -294,8 +421,8 @@ export class RemindersService {
     return 'Gửi email thất bại do lỗi không xác định.';
   }
 
-  private async createReminderNotifications(
-    currentUser: AuthUser,
+  private async createReminderNotifications(input: {
+    clinicId: string;
     reminder: {
       id: string;
       status: ReminderStatus;
@@ -304,18 +431,18 @@ export class RemindersService {
       customerId: string;
       customer: { id: string; userId: string | null; name: string };
       pet: { name: string };
-    },
-  ) {
-    const managerTitle = reminder.status === ReminderStatus.sent ? 'Nhắc nhở đã gửi' : 'Nhắc nhở gửi thất bại';
+    };
+  }) {
+    const managerTitle = input.reminder.status === ReminderStatus.sent ? 'Nhắc nhở đã gửi' : 'Nhắc nhở gửi thất bại';
     const managerBody =
-      reminder.status === ReminderStatus.sent
-        ? `Đã gửi nhắc nhở ${reminder.channel.toUpperCase()} cho ${reminder.customer.name} (${reminder.pet.name}).`
-        : `Nhắc nhở ${reminder.channel.toUpperCase()} cho ${reminder.customer.name} thất bại: ${reminder.failedReason || 'không rõ lý do'}.`;
+      input.reminder.status === ReminderStatus.sent
+        ? `Đã gửi nhắc nhở ${input.reminder.channel.toUpperCase()} cho ${input.reminder.customer.name} (${input.reminder.pet.name}).`
+        : `Nhắc nhở ${input.reminder.channel.toUpperCase()} cho ${input.reminder.customer.name} thất bại: ${input.reminder.failedReason || 'không rõ lý do'}.`;
 
     await this.prisma.notification.create({
       data: {
-        clinicId: currentUser.clinicId,
-        customerId: reminder.customerId,
+        clinicId: input.clinicId,
+        customerId: input.reminder.customerId,
         target: NotificationTarget.manager,
         title: managerTitle,
         body: managerBody,
@@ -323,15 +450,15 @@ export class RemindersService {
       },
     });
 
-    if (reminder.status === ReminderStatus.sent && reminder.customer.userId) {
+    if (input.reminder.status === ReminderStatus.sent && input.reminder.customer.userId) {
       await this.prisma.notification.create({
         data: {
-          clinicId: currentUser.clinicId,
-          customerId: reminder.customerId,
-          userId: reminder.customer.userId,
+          clinicId: input.clinicId,
+          customerId: input.reminder.customerId,
+          userId: input.reminder.customer.userId,
           target: NotificationTarget.customer,
           title: 'Bạn có nhắc nhở mới',
-          body: `PetHub vừa gửi nhắc nhở chăm sóc cho thú cưng ${reminder.pet.name}.`,
+          body: `PetHub vừa gửi nhắc nhở chăm sóc cho thú cưng ${input.reminder.pet.name}.`,
           linkTo: '/customer/appointments',
         },
       });
@@ -339,9 +466,43 @@ export class RemindersService {
 
     this.realtimeService.emitNotificationCreated({
       type: 'reminder.notification',
-      reminderId: reminder.id,
-      status: reminder.status,
-      clinicId: currentUser.clinicId,
+      reminderId: input.reminder.id,
+      status: input.reminder.status,
+      clinicId: input.clinicId,
     });
+  }
+
+  private async getNotificationSettings(clinicId: string) {
+    const settings = await this.notificationSettingsModel.findUnique({
+      where: {
+        clinicId,
+      },
+    });
+
+    return {
+      emailBooking: settings?.emailBooking ?? this.defaultNotificationSettings.emailBooking,
+      emailReminder: settings?.emailReminder ?? this.defaultNotificationSettings.emailReminder,
+      smsBooking: settings?.smsBooking ?? this.defaultNotificationSettings.smsBooking,
+      smsReminder: settings?.smsReminder ?? this.defaultNotificationSettings.smsReminder,
+      dailyReport: settings?.dailyReport ?? this.defaultNotificationSettings.dailyReport,
+      weeklyReport: settings?.weeklyReport ?? this.defaultNotificationSettings.weeklyReport,
+    };
+  }
+
+  private isReminderChannelEnabled(
+    settings: {
+      emailReminder: boolean;
+      smsReminder: boolean;
+    },
+    channel: ReminderChannel,
+  ) {
+    if (channel === ReminderChannel.email) {
+      return settings.emailReminder;
+    }
+    return settings.smsReminder;
+  }
+
+  private isSchedulerEnabled() {
+    return (process.env.REMINDER_SCHEDULER_ENABLED ?? 'true').toLowerCase() === 'true';
   }
 }

@@ -46,7 +46,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-replace_me}
-      CORS_ORIGIN: ${CORS_ORIGIN:-https://app.example.com}
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://pethubvn.store,https://www.pethubvn.store}
       AUTH_MOCK_ENABLED: ${AUTH_MOCK_ENABLED:-false}
       DEFAULT_SENSITIVE_PASSWORD: ${DEFAULT_SENSITIVE_PASSWORD:-}
       FIREBASE_SERVICE_ACCOUNT_PATH: ${FIREBASE_SERVICE_ACCOUNT_PATH:-}
@@ -60,7 +60,12 @@ services:
       PAYOS_CHECKSUM_KEY: ${PAYOS_CHECKSUM_KEY:-}
       PAYOS_RETURN_URL: ${PAYOS_RETURN_URL:-}
       PAYOS_CANCEL_URL: ${PAYOS_CANCEL_URL:-}
-      FRONTEND_URL: ${FRONTEND_URL:-}
+      FRONTEND_URL: ${FRONTEND_URL:-https://pethubvn.store}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM: ${RESEND_FROM:-}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-}
+      REMINDER_SCHEDULER_ENABLED: ${REMINDER_SCHEDULER_ENABLED_API:-true}
+      PAYOS_BACKGROUND_SYNC_ENABLED: ${PAYOS_BACKGROUND_SYNC_ENABLED_API:-true}
     depends_on:
       postgres:
         condition: service_healthy
@@ -96,6 +101,14 @@ services:
       FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL:-}
       FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      PAYOS_CLIENT_ID: ${PAYOS_CLIENT_ID:-}
+      PAYOS_API_KEY: ${PAYOS_API_KEY:-}
+      PAYOS_CHECKSUM_KEY: ${PAYOS_CHECKSUM_KEY:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM: ${RESEND_FROM:-}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-}
+      REMINDER_SCHEDULER_ENABLED: ${REMINDER_SCHEDULER_ENABLED_WORKER:-false}
+      PAYOS_BACKGROUND_SYNC_ENABLED: ${PAYOS_BACKGROUND_SYNC_ENABLED_WORKER:-false}
     depends_on:
       postgres:
         condition: service_healthy
@@ -133,8 +146,11 @@ services:
       - api
     volumes:
       - ./docker/nginx/pethub.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/nginx/certbot/www:/var/www/certbot:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     ports:
       - "80:80"
+      - "443:443"
     networks:
       - pethub_net
 

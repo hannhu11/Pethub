@@ -49,6 +49,10 @@ export class PaymentsService {
 
   @Cron('*/20 * * * * *')
   async backgroundSyncPendingPayosTransactions() {
+    if (!this.isBackgroundSyncEnabled()) {
+      return;
+    }
+
     if (this.backgroundSyncRunning || !this.canCallPayosStatusApi()) {
       return;
     }
@@ -255,6 +259,7 @@ export class PaymentsService {
         invoiceId: txn.invoiceId,
         paidAt: now,
       });
+      await this.emitInvoicePaymentUpdated(txn.clinicId, txn.invoiceId, PaymentStatus.paid, now, payload.orderCode);
       return {
         success: true,
         transactionId: txn.id,
@@ -311,20 +316,18 @@ export class PaymentsService {
 
     this.realtimeService.emitSubscriptionUpdated({
       type: paid ? 'payment.paid' : 'payment.unpaid',
+      clinicId: txn.clinicId,
       orderCode: payload.orderCode,
       transactionId: updated.id,
     });
-    if (paid) {
-      this.realtimeService.emitAppointmentUpdated({
-        type: 'payment.paid',
-        orderCode: payload.orderCode,
-      });
-      this.realtimeService.emitNotificationCreated({
-        type: 'payment.paid',
-        orderCode: payload.orderCode,
-        clinicId: txn.clinicId,
-      });
-    }
+    await this.emitInvoicePaymentUpdated(
+      txn.clinicId,
+      txn.invoiceId,
+      paid ? PaymentStatus.paid : PaymentStatus.unpaid,
+      paid ? now : null,
+      payload.orderCode,
+    );
+    this.emitPaymentDomainEvents(txn.clinicId, payload.orderCode, paid);
 
     return {
       success: true,
@@ -468,6 +471,7 @@ export class PaymentsService {
 
       this.realtimeService.emitAppointmentUpdated({
         type: 'payment.reconciled',
+        clinicId,
         appointmentId,
       });
     }
@@ -495,6 +499,13 @@ export class PaymentsService {
         invoiceId: txn.invoiceId,
         paidAt: txn.paidAt ?? new Date(),
       });
+      await this.emitInvoicePaymentUpdated(
+        txn.clinicId,
+        txn.invoiceId,
+        PaymentStatus.paid,
+        txn.paidAt ?? new Date(),
+        txn.providerRef,
+      );
       return;
     }
 
@@ -582,18 +593,12 @@ export class PaymentsService {
 
     this.realtimeService.emitSubscriptionUpdated({
       type: 'payment.paid',
+      clinicId: txn.clinicId,
       orderCode,
       transactionId: updated.id,
     });
-    this.realtimeService.emitAppointmentUpdated({
-      type: 'payment.paid',
-      orderCode,
-    });
-    this.realtimeService.emitNotificationCreated({
-      type: 'payment.paid',
-      orderCode,
-      clinicId: txn.clinicId,
-    });
+    await this.emitInvoicePaymentUpdated(txn.clinicId, updated.invoiceId, PaymentStatus.paid, now, orderCode);
+    this.emitPaymentDomainEvents(txn.clinicId, orderCode, true);
   }
 
   private async requestPayosPaymentStatus(orderCode: string): Promise<{
@@ -864,7 +869,7 @@ export class PaymentsService {
       }
     }
 
-    return 'http://140.245.119.189';
+    return 'https://pethubvn.store';
   }
 
   private resolveRedirectUrl(primary: string | undefined, secondary: string | undefined, fallback: string): string {
@@ -1073,6 +1078,13 @@ export class PaymentsService {
     await this.prisma.$transaction(async (tx) => {
       await this.syncPaidInvoiceStateTx(tx, input);
     });
+    await this.emitInvoicePaymentUpdated(
+      input.clinicId,
+      input.invoiceId,
+      PaymentStatus.paid,
+      input.paidAt,
+      null,
+    );
   }
 
   private async syncPaidInvoiceStateTx(
@@ -1132,6 +1144,67 @@ export class PaymentsService {
           paymentStatus: PaymentStatus.paid,
           paidAt: input.paidAt,
         },
+      });
+    }
+  }
+
+  private emitPaymentDomainEvents(clinicId: string, orderCode: string | null, paid: boolean) {
+    if (!paid) {
+      return;
+    }
+
+    this.realtimeService.emitAppointmentUpdated({
+      type: 'payment.paid',
+      clinicId,
+      orderCode: orderCode ?? null,
+    });
+    this.realtimeService.emitNotificationCreated({
+      type: 'payment.paid',
+      clinicId,
+      orderCode: orderCode ?? null,
+    });
+  }
+
+  private async emitInvoicePaymentUpdated(
+    clinicId: string,
+    invoiceId: string | null,
+    paymentStatus: PaymentStatus,
+    paidAt: Date | null,
+    orderCode: string | null,
+  ) {
+    if (!invoiceId) {
+      return;
+    }
+
+    const invoice = await this.prisma.invoice.findFirst({
+      where: {
+        id: invoiceId,
+        clinicId,
+      },
+      select: {
+        id: true,
+        appointmentId: true,
+      },
+    });
+    if (!invoice) {
+      return;
+    }
+
+    this.realtimeService.emitInvoicePaymentUpdated({
+      clinicId,
+      invoiceId: invoice.id,
+      appointmentId: invoice.appointmentId,
+      paymentStatus,
+      paidAt: paidAt?.toISOString() ?? null,
+      orderCode,
+    });
+
+    if (paymentStatus === PaymentStatus.paid && invoice.appointmentId) {
+      this.realtimeService.emitAppointmentUpdated({
+        type: 'payment.paid',
+        clinicId,
+        appointmentId: invoice.appointmentId,
+        paidAt: paidAt?.toISOString() ?? null,
       });
     }
   }
@@ -1196,5 +1269,9 @@ export class PaymentsService {
     const clientId = process.env.PAYOS_CLIENT_ID?.trim();
     const apiKey = process.env.PAYOS_API_KEY?.trim();
     return Boolean(clientId && apiKey);
+  }
+
+  private isBackgroundSyncEnabled() {
+    return (process.env.PAYOS_BACKGROUND_SYNC_ENABLED ?? 'true').toLowerCase() === 'true';
   }
 }

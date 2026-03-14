@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router';
 import {
   PawPrint,
@@ -31,6 +31,7 @@ import {
 } from '../lib/pethub-api';
 import type { ApiAppointment, ApiCustomer, ApiPet } from '../types';
 import { extractApiError } from '../lib/api-client';
+import { connectRealtimeSocket } from '../lib/realtime';
 import {
   CommandDialog,
   CommandEmpty,
@@ -157,7 +158,7 @@ export function ManagerLayout() {
   const [loadError, setLoadError] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuthSession();
+  const { logout, session } = useAuthSession();
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -173,54 +174,57 @@ export function ManagerLayout() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
+  const loadLiveData = useCallback(async (silent = false) => {
+    if (!silent) {
+      setLoadError('');
+    }
+    const [notificationResult, customersResult, petsResult, appointmentsResult] =
+      await Promise.allSettled([
+        listNotifications('all'),
+        listCustomers(),
+        listPets(),
+        listAppointments(),
+      ]);
+
+    if (notificationResult.status === 'fulfilled') {
+      setNotifications(notificationResult.value.items.slice(0, 20));
+      setUnreadCount(notificationResult.value.unread);
+    }
+
+    setQuickSearchData((previous) => ({
+      customers:
+        customersResult.status === 'fulfilled'
+          ? customersResult.value.slice(0, 12)
+          : previous.customers,
+      pets: petsResult.status === 'fulfilled' ? petsResult.value.slice(0, 12) : previous.pets,
+      appointments:
+        appointmentsResult.status === 'fulfilled'
+          ? appointmentsResult.value.slice(0, 12)
+          : previous.appointments,
+    }));
+
+    const firstError =
+      notificationResult.status === 'rejected'
+        ? notificationResult.reason
+        : customersResult.status === 'rejected'
+          ? customersResult.reason
+          : petsResult.status === 'rejected'
+            ? petsResult.reason
+            : appointmentsResult.status === 'rejected'
+              ? appointmentsResult.reason
+              : null;
+    if (firstError && !silent) {
+      setLoadError(extractApiError(firstError));
+    }
+  }, []);
+
   useEffect(() => {
     let mounted = true;
     const run = async (silent = false) => {
-      if (!silent) {
-        setLoadError('');
-      }
-      const [notificationResult, customersResult, petsResult, appointmentsResult] =
-        await Promise.allSettled([
-          listNotifications('all'),
-          listCustomers(),
-          listPets(),
-          listAppointments(),
-        ]);
-
       if (!mounted) {
         return;
       }
-
-      if (notificationResult.status === 'fulfilled') {
-        setNotifications(notificationResult.value.items.slice(0, 20));
-        setUnreadCount(notificationResult.value.unread);
-      }
-
-      setQuickSearchData((previous) => ({
-        customers:
-          customersResult.status === 'fulfilled'
-            ? customersResult.value.slice(0, 12)
-            : previous.customers,
-        pets: petsResult.status === 'fulfilled' ? petsResult.value.slice(0, 12) : previous.pets,
-        appointments:
-          appointmentsResult.status === 'fulfilled'
-            ? appointmentsResult.value.slice(0, 12)
-            : previous.appointments,
-      }));
-
-      const firstError =
-        notificationResult.status === 'rejected'
-          ? notificationResult.reason
-          : customersResult.status === 'rejected'
-            ? customersResult.reason
-            : petsResult.status === 'rejected'
-              ? petsResult.reason
-              : appointmentsResult.status === 'rejected'
-                ? appointmentsResult.reason
-                : null;
-      if (firstError && !silent) {
-        setLoadError(extractApiError(firstError));
-      }
+      await loadLiveData(silent);
     };
 
     void run(false);
@@ -232,7 +236,49 @@ export function ManagerLayout() {
       mounted = false;
       window.clearInterval(timer);
     };
-  }, []);
+  }, [loadLiveData, session.user?.userId]);
+
+  useEffect(() => {
+    let active = true;
+    let cleanup: (() => void) | null = null;
+
+    const setupRealtime = async () => {
+      let socket = null;
+      try {
+        socket = await connectRealtimeSocket();
+      } catch {
+        return;
+      }
+      if (!active || !socket) {
+        return;
+      }
+
+      const refresh = () => {
+        void loadLiveData(true);
+      };
+
+      socket.on('notification.created', refresh);
+      socket.on('notification.read', refresh);
+      socket.on('appointment.updated', refresh);
+      socket.on('invoice.payment.updated', refresh);
+      socket.on('reminder.updated', refresh);
+
+      cleanup = () => {
+        socket.off('notification.created', refresh);
+        socket.off('notification.read', refresh);
+        socket.off('appointment.updated', refresh);
+        socket.off('invoice.payment.updated', refresh);
+        socket.off('reminder.updated', refresh);
+        socket.disconnect();
+      };
+    };
+
+    void setupRealtime();
+    return () => {
+      active = false;
+      cleanup?.();
+    };
+  }, [loadLiveData, session.user?.userId]);
 
   useEffect(() => {
     return subscribeManagerSettingsUpdates(() => {
@@ -240,6 +286,19 @@ export function ManagerLayout() {
       setClinic(getClinicSettings());
     });
   }, []);
+
+  useEffect(() => {
+    if (!session.user) {
+      return;
+    }
+    setManagerProfile((previous) => ({
+      ...previous,
+      name: session.user?.name ?? previous.name,
+      email: session.user?.email ?? previous.email,
+      phone: session.user?.phone ?? previous.phone,
+      role: session.user?.role === 'manager' ? 'Quản trị viên' : previous.role,
+    }));
+  }, [session.user?.email, session.user?.name, session.user?.phone, session.user?.role]);
 
   const isActive = (to: string, exact?: boolean) => {
     if (exact) return location.pathname === to;

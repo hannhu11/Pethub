@@ -45,6 +45,17 @@ export class AppointmentsService {
     };
 
     if (currentUser.role === 'customer') {
+      const customer = await this.prisma.customer.findFirst({
+        where: {
+          clinicId: currentUser.clinicId,
+          userId: currentUser.userId,
+        },
+        select: { id: true },
+      });
+      if (!customer) {
+        return [];
+      }
+      where.customerId = customer.id;
       where.customer = {
         clinicId: currentUser.clinicId,
         userId: currentUser.userId,
@@ -135,6 +146,7 @@ export class AppointmentsService {
 
       this.realtimeService.emitAppointmentUpdated({
         type: 'created',
+        clinicId: currentUser.clinicId,
         appointment,
       });
 
@@ -220,6 +232,7 @@ export class AppointmentsService {
 
     this.realtimeService.emitAppointmentUpdated({
       type: 'status',
+      clinicId: currentUser.clinicId,
       appointmentId: id,
       status: dto.status,
     });
@@ -295,6 +308,7 @@ export class AppointmentsService {
 
     this.realtimeService.emitAppointmentUpdated({
       type: 'status',
+      clinicId: currentUser.clinicId,
       appointmentId: id,
       status: AppointmentStatus.cancelled,
     });
