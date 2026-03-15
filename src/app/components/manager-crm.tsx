@@ -1106,6 +1106,11 @@ export function ManagerCustomersPage() {
   const [segmentFilter, setSegmentFilter] = useState<'all' | CustomerSegment>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [digitalCardOpen, setDigitalCardOpen] = useState(false);
+  const [digitalCardLoading, setDigitalCardLoading] = useState(false);
+  const [digitalCardError, setDigitalCardError] = useState('');
+  const [digitalCardPetName, setDigitalCardPetName] = useState('');
+  const [digitalCardPet, setDigitalCardPet] = useState<Pet | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -1201,6 +1206,22 @@ export function ManagerCustomersPage() {
     setDetailOpen(true);
   };
 
+  const openDigitalCard = async (petId: string, petName: string) => {
+    setDigitalCardOpen(true);
+    setDigitalCardLoading(true);
+    setDigitalCardError('');
+    setDigitalCardPet(null);
+    setDigitalCardPetName(petName);
+    try {
+      const card = await getPetDigitalCard(petId);
+      setDigitalCardPet(mapDigitalCardToUiPet(card));
+    } catch (apiError) {
+      setDigitalCardError(extractApiError(apiError));
+    } finally {
+      setDigitalCardLoading(false);
+    }
+  };
+
   return (
     <div className='space-y-6'>
       <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3'>
@@ -1218,20 +1239,20 @@ export function ManagerCustomersPage() {
 
       <div className='grid sm:grid-cols-2 lg:grid-cols-4 gap-3'>
         <div className='bg-white border border-[#2d2a26] rounded-2xl p-4'>
-          <p className='text-sm text-[#7a756e]'>Khách VIP</p>
-          <p className='text-3xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>{summary.vip}</p>
+          <p className='text-xs uppercase tracking-wide text-[#7a756e]'>Khách VIP</p>
+          <p className='text-2xl text-[#2d2a26] mt-1' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>{summary.vip}</p>
         </div>
         <div className='bg-white border border-[#2d2a26] rounded-2xl p-4'>
-          <p className='text-sm text-[#7a756e]'>Thân thiết</p>
-          <p className='text-3xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>{summary.loyal}</p>
+          <p className='text-xs uppercase tracking-wide text-[#7a756e]'>Thân thiết</p>
+          <p className='text-2xl text-[#2d2a26] mt-1' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>{summary.loyal}</p>
         </div>
         <div className='bg-white border border-[#2d2a26] rounded-2xl p-4'>
-          <p className='text-sm text-[#7a756e]'>Khách thường</p>
-          <p className='text-3xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>{summary.regular}</p>
+          <p className='text-xs uppercase tracking-wide text-[#7a756e]'>Khách thường</p>
+          <p className='text-2xl text-[#2d2a26] mt-1' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>{summary.regular}</p>
         </div>
         <div className='bg-white border border-[#2d2a26] rounded-2xl p-4'>
-          <p className='text-sm text-[#7a756e]'>Tổng LTV</p>
-          <p className='text-3xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <p className='text-xs uppercase tracking-wide text-[#7a756e]'>Tổng LTV</p>
+          <p className='text-2xl text-[#2d2a26] mt-1' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
             {formatCurrency(summary.totalLtv)}
           </p>
         </div>
@@ -1269,22 +1290,22 @@ export function ManagerCustomersPage() {
                         </span>
                       </div>
                       <div className='flex-1 min-w-0'>
-                        <div className='flex items-center gap-2'>
-                          <h3 className='text-xl text-[#2d2a26] truncate' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                      <div className='flex items-center gap-2'>
+                          <h3 className='text-xl text-[#2d2a26] truncate leading-none' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
                             {customer.name}
                           </h3>
                           <span className={`text-[10px] px-2 py-0.5 rounded-full border ${segmentClass(customer.segment)}`} style={{ fontWeight: 600 }}>
                             {segmentLabel(customer.segment)}
                           </span>
                         </div>
-                        <div className='flex items-center gap-3 text-sm text-[#7a756e] mt-0.5'>
+                        <div className='flex items-center gap-3 text-xs text-[#7a756e] mt-1'>
                           <span>{customer.phone}</span>
                           <span>{petCount} thú cưng</span>
                         </div>
                       </div>
                       <div className='text-right hidden sm:block'>
-                        <p className='text-xs text-[#7a756e]'>LTV</p>
-                        <p className='text-3xl text-[#6b8f5e]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                        <p className='text-[10px] uppercase tracking-wide text-[#7a756e]'>LTV</p>
+                        <p className='text-2xl text-[#6b8f5e]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
                           {formatCurrency(customer.totalSpent)}
                         </p>
                       </div>
@@ -1311,7 +1332,7 @@ export function ManagerCustomersPage() {
 
         {detailOpen && selectedId && detail ? (
           <div className='lg:w-[55%] space-y-4'>
-            <div className='bg-white border border-[#2d2a26] rounded-2xl p-5'>
+            <div className='bg-[linear-gradient(140deg,#ffffff_0%,#f8f5ef_100%)] border border-[#2d2a26] rounded-2xl p-5 shadow-[0_12px_30px_rgba(45,42,38,0.08)]'>
               <div className='flex items-start justify-between gap-3'>
                 <div className='flex items-center gap-4'>
                   <div className='w-14 h-14 rounded-full bg-[#c67d5b] flex items-center justify-center border-2 border-[#2d2a26]'>
@@ -1321,14 +1342,14 @@ export function ManagerCustomersPage() {
                   </div>
                   <div>
                     <div className='flex items-center gap-2'>
-                      <h2 className='text-4xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                      <h2 className='text-3xl text-[#2d2a26] leading-none' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
                         {detail.name}
                       </h2>
                       <span className={`text-[10px] px-2 py-0.5 rounded-full border ${segmentClass(detail.segment)}`} style={{ fontWeight: 600 }}>
                         {segmentLabel(detail.segment)}
                       </span>
                     </div>
-                    <div className='flex items-center gap-4 text-sm text-[#7a756e] mt-1'>
+                    <div className='flex items-center gap-4 text-xs text-[#7a756e] mt-2'>
                       <span className='inline-flex items-center gap-1'>
                         <Mail className='w-4 h-4' />
                         {detail.email || '--'}
@@ -1355,13 +1376,13 @@ export function ManagerCustomersPage() {
             <div className='grid grid-cols-3 gap-3'>
               <div className='bg-white border border-[#2d2a26] rounded-2xl p-4 text-center'>
                 <p className='text-[10px] text-[#7a756e] uppercase tracking-wider'>Lifetime Value</p>
-                <p className='text-3xl text-[#2d2a26] mt-1' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                <p className='text-2xl text-[#2d2a26] mt-1' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
                   {formatCurrency(detail.totalSpent)}
                 </p>
               </div>
               <div className='bg-white border border-[#2d2a26] rounded-2xl p-4 text-center'>
                 <p className='text-[10px] text-[#7a756e] uppercase tracking-wider'>Lượt ghé thăm</p>
-                <p className='text-3xl text-[#2d2a26] mt-1' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                <p className='text-2xl text-[#2d2a26] mt-1' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
                   {detail.totalVisits}
                 </p>
               </div>
@@ -1373,8 +1394,8 @@ export function ManagerCustomersPage() {
               </div>
             </div>
 
-            <div className='bg-white border border-[#2d2a26] rounded-2xl p-5'>
-              <h3 className='text-3xl text-[#2d2a26] mb-3' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <div className='bg-[linear-gradient(160deg,#ffffff_0%,#f7f3ec_100%)] border border-[#2d2a26] rounded-2xl p-5'>
+              <h3 className='text-2xl text-[#2d2a26] mb-3' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
                 Thú cưng ({detail.pets?.length || 0})
               </h3>
               <div className='flex gap-3 overflow-x-auto pb-1'>
@@ -1385,13 +1406,14 @@ export function ManagerCustomersPage() {
                     </div>
                     <p className='text-sm text-center' style={{ fontWeight: 700 }}>{pet.name}</p>
                     <p className='text-xs text-[#7a756e] text-center'>{pet.species} • {pet.breed || 'Chưa rõ'}</p>
-                    <a
-                      href={`/manager/pets?petId=${pet.id}`}
+                    <button
+                      type='button'
+                      onClick={() => void openDigitalCard(pet.id, pet.name)}
                       className='w-full mt-1.5 inline-flex items-center justify-center py-1 rounded-lg border border-[#2d2a26]/30 text-[11px] text-[#6b8f5e] hover:bg-[#6b8f5e]/10 transition-all'
                       style={{ fontWeight: 600 }}
                     >
                       Digital Card
-                    </a>
+                    </button>
                   </div>
                 ))}
                 {(detail.pets || []).length === 0 ? (
@@ -1401,7 +1423,7 @@ export function ManagerCustomersPage() {
             </div>
 
             <div className='bg-white border border-[#2d2a26] rounded-2xl p-5'>
-              <h3 className='text-3xl text-[#2d2a26] mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+              <h3 className='text-2xl text-[#2d2a26] mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
                 Lịch sử hoạt động
               </h3>
               <div className='space-y-2'>
@@ -1424,6 +1446,50 @@ export function ManagerCustomersPage() {
           </div>
         ) : null}
       </div>
+
+      {digitalCardOpen ? (
+        <div
+          className='fixed inset-0 z-50 bg-black/40 p-4 md:p-8 overflow-auto'
+          onClick={() => setDigitalCardOpen(false)}
+        >
+          <div
+            className='max-w-4xl mx-auto rounded-3xl border border-[#2d2a26] bg-[#faf9f6] p-4 md:p-6 shadow-[0_24px_60px_rgba(0,0,0,0.24)]'
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className='flex items-center justify-between mb-4'>
+              <div>
+                <p className='text-xs uppercase tracking-[0.14em] text-[#7a756e]'>Digital Card</p>
+                <h3
+                  className='text-xl text-[#2d2a26] leading-tight'
+                  style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}
+                >
+                  {digitalCardPetName || 'Thú cưng'}
+                </h3>
+              </div>
+              <button
+                type='button'
+                onClick={() => setDigitalCardOpen(false)}
+                className='p-1.5 rounded-lg border border-[#2d2a26]/20 hover:bg-[#f0ede8]'
+                aria-label='Đóng Digital Card'
+              >
+                <X className='w-4 h-4 text-[#7a756e]' />
+              </button>
+            </div>
+
+            {digitalCardLoading ? (
+              <p className='text-sm text-[#7a756e]'>Đang tải digital card...</p>
+            ) : null}
+            {digitalCardError ? (
+              <div className='rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-700'>
+                {digitalCardError}
+              </div>
+            ) : null}
+            {!digitalCardLoading && !digitalCardError && digitalCardPet ? (
+              <PetDigitalCard pet={digitalCardPet} />
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

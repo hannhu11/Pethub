@@ -159,9 +159,8 @@ export class AuthService {
         where: { firebaseUid: input.firebaseUid },
         update: {
           clinicId: input.clinicId,
-          email: input.email,
-          name: input.displayName ?? undefined,
-          phone: input.phone || undefined,
+          // Preserve profile fields managed in PetHub settings to avoid stale Firebase
+          // token payload overwriting user-edited data after refresh/login.
         },
         create: {
           clinicId: input.clinicId,
@@ -199,9 +198,6 @@ export class AuthService {
         data: {
           firebaseUid: input.firebaseUid,
           clinicId: input.clinicId,
-          email: input.email,
-          name: input.displayName ?? existing.name,
-          phone: input.phone || existing.phone,
         },
       });
     }

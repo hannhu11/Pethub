@@ -5,9 +5,11 @@ const API_TIMEOUT_MS = 20_000;
 const MAX_GET_RETRIES = 1;
 
 function resolveApiBaseUrl(): string {
-  const configured = import.meta.env.VITE_API_BASE_URL?.trim();
+  const configured =
+    import.meta.env.VITE_API_BASE_URL?.trim() || import.meta.env.VITE_API_URL?.trim();
   const devDefault = 'http://localhost:4000/api';
-  const prodDefault = '/api';
+  const prodDefault =
+    typeof window !== 'undefined' ? `${window.location.origin}/api` : '/api';
 
   const fallback = import.meta.env.PROD ? prodDefault : devDefault;
   if (!configured) {
@@ -44,11 +46,21 @@ export const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
+  config.headers = config.headers ?? {};
+  if (!config.headers['Cache-Control']) {
+    config.headers['Cache-Control'] = 'no-cache';
+  }
+  if (!config.headers.Pragma) {
+    config.headers.Pragma = 'no-cache';
+  }
+  if (!config.headers.Expires) {
+    config.headers.Expires = '0';
+  }
+
   if (!accessToken) {
     return config;
   }
 
-  config.headers = config.headers ?? {};
   config.headers.Authorization = `Bearer ${accessToken}`;
   return config;
 });
