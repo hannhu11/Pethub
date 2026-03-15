@@ -630,11 +630,7 @@ export class PaymentsService {
 
       const raw = this.toJsonObject(response.data ?? {});
       const data = this.asRecord((response.data as Record<string, unknown> | undefined)?.data) ?? {};
-      const status =
-        this.coerceString(data.status) ||
-        this.coerceString(data.code) ||
-        this.coerceString((response.data as Record<string, unknown> | undefined)?.status) ||
-        '';
+      const status = this.coerceString(data.status) || '';
       const amount =
         this.coerceNumber(data.amount) ??
         this.coerceNumber((response.data as Record<string, unknown> | undefined)?.amount) ??
@@ -951,6 +947,7 @@ export class PaymentsService {
   }
 
   private resolvePaidState(status: string, dto: NormalizedWebhookPayload): boolean {
+    void dto;
     const normalizedStatus = status.trim().toUpperCase();
     if (
       [
@@ -961,24 +958,6 @@ export class PaymentsService {
         'DONE',
         'APPROVED',
       ].includes(normalizedStatus)
-    ) {
-      return true;
-    }
-
-    const code = this.getWebhookField(dto, 'code');
-    const normalizedCode = `${code ?? dto.code ?? ''}`.trim();
-    if (normalizedCode === '00' && dto.success !== false) {
-      return true;
-    }
-
-    const desc = `${this.getWebhookField(dto, 'desc') ?? dto.desc ?? ''}`
-      .trim()
-      .toLowerCase();
-    if (
-      ['success', 'paid', 'succeeded', 'completed', 'thanh cong', 'da thanh toan'].includes(
-        desc,
-      ) &&
-      dto.success !== false
     ) {
       return true;
     }
