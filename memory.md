@@ -438,3 +438,31 @@
 - Never commit `.env`, private keys, firebase key files, payOS raw credentials, or SSH key material.
 - Secret files found outside repo root must stay untracked.
 - Before each push: run secret scan + verify `git status` excludes sensitive files.
+
+## Iteration Update 2026-03-16 (Milestone 97% + Walk-in save stability)
+- Branch:
+  - `codex/complete-90-backend-frontend`
+- Milestone:
+  - Project status updated to **97% complete** (all locked menus unchanged; final active area remains POS/Invoice polishing and runtime validation).
+
+- Frontend-only fix completed this round:
+  - File: `src/app/components/manager-crm.tsx`
+  - Issue addressed:
+    - Manager `Thêm nhanh — Walk-in` could get stuck at `Đang lưu...` when uploading large pet images.
+    - Live nginx logs confirmed repeated `POST /api/pets` failures with `413 Request Entity Too Large` (payload ~6.6MB).
+  - Applied solution:
+    - Added client-side image optimization/compression before submit.
+    - Added payload-size guard with clear user-facing error when image remains too large after compression.
+    - Kept existing backend/API/schema untouched.
+
+- Deploy status:
+  - Synced updated frontend file to VPS (`/home/ubuntu/pethub/src/app/components/manager-crm.tsx`).
+  - Rebuilt/recreated **web container only**:
+    - `docker compose --env-file .env.production -f docker-compose.production.yml build web`
+    - `docker compose --env-file .env.production -f docker-compose.production.yml up -d --force-recreate web`
+  - New bundle observed on live index:
+    - `assets/index-lc-gXDtt.js`
+
+- Security and scope check:
+  - No backend code changes in this iteration.
+  - No credential/key files staged for commit.
