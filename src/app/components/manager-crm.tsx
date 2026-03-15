@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import {
   CalendarDays,
+  ChevronDown,
   Download,
   Edit3,
   Mail,
@@ -646,18 +647,21 @@ export function ManagerPetsPage() {
               className='pl-9 pr-4 py-2.5 border border-[#2d2a26] rounded-xl bg-white text-sm w-56'
             />
           </div>
-          <select
-            value={customerFilter}
-            onChange={(event) => setCustomerFilter(event.target.value)}
-            className='px-3 py-2.5 border border-[#2d2a26] rounded-xl bg-white text-sm'
-          >
-            <option value='all'>Tất cả khách hàng</option>
-            {customers.map((customer) => (
-              <option key={customer.id} value={customer.id}>
-                {customer.name}
-              </option>
-            ))}
-          </select>
+          <div className='relative'>
+            <select
+              value={customerFilter}
+              onChange={(event) => setCustomerFilter(event.target.value)}
+              className='min-w-[210px] appearance-none pl-3 pr-9 py-2.5 border border-[#2d2a26] rounded-xl bg-white text-sm'
+            >
+              <option value='all'>Tất cả khách hàng</option>
+              {customers.map((customer) => (
+                <option key={customer.id} value={customer.id}>
+                  {customer.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className='pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2d2a26]/70' />
+          </div>
           <button
             onClick={openCreate}
             className='inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#6b8f5e] text-white border border-[#2d2a26] text-sm'
@@ -680,26 +684,34 @@ export function ManagerPetsPage() {
               return (
                 <div
                   key={pet.id}
-                  className={`text-left bg-white border rounded-2xl p-4 transition ${
-                    selected ? 'border-[#6b8f5e] shadow-sm' : 'border-[#2d2a26]'
+                  role='button'
+                  tabIndex={0}
+                  onClick={() => {
+                    setSelectedPetId(pet.id);
+                    setDetailTab('info');
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setSelectedPetId(pet.id);
+                      setDetailTab('info');
+                    }
+                  }}
+                  className={`text-left bg-white border rounded-2xl p-4 transition-all duration-200 cursor-pointer ${
+                    selected
+                      ? 'border-[#6b8f5e] shadow-[0_10px_25px_rgba(107,143,94,0.16)]'
+                      : 'border-[#2d2a26] hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(45,42,38,0.12)]'
                   }`}
+                  aria-label={`Xem chi tiết thú cưng ${pet.name}`}
                 >
                   <div className='flex gap-3'>
                     <div className='w-14 h-14 rounded-xl overflow-hidden border border-[#2d2a26]'>
                       <ImageWithFallback src={view.image} alt={view.name} className='w-full h-full object-cover' />
                     </div>
                     <div className='flex-1'>
-                      <button
-                        type='button'
-                        onClick={() => {
-                          setSelectedPetId(pet.id);
-                          setDetailTab('info');
-                        }}
-                        className='text-sm text-[#2d2a26] hover:text-[#6b8f5e] transition-colors'
-                        style={{ fontWeight: 700 }}
-                      >
+                      <p className='text-sm text-[#2d2a26] transition-colors' style={{ fontWeight: 700 }}>
                         {pet.name}
-                      </button>
+                      </p>
                       <p className='text-xs text-[#7a756e]'>{pet.species} • {pet.breed || 'Chưa cập nhật giống'}</p>
                       <p className='text-xs text-[#7a756e]'>{pet.customer?.name || 'Chưa có chủ'}</p>
                     </div>
@@ -728,25 +740,25 @@ export function ManagerPetsPage() {
         </div>
 
         {selectedPet && selectedUiPet ? (
-          <div className='bg-white border border-[#2d2a26] rounded-2xl overflow-hidden'>
+          <div className='bg-[linear-gradient(180deg,#ffffff_0%,#f8f6f1_100%)] border border-[#2d2a26] rounded-3xl overflow-hidden shadow-[0_18px_42px_rgba(45,42,38,0.10)]'>
             <>
-              <div className='p-4 border-b border-[#2d2a26]/10 flex items-center justify-between gap-3'>
+              <div className='p-4 md:p-5 border-b border-[#2d2a26]/10 bg-white/75 flex items-center justify-between gap-3'>
                 <div className='flex items-center gap-3 min-w-0'>
-                  <div className='w-12 h-12 rounded-full overflow-hidden border border-[#2d2a26]/20'>
+                  <div className='w-14 h-14 rounded-2xl overflow-hidden border border-[#2d2a26]/20 shadow-sm'>
                     <ImageWithFallback src={selectedUiPet.image} alt={selectedUiPet.name} className='w-full h-full object-cover' />
                   </div>
                   <div className='min-w-0'>
-                    <p className='text-lg text-[#2d2a26] truncate' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                    <p className='text-2xl text-[#2d2a26] truncate leading-none' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
                       {selectedUiPet.name}
                     </p>
-                    <p className='text-xs text-[#7a756e] truncate'>{selectedUiPet.breed} • {selectedUiPet.species}</p>
+                    <p className='text-sm text-[#7a756e] truncate mt-1'>{selectedUiPet.breed} • {selectedUiPet.species}</p>
                     <p className='text-xs text-[#7a756e] truncate'>{selectedUiPet.ownerName}</p>
                   </div>
                 </div>
                 <button
                   type='button'
                   onClick={() => openEdit(selectedPet)}
-                  className='inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#2d2a26]/20 text-sm hover:bg-[#f0ede8]'
+                  className='inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[#2d2a26]/20 text-sm bg-white hover:bg-[#f0ede8]'
                 >
                   <Edit3 className='w-4 h-4' />
                   Sửa hồ sơ
@@ -761,7 +773,7 @@ export function ManagerPetsPage() {
                 </button>
               </div>
 
-              <div className='p-4 border-b border-[#2d2a26]/10 flex gap-2'>
+              <div className='px-4 py-3 md:px-5 border-b border-[#2d2a26]/10 flex flex-wrap gap-2'>
                 {[
                   { id: 'info' as const, label: 'Hồ sơ' },
                   { id: 'medical' as const, label: 'Bệnh án' },
@@ -781,8 +793,8 @@ export function ManagerPetsPage() {
                 ))}
               </div>
 
-              <div className='p-4 space-y-3 max-h-[70vh] overflow-auto'>
-                {detailTab === 'info' ? <PetProfileDetailPanel pet={selectedUiPet} /> : null}
+              <div className='p-4 md:p-5 space-y-3 max-h-[70vh] overflow-auto'>
+                {detailTab === 'info' ? <PetProfileDetailPanel pet={selectedUiPet} className='pb-1' /> : null}
 
                 {detailTab === 'medical' ? (
                   <div className='space-y-3'>
@@ -996,18 +1008,21 @@ export function ManagerPetsPage() {
               ) : null}
 
               {ownerMode === 'existing' ? (
-                <select
-                  value={form.existingOwner}
-                  onChange={(event) => setForm((prev) => ({ ...prev, existingOwner: event.target.value }))}
-                  className='w-full p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
-                >
-                  <option value=''>-- Chọn khách hàng --</option>
-                  {customers.map((customer) => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.name} ({customer.phone})
-                    </option>
-                  ))}
-                </select>
+                <div className='relative'>
+                  <select
+                    value={form.existingOwner}
+                    onChange={(event) => setForm((prev) => ({ ...prev, existingOwner: event.target.value }))}
+                    className='w-full appearance-none p-3 pr-10 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
+                  >
+                    <option value=''>-- Chọn khách hàng --</option>
+                    {customers.map((customer) => (
+                      <option key={customer.id} value={customer.id}>
+                        {customer.name} ({customer.phone})
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className='pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2d2a26]/70' />
+                </div>
               ) : (
                 <div className='grid gap-3'>
                   <input
@@ -1057,20 +1072,34 @@ export function ManagerPetsPage() {
                 <input type='date' value={form.petDob} onChange={(event) => setForm((prev) => ({ ...prev, petDob: event.target.value }))} className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white' />
                 <input type='number' value={form.petWeight} onChange={(event) => setForm((prev) => ({ ...prev, petWeight: event.target.value }))} placeholder='Cân nặng (kg)' className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white' />
                 <input value={form.coatColor} onChange={(event) => setForm((prev) => ({ ...prev, coatColor: event.target.value }))} placeholder='Màu lông' className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white' />
-                <select value={form.bloodType} onChange={(event) => setForm((prev) => ({ ...prev, bloodType: event.target.value }))} className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'>
-                  <option value='none'>Nhóm máu: Không rõ</option>
-                  <option value='A'>A</option>
-                  <option value='B'>B</option>
-                  <option value='AB'>AB</option>
-                  <option value='DEA 1.1+'>DEA 1.1+</option>
-                  <option value='DEA 1.1-'>DEA 1.1-</option>
-                </select>
+                <div className='relative'>
+                  <select
+                    value={form.bloodType}
+                    onChange={(event) => setForm((prev) => ({ ...prev, bloodType: event.target.value }))}
+                    className='w-full appearance-none p-3 pr-10 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
+                  >
+                    <option value='none'>Nhóm máu: Không rõ</option>
+                    <option value='A'>A</option>
+                    <option value='B'>B</option>
+                    <option value='AB'>AB</option>
+                    <option value='DEA 1.1+'>DEA 1.1+</option>
+                    <option value='DEA 1.1-'>DEA 1.1-</option>
+                  </select>
+                  <ChevronDown className='pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2d2a26]/70' />
+                </div>
                 <input value={form.microchipId} onChange={(event) => setForm((prev) => ({ ...prev, microchipId: event.target.value }))} placeholder='Microchip ID' className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white' />
-                <select value={form.neutered} onChange={(event) => setForm((prev) => ({ ...prev, neutered: event.target.value as 'yes' | 'no' | 'none' }))} className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'>
-                  <option value='none'>Triệt sản: Không rõ</option>
-                  <option value='yes'>Đã triệt sản</option>
-                  <option value='no'>Chưa triệt sản</option>
-                </select>
+                <div className='relative'>
+                  <select
+                    value={form.neutered}
+                    onChange={(event) => setForm((prev) => ({ ...prev, neutered: event.target.value as 'yes' | 'no' | 'none' }))}
+                    className='w-full appearance-none p-3 pr-10 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
+                  >
+                    <option value='none'>Triệt sản: Không rõ</option>
+                    <option value='yes'>Đã triệt sản</option>
+                    <option value='no'>Chưa triệt sản</option>
+                  </select>
+                  <ChevronDown className='pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2d2a26]/70' />
+                </div>
               </div>
               <div className='space-y-1'>
                 <div className='flex items-center justify-between'>
