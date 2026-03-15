@@ -5,7 +5,6 @@ import { useNavigate, useSearchParams } from 'react-router';
 import {
   checkoutPos,
   getPosPrefill,
-  getInvoiceById,
   listCatalogProducts,
   listCatalogServices,
   listCustomers,
@@ -68,7 +67,6 @@ export function ManagerPOSPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [checkoutResult, setCheckoutResult] = useState<PosCheckoutResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [checkingPayment, setCheckingPayment] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -130,7 +128,7 @@ export function ManagerPOSPage() {
     const raw = window.sessionStorage.getItem(LAST_POS_CHECKOUT_STORAGE_KEY);
     if (!raw) {
       if (paymentFlag === 'success') {
-        setMessage('Thanh toán đã hoàn tất trên payOS. Hệ thống đang xác minh trạng thái hóa đơn...');
+        setMessage('Đang chờ xác nhận thanh toán từ payOS/ngân hàng...');
       }
       return;
     }
@@ -152,12 +150,12 @@ export function ManagerPOSPage() {
         window.sessionStorage.removeItem(LAST_POS_CHECKOUT_STORAGE_KEY);
       } else if (stored.result?.invoiceId) {
         setCheckoutResult(stored.result);
-        if (stored.result.paymentStatus === 'paid') {
-          navigate(`/manager/pos/receipt/${stored.result.invoiceId}`, { replace: true });
-          return;
-        }
         if (stored.result.paymentAction) {
           navigate(`/manager/pos/transaction/${stored.result.invoiceId}`, { replace: true });
+          return;
+        }
+        if (stored.result.paymentStatus === 'paid') {
+          navigate(`/manager/pos/receipt/${stored.result.invoiceId}`, { replace: true });
           return;
         }
       }
@@ -166,7 +164,7 @@ export function ManagerPOSPage() {
     }
 
     if (paymentFlag === 'success') {
-      setMessage('Thanh toán đã hoàn tất trên payOS. Hệ thống đang xác minh trạng thái hóa đơn...');
+      setMessage('Đang chờ xác nhận thanh toán từ payOS/ngân hàng...');
     }
     if (paymentFlag === 'cancel') {
       setMessage('Khách đã hủy thanh toán trên payOS. Hóa đơn vẫn ở trạng thái chờ.');
@@ -247,57 +245,6 @@ export function ManagerPOSPage() {
       mounted = false;
     };
   }, [selectedCustomerId, selectedPetId]);
-
-  useEffect(() => {
-    if (!checkoutResult?.paymentAction || checkoutResult.paymentStatus === 'paid') {
-      return;
-    }
-
-    let mounted = true;
-    setCheckingPayment(true);
-
-    const poll = async () => {
-      try {
-        const data = await getInvoiceById(checkoutResult.invoiceId);
-        if (!mounted) {
-          return;
-        }
-
-        if (data.invoice.paymentStatus === 'paid') {
-          setCheckoutResult((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  paymentStatus: 'paid',
-                }
-              : prev,
-          );
-          setCart([]);
-          setMessage('payOS đã xác nhận giao dịch. Hóa đơn đã chuyển sang ĐÃ THANH TOÁN.');
-          setCheckingPayment(false);
-          window.sessionStorage.removeItem(LAST_POS_CHECKOUT_STORAGE_KEY);
-          navigate(`/manager/pos/receipt/${data.invoice.id}`, { replace: true });
-          return;
-        }
-      } catch {
-        if (mounted) {
-          setCheckingPayment(false);
-        }
-      }
-    };
-
-    const timer = setInterval(() => {
-      void poll();
-    }, 3000);
-
-    void poll();
-
-    return () => {
-      mounted = false;
-      setCheckingPayment(false);
-      clearInterval(timer);
-    };
-  }, [checkoutResult?.invoiceId, checkoutResult?.paymentAction, checkoutResult?.paymentStatus, navigate]);
 
   useEffect(() => {
     if (!checkoutResult) {
@@ -417,16 +364,18 @@ export function ManagerPOSPage() {
       });
 
       setCheckoutResult(result);
+      if (result.paymentAction) {
+        setMessage('Đã tạo giao dịch QR. Đang chờ xác nhận thanh toán từ payOS/ngân hàng.');
+        navigate(`/manager/pos/transaction/${result.invoiceId}`);
+        return;
+      }
       if (result.paymentStatus === 'paid') {
         setMessage('Thanh toán thành công. Hóa đơn đã được ghi nhận.');
         setCart([]);
         window.sessionStorage.removeItem(LAST_POS_CHECKOUT_STORAGE_KEY);
         navigate(`/manager/pos/receipt/${result.invoiceId}`);
       } else {
-        setMessage('Đã tạo hóa đơn chờ thanh toán. Khách vui lòng quét QR payOS để chuyển khoản.');
-        if (result.paymentAction) {
-          navigate(`/manager/pos/transaction/${result.invoiceId}`);
-        }
+        setMessage('Đã tạo hóa đơn chờ thanh toán.');
       }
     } catch (apiError) {
       setError(extractApiError(apiError));
@@ -678,9 +627,6 @@ export function ManagerPOSPage() {
                 <p className='text-xs text-[#7a756e]'>
                   payOS xác nhận qua webhook `POST /api/payments/payos/webhook`. Khi ngân hàng chuyển thành công, trạng thái sẽ tự cập nhật.
                 </p>
-              ) : null}
-              {checkingPayment && checkoutResult.paymentStatus !== 'paid' ? (
-                <p className='text-xs text-[#7a756e]'>Đang kiểm tra xác nhận thanh toán từ payOS...</p>
               ) : null}
             </div>
 
