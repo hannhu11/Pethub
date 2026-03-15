@@ -137,6 +137,75 @@ function readFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
+const MAX_PET_IMAGE_PAYLOAD_BYTES = 700_000;
+
+function estimateDataUrlBytes(dataUrl: string) {
+  const base64 = dataUrl.split(',')[1] ?? '';
+  return Math.floor((base64.length * 3) / 4);
+}
+
+function loadImageFromFile(file: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('Không thể xử lý ảnh tải lên.'));
+    };
+    image.src = objectUrl;
+  });
+}
+
+async function optimizePetImageForUpload(file: File) {
+  const originalDataUrl = await readFileAsDataUrl(file);
+  if (estimateDataUrlBytes(originalDataUrl) <= MAX_PET_IMAGE_PAYLOAD_BYTES) {
+    return originalDataUrl;
+  }
+
+  const source = await loadImageFromFile(file);
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  if (!context) {
+    return originalDataUrl;
+  }
+
+  const maxDimension = 1200;
+  const largerEdge = Math.max(source.naturalWidth, source.naturalHeight);
+  let width = source.naturalWidth;
+  let height = source.naturalHeight;
+  if (largerEdge > maxDimension) {
+    const ratio = maxDimension / largerEdge;
+    width = Math.max(320, Math.round(width * ratio));
+    height = Math.max(320, Math.round(height * ratio));
+  }
+
+  const qualitySteps = [0.86, 0.78, 0.7, 0.62, 0.54, 0.46, 0.4];
+  let bestAttempt = originalDataUrl;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    canvas.width = Math.max(320, Math.round(width));
+    canvas.height = Math.max(320, Math.round(height));
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(source, 0, 0, canvas.width, canvas.height);
+
+    for (const quality of qualitySteps) {
+      const output = canvas.toDataURL('image/jpeg', quality);
+      bestAttempt = output;
+      if (estimateDataUrlBytes(output) <= MAX_PET_IMAGE_PAYLOAD_BYTES) {
+        return output;
+      }
+    }
+
+    width *= 0.82;
+    height *= 0.82;
+  }
+
+  return bestAttempt;
+}
+
 function formatRecordDate(value: string) {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
@@ -406,7 +475,10 @@ export function ManagerPetsPage() {
     }
 
     try {
-      const dataUrl = await readFileAsDataUrl(file);
+      const dataUrl = await optimizePetImageForUpload(file);
+      if (estimateDataUrlBytes(dataUrl) > MAX_PET_IMAGE_PAYLOAD_BYTES) {
+        throw new Error('Ảnh quá lớn sau khi nén. Vui lòng chọn ảnh nhẹ hơn để lưu hồ sơ.');
+      }
       setForm((prev) => ({
         ...prev,
         imageUrl: dataUrl,
