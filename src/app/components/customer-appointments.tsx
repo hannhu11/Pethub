@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Clock3, PawPrint, PlusCircle, Stethoscope } from 'lucide-react';
+import { CalendarDays, ChevronDown, Clock3, PawPrint, PlusCircle, Stethoscope } from 'lucide-react';
 import { useSearchParams } from 'react-router';
 import type { ApiAppointment, ApiPet, ApiService, BookingDraft, CancelDialogState } from '../types';
 import { cancelAppointment, createAppointment, listAppointments, listCatalogServices, listPets } from '../lib/pethub-api';
@@ -262,19 +262,22 @@ export function CustomerAppointmentsPage() {
                 <Stethoscope className='w-4 h-4 text-[#6b8f5e]' />
                 Dịch vụ
               </label>
-              <select
-                value={draft.serviceId || ''}
-                onChange={(event) => setDraft((prev) => ({ ...prev, serviceId: event.target.value }))}
-                disabled={!hasServices}
-                className='w-full p-3 border border-[#2d2a26] rounded-xl bg-[#faf9f6]'
-              >
-                <option value=''>-- Chọn dịch vụ --</option>
-                {services.map((service) => (
-                  <option key={service.id} value={service.id}>
-                    {service.name} ({formatCurrency(service.price)})
-                  </option>
-                ))}
-              </select>
+              <div className='relative'>
+                <select
+                  value={draft.serviceId || ''}
+                  onChange={(event) => setDraft((prev) => ({ ...prev, serviceId: event.target.value }))}
+                  disabled={!hasServices}
+                  className='w-full appearance-none p-3 pr-10 border border-[#2d2a26] rounded-xl bg-[#faf9f6]'
+                >
+                  <option value=''>-- Chọn dịch vụ --</option>
+                  {services.map((service) => (
+                    <option key={service.id} value={service.id}>
+                      {service.name} ({formatCurrency(service.price)})
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className='pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2d2a26]/70' />
+              </div>
               {!loading && !hasServices ? (
                 <p className='mt-2 text-xs text-[#7a756e]'>Phòng khám chưa cập nhật dịch vụ. Vui lòng thử lại sau.</p>
               ) : null}
@@ -285,19 +288,22 @@ export function CustomerAppointmentsPage() {
                 <PawPrint className='w-4 h-4 text-[#6b8f5e]' />
                 Thú cưng
               </label>
-              <select
-                value={draft.petId || ''}
-                onChange={(event) => setDraft((prev) => ({ ...prev, petId: event.target.value }))}
-                disabled={!hasPets}
-                className='w-full p-3 border border-[#2d2a26] rounded-xl bg-[#faf9f6]'
-              >
-                <option value=''>-- Chọn thú cưng --</option>
-                {pets.map((pet) => (
-                  <option key={pet.id} value={pet.id}>
-                    {pet.name} ({pet.breed || pet.species})
-                  </option>
-                ))}
-              </select>
+              <div className='relative'>
+                <select
+                  value={draft.petId || ''}
+                  onChange={(event) => setDraft((prev) => ({ ...prev, petId: event.target.value }))}
+                  disabled={!hasPets}
+                  className='w-full appearance-none p-3 pr-10 border border-[#2d2a26] rounded-xl bg-[#faf9f6]'
+                >
+                  <option value=''>-- Chọn thú cưng --</option>
+                  {pets.map((pet) => (
+                    <option key={pet.id} value={pet.id}>
+                      {pet.name} ({pet.breed || pet.species})
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className='pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2d2a26]/70' />
+              </div>
               {!loading && !hasPets ? (
                 <p className='mt-2 text-xs text-[#7a756e]'>
                   Bạn chưa có thú cưng nào. Vui lòng liên hệ quản trị viên để thêm hồ sơ thú cưng trước khi đặt lịch.
