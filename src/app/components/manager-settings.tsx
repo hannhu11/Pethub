@@ -96,6 +96,55 @@ export function ManagerSettingsPage() {
   const [notifSaving, setNotifSaving] = useState(false);
   const [notifError, setNotifError] = useState('');
 
+  const applyManagerSettingsData = (data: Awaited<ReturnType<typeof getManagerSettings>>) => {
+    const nextProfile = {
+      name: data.profile.name,
+      email: data.profile.email,
+      phone: data.profile.phone,
+      role: toRoleLabel(data.profile.role),
+    };
+    const nextClinic = {
+      name: data.clinic?.clinicName ?? '',
+      taxId: data.clinic?.taxId ?? '',
+      phone: data.clinic?.phone ?? '',
+      address: data.clinic?.address ?? '',
+      invoiceNote: data.clinic?.invoiceNote ?? '',
+    };
+    const isPremiumPlan = Boolean(
+      data.subscription?.isActive ||
+        data.subscription?.planCode?.toLowerCase().includes('premium') ||
+        data.subscription?.planName?.toLowerCase().includes('premium'),
+    );
+    const nextSubscription = {
+      plan: isPremiumPlan ? 'premium' : 'basic',
+      amount: Number(data.subscription?.amount ?? getSubscriptionSettings().amount ?? 249000),
+      currency: 'VND' as const,
+      billingCycle: 'monthly' as const,
+      paymentMethod: getSubscriptionSettings().paymentMethod,
+      activatedAt: data.subscription?.startedAt
+        ? new Date(data.subscription.startedAt).toLocaleDateString('vi-VN')
+        : undefined,
+    };
+
+    setProfile(nextProfile);
+    setClinic(nextClinic);
+    setSubscription(nextSubscription);
+    setNotifications({
+      emailBooking: data.notifications.emailBooking,
+      emailReminder: data.notifications.emailReminder,
+      smsBooking: data.notifications.smsBooking,
+      smsReminder: data.notifications.smsReminder,
+      dailyReport: data.notifications.dailyReport,
+      weeklyReport: data.notifications.weeklyReport,
+    });
+
+    hydrateManagerSettings({
+      profile: nextProfile,
+      clinic: nextClinic,
+      subscription: nextSubscription,
+    });
+  };
+
   useEffect(() => {
     if (!requestedTab || !validTabIds.includes(requestedTab as SettingsTabId)) {
       return;
@@ -115,53 +164,7 @@ export function ManagerSettingsPage() {
         if (!mounted) {
           return;
         }
-
-        const nextProfile = {
-          name: data.profile.name,
-          email: data.profile.email,
-          phone: data.profile.phone,
-          role: toRoleLabel(data.profile.role),
-        };
-        const nextClinic = {
-          name: data.clinic?.clinicName ?? '',
-          taxId: data.clinic?.taxId ?? '',
-          phone: data.clinic?.phone ?? '',
-          address: data.clinic?.address ?? '',
-          invoiceNote: data.clinic?.invoiceNote ?? '',
-        };
-        const isPremiumPlan = Boolean(
-          data.subscription?.isActive ||
-            data.subscription?.planCode?.toLowerCase().includes('premium') ||
-            data.subscription?.planName?.toLowerCase().includes('premium'),
-        );
-        const nextSubscription = {
-          plan: isPremiumPlan ? 'premium' : 'basic',
-          amount: Number(data.subscription?.amount ?? getSubscriptionSettings().amount ?? 249000),
-          currency: 'VND' as const,
-          billingCycle: 'monthly' as const,
-          paymentMethod: getSubscriptionSettings().paymentMethod,
-          activatedAt: data.subscription?.startedAt
-            ? new Date(data.subscription.startedAt).toLocaleDateString('vi-VN')
-            : undefined,
-        };
-
-        setProfile(nextProfile);
-        setClinic(nextClinic);
-        setSubscription(nextSubscription);
-        setNotifications({
-          emailBooking: data.notifications.emailBooking,
-          emailReminder: data.notifications.emailReminder,
-          smsBooking: data.notifications.smsBooking,
-          smsReminder: data.notifications.smsReminder,
-          dailyReport: data.notifications.dailyReport,
-          weeklyReport: data.notifications.weeklyReport,
-        });
-
-        hydrateManagerSettings({
-          profile: nextProfile,
-          clinic: nextClinic,
-          subscription: nextSubscription,
-        });
+        applyManagerSettingsData(data);
       } catch (apiError) {
         if (mounted) {
           const message = extractApiError(apiError);
@@ -257,6 +260,14 @@ export function ManagerSettingsPage() {
         setClinic(nextClinic);
         saveClinicSettings(nextClinic);
         setSavedTarget('clinic');
+      }
+
+      // Force-read latest persisted settings to avoid stale UI after refresh (F5).
+      try {
+        const latest = await getManagerSettings();
+        applyManagerSettingsData(latest);
+      } catch {
+        // Keep optimistic values when follow-up reload is temporarily unavailable.
       }
 
       window.setTimeout(() => {

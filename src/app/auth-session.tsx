@@ -111,7 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const clinicSlug = resolveClinicSlug();
           return await syncFirebaseUser({
             idToken,
-            name: profileOverride?.name ?? firebaseUser.displayName ?? undefined,
+            name: profileOverride?.name,
             phone: profileOverride?.phone ?? firebaseUser.phoneNumber ?? undefined,
             clinicSlug,
           });

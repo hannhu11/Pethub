@@ -1,6 +1,7 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
+import type { NextFunction, Request, Response } from 'express';
 import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
 
@@ -29,6 +30,15 @@ async function bootstrap() {
       callback(new Error(`Origin ${origin} is not allowed by CORS`));
     },
     credentials: true,
+  });
+
+  const expressInstance = app.getHttpAdapter().getInstance();
+  expressInstance.set('etag', false);
+  app.use((_: Request, res: Response, next: NextFunction) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    next();
   });
 
   // Allow image/base64 payloads for pet profile upload and similar forms.

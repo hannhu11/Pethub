@@ -27,10 +27,10 @@ import {
   subscribeManagerSettingsUpdates,
 } from './manager-settings-store';
 import {
-  listAppointments,
-  listCustomers,
   listNotifications,
+  listCustomers,
   listPets,
+  listAppointments,
   markNotificationAsRead,
   getManagerSettings,
   type ApiNotification,
@@ -161,11 +161,12 @@ export function ManagerLayout() {
   });
   const [managerProfile, setManagerProfile] = useState(getProfileSettings());
   const [clinic, setClinic] = useState(getClinicSettings());
-  const [loadError, setLoadError] = useState('');
+  const [, setLoadError] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, session } = useAuthSession();
-  const liveDataInFlightRef = useRef(false);
+  const notificationsInFlightRef = useRef(false);
+  const quickSearchInFlightRef = useRef(false);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -181,66 +182,61 @@ export function ManagerLayout() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  const loadLiveData = useCallback(async (silent = false) => {
-    if (liveDataInFlightRef.current) {
+  const loadNotifications = useCallback(async (silent = false) => {
+    if (notificationsInFlightRef.current) {
       return;
     }
-    liveDataInFlightRef.current = true;
+    notificationsInFlightRef.current = true;
     if (!silent) {
       setLoadError('');
     }
     try {
-      const [notificationResult, customersResult, petsResult, appointmentsResult] =
-        await Promise.allSettled([
-          listNotifications('all'),
-          listCustomers(),
-          listPets(),
-          listAppointments(),
-        ]);
-
-      if (notificationResult.status === 'fulfilled') {
-        setNotifications(notificationResult.value.items.slice(0, 20));
-        setUnreadCount(notificationResult.value.unread);
-      }
-
-      setQuickSearchData((previous) => ({
-        customers:
-          customersResult.status === 'fulfilled'
-            ? customersResult.value.slice(0, 12)
-            : previous.customers,
-        pets: petsResult.status === 'fulfilled' ? petsResult.value.slice(0, 12) : previous.pets,
-        appointments:
-          appointmentsResult.status === 'fulfilled'
-            ? appointmentsResult.value.slice(0, 12)
-            : previous.appointments,
-      }));
-
-      const allRejected =
-        notificationResult.status === 'rejected' &&
-        customersResult.status === 'rejected' &&
-        petsResult.status === 'rejected' &&
-        appointmentsResult.status === 'rejected';
-
-      const firstError =
-        notificationResult.status === 'rejected'
-          ? notificationResult.reason
-          : customersResult.status === 'rejected'
-            ? customersResult.reason
-            : petsResult.status === 'rejected'
-              ? petsResult.reason
-              : appointmentsResult.status === 'rejected'
-                ? appointmentsResult.reason
-                : null;
-
-      if (allRejected && firstError && !silent) {
-        setLoadError(extractApiError(firstError));
-      } else {
+      const data = await listNotifications('all');
+      setNotifications(data.items.slice(0, 20));
+      setUnreadCount(data.unread);
+      if (!silent) {
         setLoadError('');
       }
+    } catch (apiError) {
+      if (!silent) {
+        setLoadError(extractApiError(apiError));
+      }
     } finally {
-      liveDataInFlightRef.current = false;
+      notificationsInFlightRef.current = false;
     }
   }, []);
+
+  const loadQuickSearchData = useCallback(async () => {
+    if (quickSearchInFlightRef.current) {
+      return;
+    }
+    if (
+      quickSearchData.customers.length > 0 ||
+      quickSearchData.pets.length > 0 ||
+      quickSearchData.appointments.length > 0
+    ) {
+      return;
+    }
+
+    quickSearchInFlightRef.current = true;
+    try {
+      const [customers, pets, appointments] = await Promise.all([
+        listCustomers(),
+        listPets(),
+        listAppointments(),
+      ]);
+
+      setQuickSearchData({
+        customers: customers.slice(0, 12),
+        pets: pets.slice(0, 12),
+        appointments: appointments.slice(0, 12),
+      });
+    } catch {
+      // Keep command palette usable even if quick-search data is temporarily unavailable.
+    } finally {
+      quickSearchInFlightRef.current = false;
+    }
+  }, [quickSearchData.appointments.length, quickSearchData.customers.length, quickSearchData.pets.length]);
 
   useEffect(() => {
     let mounted = true;
@@ -248,7 +244,7 @@ export function ManagerLayout() {
       if (!mounted) {
         return;
       }
-      await loadLiveData(silent);
+      await loadNotifications(silent);
     };
 
     void run(false);
@@ -260,7 +256,14 @@ export function ManagerLayout() {
       mounted = false;
       window.clearInterval(timer);
     };
-  }, [loadLiveData, session.user?.userId]);
+  }, [loadNotifications, session.user?.userId]);
+
+  useEffect(() => {
+    if (!commandOpen) {
+      return;
+    }
+    void loadQuickSearchData();
+  }, [commandOpen, loadQuickSearchData]);
 
   useEffect(() => {
     let mounted = true;
@@ -328,7 +331,7 @@ export function ManagerLayout() {
       }
 
       const refresh = () => {
-        void loadLiveData(true);
+        void loadNotifications(true);
       };
 
       socket.on('notification.created', refresh);
@@ -352,7 +355,7 @@ export function ManagerLayout() {
       active = false;
       cleanup?.();
     };
-  }, [loadLiveData, session.user?.userId]);
+  }, [loadNotifications, session.user?.userId]);
 
   useEffect(() => {
     return subscribeManagerSettingsUpdates(() => {
@@ -638,9 +641,6 @@ export function ManagerLayout() {
         </header>
 
         <main className='flex-1 p-4 md:p-6 overflow-auto print:p-0 print:m-0 print:overflow-visible print:bg-white'>
-          {loadError ? (
-            <div className='mb-4 rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-700'>{loadError}</div>
-          ) : null}
           <Outlet />
         </main>
       </div>
