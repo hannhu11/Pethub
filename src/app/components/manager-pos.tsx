@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Banknote, CreditCard, QrCode, Receipt, Search, ShoppingBag, Stethoscope, Trash2 } from 'lucide-react';
+import { Banknote, ChevronDown, CreditCard, QrCode, Receipt, Search, ShoppingBag, Stethoscope, Trash2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useNavigate, useSearchParams } from 'react-router';
 import {
@@ -523,35 +523,41 @@ export function ManagerPOSPage() {
             <div className='p-4 space-y-3 border-b border-[#2d2a26]/10'>
               <div>
                 <label className='text-xs text-[#7a756e]'>Khách hàng</label>
-                <select
-                  value={selectedCustomerId}
-                  onChange={(event) => setSelectedCustomerId(event.target.value)}
-                  className='w-full mt-1 p-2.5 rounded-xl border border-[#2d2a26] text-sm bg-white'
-                >
-                  <option value=''>-- Chọn khách hàng --</option>
-                  {customers.map((customer) => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.name} - {customer.phone}
-                    </option>
-                  ))}
-                </select>
+                <div className='relative mt-1'>
+                  <select
+                    value={selectedCustomerId}
+                    onChange={(event) => setSelectedCustomerId(event.target.value)}
+                    className='w-full appearance-none p-2.5 pr-10 rounded-xl border border-[#2d2a26] text-sm bg-white'
+                  >
+                    <option value=''>-- Chọn khách hàng --</option>
+                    {customers.map((customer) => (
+                      <option key={customer.id} value={customer.id}>
+                        {customer.name} - {customer.phone}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className='pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2d2a26]/70' />
+                </div>
               </div>
 
               <div>
                 <label className='text-xs text-[#7a756e]'>Thú cưng</label>
-                <select
-                  value={selectedPetId}
-                  onChange={(event) => setSelectedPetId(event.target.value)}
-                  disabled={pets.length === 0}
-                  className='w-full mt-1 p-2.5 rounded-xl border border-[#2d2a26] text-sm bg-white'
-                >
-                  <option value=''>-- Chọn thú cưng --</option>
-                  {pets.map((pet) => (
-                    <option key={pet.id} value={pet.id}>
-                      {pet.name} ({pet.species})
-                    </option>
-                  ))}
-                </select>
+                <div className='relative mt-1'>
+                  <select
+                    value={selectedPetId}
+                    onChange={(event) => setSelectedPetId(event.target.value)}
+                    disabled={pets.length === 0}
+                    className='w-full appearance-none p-2.5 pr-10 rounded-xl border border-[#2d2a26] text-sm bg-white'
+                  >
+                    <option value=''>-- Chọn thú cưng --</option>
+                    {pets.map((pet) => (
+                      <option key={pet.id} value={pet.id}>
+                        {pet.name} ({pet.species})
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className='pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2d2a26]/70' />
+                </div>
                 {!selectedCustomerId ? (
                   <p className='text-xs text-[#7a756e] mt-1'>Chọn khách hàng để tải danh sách thú cưng.</p>
                 ) : null}

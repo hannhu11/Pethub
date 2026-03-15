@@ -633,9 +633,7 @@ export function ManagerPetsPage() {
           <h1 className='text-2xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
             Quản lý thú cưng
           </h1>
-          <p className='text-sm text-[#7a756e] mt-1'>
-            {pets.length} hồ sơ thú cưng • {pets.filter((pet) => Boolean(pet.lastCheckupAt)).length} Digital Card
-          </p>
+          <p className='text-sm text-[#7a756e] mt-1'>{pets.length} hồ sơ thú cưng • {pets.length} Digital Card</p>
         </div>
         <div className='flex items-center gap-2'>
           <div className='relative'>
@@ -755,22 +753,24 @@ export function ManagerPetsPage() {
                     <p className='text-xs text-[#7a756e] truncate'>{selectedUiPet.ownerName}</p>
                   </div>
                 </div>
-                <button
-                  type='button'
-                  onClick={() => openEdit(selectedPet)}
-                  className='inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[#2d2a26]/20 text-sm bg-white hover:bg-[#f0ede8]'
-                >
-                  <Edit3 className='w-4 h-4' />
-                  Sửa hồ sơ
-                </button>
-                <button
-                  type='button'
-                  onClick={() => setSelectedPetId(null)}
-                  className='inline-flex items-center justify-center w-9 h-9 rounded-xl border border-[#2d2a26]/20 text-sm hover:bg-[#f0ede8]'
-                  aria-label='Đóng chi tiết thú cưng'
-                >
-                  <X className='w-4 h-4' />
-                </button>
+                <div className='flex items-center gap-3 shrink-0'>
+                  <button
+                    type='button'
+                    onClick={() => openEdit(selectedPet)}
+                    className='inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[#2d2a26]/20 text-sm bg-white hover:bg-[#f0ede8]'
+                  >
+                    <Edit3 className='w-4 h-4' />
+                    Sửa hồ sơ
+                  </button>
+                  <button
+                    type='button'
+                    onClick={() => setSelectedPetId(null)}
+                    className='inline-flex items-center justify-center w-9 h-9 rounded-xl border border-[#2d2a26]/20 text-sm hover:bg-[#f0ede8]'
+                    aria-label='Đóng chi tiết thú cưng'
+                  >
+                    <X className='w-4 h-4' />
+                  </button>
+                </div>
               </div>
 
               <div className='px-4 py-3 md:px-5 border-b border-[#2d2a26]/10 flex flex-wrap gap-2'>
