@@ -185,6 +185,7 @@ export interface InvoiceDetailsResponse {
     items: Array<{
       id: string;
       itemType: 'service' | 'product';
+      petId?: string | null;
       name: string;
       qty: number;
       unitPrice: number | string;

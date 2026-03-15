@@ -128,7 +128,7 @@ export function ManagerPOSPage() {
     const raw = window.sessionStorage.getItem(LAST_POS_CHECKOUT_STORAGE_KEY);
     if (!raw) {
       if (paymentFlag === 'success') {
-        setMessage('Đang chờ xác nhận thanh toán từ payOS/ngân hàng...');
+        setMessage('Đang chờ xác nhận thanh toán từ ngân hàng...');
       }
       return;
     }
@@ -164,10 +164,10 @@ export function ManagerPOSPage() {
     }
 
     if (paymentFlag === 'success') {
-      setMessage('Đang chờ xác nhận thanh toán từ payOS/ngân hàng...');
+      setMessage('Đang chờ xác nhận thanh toán từ ngân hàng...');
     }
     if (paymentFlag === 'cancel') {
-      setMessage('Khách đã hủy thanh toán trên payOS. Hóa đơn vẫn ở trạng thái chờ.');
+      setMessage('Khách đã hủy thanh toán trực tuyến. Hóa đơn vẫn ở trạng thái chờ.');
     }
   }, [appointmentId, navigate, paymentFlag]);
 
@@ -365,7 +365,7 @@ export function ManagerPOSPage() {
 
       setCheckoutResult(result);
       if (result.paymentAction) {
-        setMessage('Đã tạo giao dịch QR. Đang chờ xác nhận thanh toán từ payOS/ngân hàng.');
+        setMessage('Đã tạo giao dịch QR. Đang chờ xác nhận thanh toán từ ngân hàng.');
         navigate(`/manager/pos/transaction/${result.invoiceId}`);
         return;
       }
@@ -392,7 +392,9 @@ export function ManagerPOSPage() {
         <h1 className='text-2xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
           Thanh toán POS
         </h1>
-        <p className='text-sm text-[#7a756e]'>Checkout backend thật. QR chuyển khoản dùng payOS và xác nhận qua webhook.</p>
+        <p className='text-sm text-[#7a756e]'>
+          Nền tảng thanh toán đa kênh. Giao dịch được xử lý an toàn, nhanh chóng và tự động cập nhật trạng thái.
+        </p>
       </div>
 
       {error ? <div className='rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-700'>{error}</div> : null}
@@ -453,8 +455,8 @@ export function ManagerPOSPage() {
           {!loading && visibleItems.length === 0 ? (
             <div className='rounded-xl border border-[#2d2a26]/20 bg-white p-4 text-sm text-[#7a756e]'>
               {tab === 'service'
-                ? 'Chưa có dịch vụ backend thật trong catalog. Vui lòng vào mục Sản phẩm & Dịch vụ để thêm dịch vụ.'
-                : 'Chưa có sản phẩm backend thật trong catalog.'}
+                ? 'Chưa có dịch vụ trong danh mục. Vui lòng vào mục Sản phẩm & Dịch vụ để thêm dịch vụ.'
+                : 'Chưa có sản phẩm trong danh mục.'}
             </div>
           ) : null}
           {loading ? <p className='text-sm text-[#7a756e]'>Đang tải dữ liệu POS...</p> : null}
@@ -615,7 +617,7 @@ export function ManagerPOSPage() {
                 Hóa đơn: <span style={{ fontWeight: 600 }}>{checkoutResult.invoiceNo}</span>
               </p>
               <p>
-                Mã đơn payOS: <span style={{ fontWeight: 600 }}>{checkoutResult.paymentAction?.orderCode || '--'}</span>
+                Mã giao dịch QR: <span style={{ fontWeight: 600 }}>{checkoutResult.paymentAction?.orderCode || '--'}</span>
               </p>
               <p>
                 Trạng thái:{' '}
@@ -625,7 +627,7 @@ export function ManagerPOSPage() {
               </p>
               {checkoutResult.paymentAction ? (
                 <p className='text-xs text-[#7a756e]'>
-                  payOS xác nhận qua webhook `POST /api/payments/payos/webhook`. Khi ngân hàng chuyển thành công, trạng thái sẽ tự cập nhật.
+                  Hệ thống sẽ tự động cập nhật trạng thái ngay khi giao dịch được ngân hàng xác nhận.
                 </p>
               ) : null}
             </div>
@@ -633,14 +635,14 @@ export function ManagerPOSPage() {
             {checkoutResult.paymentAction ? (
               <div className='border border-[#2d2a26]/15 rounded-xl p-4 flex flex-col items-center gap-3'>
                 {qrValue?.startsWith('http') || qrValue?.startsWith('data:image') ? (
-                  <img src={qrValue} alt='payOS QR' className='w-52 h-52 object-contain border border-[#2d2a26]/10 rounded-lg p-2 bg-white' />
+                  <img src={qrValue} alt='QR thanh toán' className='w-52 h-52 object-contain border border-[#2d2a26]/10 rounded-lg p-2 bg-white' />
                 ) : qrValue ? (
                   <div className='w-56 h-56 border border-[#2d2a26]/10 rounded-lg p-2 bg-white flex items-center justify-center'>
                     <QRCodeSVG value={qrValue} size={200} />
                   </div>
                 ) : (
                   <div className='w-52 h-52 border border-dashed border-[#2d2a26]/20 rounded-lg flex items-center justify-center text-xs text-[#7a756e]'>
-                    Chưa có QR từ payOS
+                    Chưa có mã QR thanh toán
                   </div>
                 )}
                 <a
@@ -649,7 +651,7 @@ export function ManagerPOSPage() {
                   rel='noreferrer'
                   className='text-sm text-[#6b8f5e] underline'
                 >
-                  Mở link thanh toán payOS
+                  Mở liên kết thanh toán
                 </a>
               </div>
             ) : null}

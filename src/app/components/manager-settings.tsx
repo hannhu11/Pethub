@@ -342,7 +342,7 @@ export function ManagerSettingsPage() {
           {'Cài đặt'}
         </h1>
         <p className="text-sm text-[#7a756e] mt-1">{'Quản lý thông tin tài khoản và phòng khám'}</p>
-        {settingsLoading ? <p className='text-xs text-[#7a756e] mt-2'>Đang đồng bộ cấu hình từ backend...</p> : null}
+        {settingsLoading ? <p className='text-xs text-[#7a756e] mt-2'>Đang đồng bộ cấu hình hệ thống...</p> : null}
         {settingsError ? <p className='text-xs text-red-600 mt-2'>{settingsError}</p> : null}
       </div>
 

@@ -3,13 +3,14 @@ import { useNavigate, useParams } from 'react-router';
 import { ArrowLeft, Download, Printer } from 'lucide-react';
 import { extractApiError } from '../lib/api-client';
 import { downloadElementAsPdf } from './export-utils';
-import { getInvoiceById, type InvoiceDetailsResponse } from '../lib/pethub-api';
+import { getInvoiceById, listPets, type InvoiceDetailsResponse } from '../lib/pethub-api';
+import type { ApiPet } from '../types';
 
 const paymentMethodLabel: Record<string, string> = {
   cash: 'Tiền mặt',
   transfer: 'Chuyển khoản',
   card: 'Thẻ',
-  payos: 'payOS',
+  payos: 'Chuyển khoản QR',
   momo: 'MoMo',
   zalopay: 'ZaloPay',
 };
@@ -32,6 +33,7 @@ export function ManagerInvoicePage() {
   const navigate = useNavigate();
   const invoiceRef = useRef<HTMLDivElement>(null);
   const [payload, setPayload] = useState<InvoiceDetailsResponse | null>(null);
+  const [fallbackPet, setFallbackPet] = useState<ApiPet | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState('');
@@ -68,6 +70,50 @@ export function ManagerInvoicePage() {
 
   const invoice = payload?.invoice;
   const clinic = payload?.clinic;
+  const appointmentPet = invoice?.appointment?.pet ?? null;
+  const fallbackPetId = invoice?.items.find((item) => item.petId)?.petId ?? null;
+  const resolvedPet = appointmentPet
+    ? {
+        name: appointmentPet.name,
+        species: appointmentPet.species,
+        breed: appointmentPet.breed,
+      }
+    : fallbackPet
+      ? {
+          name: fallbackPet.name,
+          species: fallbackPet.species,
+          breed: fallbackPet.breed ?? null,
+        }
+      : null;
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadFallbackPet = async () => {
+      if (!invoice || appointmentPet || !fallbackPetId) {
+        setFallbackPet(null);
+        return;
+      }
+
+      try {
+        const customerPets = await listPets(invoice.customerId);
+        if (!mounted) {
+          return;
+        }
+        setFallbackPet(customerPets.find((pet) => pet.id === fallbackPetId) ?? null);
+      } catch {
+        if (mounted) {
+          setFallbackPet(null);
+        }
+      }
+    };
+
+    void loadFallbackPet();
+
+    return () => {
+      mounted = false;
+    };
+  }, [appointmentPet, fallbackPetId, invoice]);
 
   const handleDownloadPdf = async () => {
     if (!invoiceRef.current || downloading || !invoice) return;
@@ -171,11 +217,11 @@ export function ManagerInvoicePage() {
           <div className='border border-[#2d2a26]/20 rounded-xl p-4'>
             <p className='text-xs uppercase tracking-wider text-[#7a756e]'>Thú cưng</p>
             <p className='text-base text-[#2d2a26] mt-1' style={{ fontWeight: 600 }}>
-              {invoice.appointment?.pet?.name || '—'}
+              {resolvedPet?.name || '—'}
             </p>
             <p className='text-sm text-[#7a756e]'>
-              {invoice.appointment?.pet
-                ? `${invoice.appointment.pet.species} • ${invoice.appointment.pet.breed || 'Chưa rõ'}`
+              {resolvedPet
+                ? `${resolvedPet.species} • ${resolvedPet.breed || 'Chưa rõ'}`
                 : 'Không có thông tin thú cưng'}
             </p>
             <p className='text-sm text-[#7a756e]'>
