@@ -166,7 +166,9 @@ export function ManagerReminderTemplatesPage() {
           <h1 className='text-2xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
             Tạo nhắc nhở từ mẫu
           </h1>
-          <p className='text-sm text-[#7a756e] mt-1'>Template chuẩn hóa, gửi bằng dữ liệu thật từ backend.</p>
+          <p className='text-sm text-[#7a756e] mt-1'>
+            Thư viện kịch bản chăm sóc chuyên nghiệp. Cá nhân hóa thông điệp và tự động hóa hành trình khách hàng.
+          </p>
         </div>
       </div>
 

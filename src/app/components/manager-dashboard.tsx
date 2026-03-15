@@ -147,7 +147,9 @@ export function ManagerDashboardPage() {
           <h1 className='text-2xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
             Tổng quan
           </h1>
-          <p className='text-sm text-[#7a756e]'>Nguồn dữ liệu backend thật, đồng bộ analytics + customer LTV</p>
+          <p className='text-sm text-[#7a756e]'>
+            Trung tâm điều hành toàn diện. Phân tích doanh thu theo thời gian và tối ưu giá trị trọn đời khách hàng.
+          </p>
         </div>
       </div>
 

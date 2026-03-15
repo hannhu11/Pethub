@@ -254,7 +254,9 @@ export function ManagerCatalogPage() {
           <h1 className='text-2xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
             Sản phẩm & Dịch vụ
           </h1>
-          <p className='text-sm text-[#7a756e] mt-1'>Nguồn dữ liệu backend thật. Không dùng mock dataset.</p>
+          <p className='text-sm text-[#7a756e] mt-1'>
+            Hệ thống quản lý danh mục thông minh. Kiểm soát dịch vụ và sản phẩm đồng bộ, chính xác, linh hoạt.
+          </p>
         </div>
         <button
           type='button'

@@ -59,7 +59,7 @@ export function ManagerPosTransactionStatusPage() {
       setConfirmedBy(by);
       setChecking(false);
       setEarlyPaidGuardActive(false);
-      setMessage('payOS đã xác nhận giao dịch. Đang chuyển sang trang in hóa đơn...');
+      setMessage('Giao dịch đã được xác nhận. Đang chuyển sang trang in hóa đơn...');
       window.sessionStorage.removeItem('pethub:last-pos-checkout');
       if (redirectTimerRef.current) {
         window.clearTimeout(redirectTimerRef.current);
@@ -351,7 +351,7 @@ export function ManagerPosTransactionStatusPage() {
             {phase === 'confirmed' ? (
               <div className='flex items-center gap-2 text-sm text-emerald-700'>
                 <CircleCheck className='w-4 h-4' />
-                <span style={{ fontWeight: 600 }}>payOS đã xác nhận. Đang chuyển sang trang in hóa đơn...</span>
+                <span style={{ fontWeight: 600 }}>Giao dịch đã được xác nhận. Đang chuyển sang trang in hóa đơn...</span>
               </div>
             ) : (
               <div className='flex items-center gap-2 text-sm text-[#7a756e]'>
@@ -366,7 +366,7 @@ export function ManagerPosTransactionStatusPage() {
               </div>
             ) : null}
             {phase === 'waiting' && checking ? (
-              <p className='text-xs text-[#7a756e] mt-2'>Đang kiểm tra webhook payOS mỗi 3 giây...</p>
+              <p className='text-xs text-[#7a756e] mt-2'>Đang kiểm tra trạng thái thanh toán mỗi 3 giây...</p>
             ) : null}
             {phase === 'confirmed' && confirmedBy ? (
               <p className='text-xs text-[#7a756e] mt-2'>
@@ -396,7 +396,7 @@ export function ManagerPosTransactionStatusPage() {
               {qrValue?.startsWith('http') || qrValue?.startsWith('data:image') ? (
                 <img
                   src={qrValue}
-                  alt='payOS QR'
+                  alt='QR thanh toán'
                   className='w-52 h-52 object-contain border border-[#2d2a26]/10 rounded-lg p-2 bg-white'
                 />
               ) : qrValue ? (
@@ -405,7 +405,7 @@ export function ManagerPosTransactionStatusPage() {
                 </div>
               ) : (
                 <div className='w-52 h-52 border border-dashed border-[#2d2a26]/20 rounded-lg flex items-center justify-center text-xs text-[#7a756e]'>
-                  Chưa có QR từ payOS
+                    Chưa có mã QR thanh toán
                 </div>
               )}
               <a
@@ -415,12 +415,12 @@ export function ManagerPosTransactionStatusPage() {
                 className='inline-flex items-center gap-1 text-sm text-[#6b8f5e] underline'
               >
                 <ExternalLink className='w-4 h-4' />
-                Mở link thanh toán payOS
+                Mở liên kết thanh toán
               </a>
             </div>
           ) : (
             <p className='text-sm text-[#7a756e] mt-4'>
-              Giao dịch này không dùng QR payOS. Nếu đã thanh toán tiền mặt/thẻ, hệ thống sẽ chuyển thẳng sang hóa đơn.
+              Giao dịch này không dùng mã QR chuyển khoản. Nếu đã thanh toán tiền mặt/thẻ, hệ thống sẽ chuyển thẳng sang hóa đơn.
             </p>
           )}
         </div>

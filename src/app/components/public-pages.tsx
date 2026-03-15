@@ -96,7 +96,7 @@ export function AboutPage() {
           <div className='bg-white border border-[#2d2a26] rounded-2xl p-5'>
             <Sparkles className='w-6 h-6 text-[#6b8f5e] mb-3' />
             <h2 className='text-lg mb-2' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Sẵn sàng mở rộng</h2>
-            <p className='text-sm text-[#7a756e]'>Thiết kế để scale từ một cửa hàng đến chuỗi đa chi nhánh trong các phase backend tiếp theo.</p>
+            <p className='text-sm text-[#7a756e]'>Thiết kế để mở rộng từ một cửa hàng đến chuỗi đa chi nhánh với hiệu suất ổn định.</p>
           </div>
         </div>
       </div>

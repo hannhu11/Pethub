@@ -143,7 +143,7 @@ export function ManagerNotificationsPage() {
           <h1 className='text-2xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
             Trung tâm thông báo
           </h1>
-          <p className='text-sm text-[#7a756e] mt-1'>Dữ liệu realtime từ backend, không dùng mock notifications.</p>
+          <p className='text-sm text-[#7a756e] mt-1'>Cập nhật theo thời gian thực để bạn theo dõi mọi hoạt động quan trọng ngay tức thì.</p>
         </div>
         <button
           type='button'

@@ -9,7 +9,7 @@ const paymentMethodLabel: Record<string, string> = {
   cash: 'Tiền mặt',
   transfer: 'Chuyển khoản',
   card: 'Thẻ',
-  payos: 'payOS',
+  payos: 'Chuyển khoản QR',
   momo: 'MoMo',
   zalopay: 'ZaloPay',
 };
