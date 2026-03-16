@@ -294,6 +294,11 @@ export interface ApiNotificationsListResponse {
   items: ApiNotification[];
   unread: number;
   filter: 'all' | 'unread' | 'read';
+  counts: {
+    all: number;
+    unread: number;
+    read: number;
+  };
 }
 
 export interface ApiNotificationSettings {
