@@ -1,36 +1,53 @@
 
-# PetHub
+# PetHub (Public Submission)
 
-PetHub includes:
+PetHub is a pet-care platform with:
 
-- Frontend (`Vite + React`) in project root
-- Backend (`NestJS + Prisma + PostgreSQL + Firebase Auth`) in `/backend`
+- Frontend: `Vite + React + TypeScript`
+- Backend: `NestJS + Prisma + PostgreSQL + Redis`
+- Authentication: Firebase (ID token verification)
 
-## 1) Local development
+This repository is prepared for **public sharing** and does not include private secrets.
 
-### Frontend
+## Project structure
+
+- `/src`: frontend application
+- `/backend`: backend API
+- `/docker`: container and Nginx configs
+- `/docs`: technical and deployment notes
+
+## Local setup
+
+## 1) Frontend
 
 ```bash
-npm i
+npm install
 cp .env.example .env
 npm run dev
 ```
 
-Required frontend env:
-- `VITE_API_BASE_URL`
-- `VITE_FIREBASE_*` (web app config from Firebase Console)
+Required frontend env values:
 
-### Backend
+- `VITE_API_BASE_URL`
+- `VITE_FIREBASE_API_KEY`
+- `VITE_FIREBASE_AUTH_DOMAIN`
+- `VITE_FIREBASE_PROJECT_ID`
+- `VITE_FIREBASE_STORAGE_BUCKET`
+- `VITE_FIREBASE_MESSAGING_SENDER_ID`
+- `VITE_FIREBASE_APP_ID`
+- `VITE_FIREBASE_MEASUREMENT_ID`
+
+## 2) Backend
 
 ```bash
 cd backend
-npm i
+npm install
 cp .env.example .env
 npx prisma generate
 npm run start:dev
 ```
 
-## 2) Build checks
+## Build and test
 
 ```bash
 npm run build
@@ -38,41 +55,27 @@ npm --prefix backend run build
 npm --prefix backend test -- --runInBand
 ```
 
-## 3) Production deployment (Oracle VPS)
+## Environment and secret policy
 
-- Compose file: `/docker-compose.production.yml`
-- Nginx route template: `/docker/nginx/pethub.conf`
-- Logic audit: `/docs/LOGIC_AUDIT.md`
-- Operations runbook: `/docs/ORACLE_PRODUCTION_RUNBOOK_VN.md`
-- Go-live checklist: `/docs/GO_LIVE_24_7.md`
-- Auth admin guide: `/docs/AUTH_ADMIN_GUIDE.md`
+- Do not commit `.env`, `.env.production`, or any private key files.
+- Use only template files: `.env.example`, `.env.production.example`, `backend/.env.example`.
+- Keep all sensitive values empty in repository files and fill them only in deployment environment.
+- Rotate all credentials if any key was ever exposed.
 
-Bring up production stack:
+## Deployment references
+
+- `docker-compose.production.yml`
+- `docker/nginx/pethub.conf`
+- `docs/ORACLE_PRODUCTION_RUNBOOK_VN.md`
+- `docs/GO_LIVE_24_7.md`
+
+Example production command:
 
 ```bash
 docker compose -f docker-compose.production.yml -p pethub up -d --build
 ```
 
-Troubleshooting public access on Oracle:
-- If `curl http://127.0.0.1/api/health` works on VPS but `http://<public-ip>/api/health` times out, traffic is blocked before reaching the VM.
-- Check the instance subnet uses the security list you edited.
-- If VNIC has NSG attached, add ingress rules there too (`80`, `443`, source `0.0.0.0/0`).
-- Keep OS firewall open (`iptables INPUT policy ACCEPT` or explicit allow rules).
-- `4000` does not need to be public; keep it internal behind Nginx.
+## Notes for graders/reviewers
 
-## Security baseline
-
-- Never commit `.env*`, Firebase service account JSON, or private keys.
-- Rotate all previously exposed keys before go-live.
-- Set `AUTH_MOCK_ENABLED=false` in production.
-- Set `DEFAULT_SENSITIVE_PASSWORD` to a strong value (minimum 12 chars) if password hash is not initialized.
-
-## 4) Production architecture
-
-- `app.<domain>` -> frontend container
-- `api.<domain>` -> NestJS API container
-- PostgreSQL is source of truth (business data)
-- Redis for queue/realtime support
-- Firebase for authentication tokens
-- payOS/VietQR for subscription payment flow
-- Gemini for reminder text generation
+- This public submission intentionally excludes private operational materials and machine-specific secrets.
+- To run the project, provide your own environment variables in local `.env` files based on the templates.
