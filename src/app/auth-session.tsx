@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { Navigate, Outlet, useLocation } from 'react-router';
 import {
   createUserWithEmailAndPassword,
-  onAuthStateChanged,
+  onIdTokenChanged,
   sendPasswordResetEmail,
   signInWithPopup,
   signInWithEmailAndPassword,
@@ -11,7 +11,7 @@ import {
   type User as FirebaseUser,
 } from 'firebase/auth';
 import { firebaseAuth, googleProvider } from './lib/firebase';
-import { setApiAccessToken } from './lib/api-client';
+import { setApiAccessToken, setApiAccessTokenResolver } from './lib/api-client';
 import { completeOnboarding, syncFirebaseUser, type AuthSessionPayload } from './lib/pethub-api';
 import { toFriendlyAuthError } from './lib/auth-errors';
 import type { AuthRole, AuthUser, SessionState } from './types';
@@ -96,6 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<SessionState>(loadingSession);
   const syncInFlightRef = useRef<Promise<AuthSessionPayload> | null>(null);
   const syncInFlightUidRef = useRef<string | null>(null);
+  const sessionRef = useRef<SessionState>(loadingSession);
 
   const hydrateUser = useCallback(
     async (firebaseUser: FirebaseUser, profileOverride?: { name?: string; phone?: string }) => {
@@ -134,9 +135,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
+
+  useEffect(() => {
     let mounted = true;
 
-    const unsubscribe = onAuthStateChanged(firebaseAuth, async (firebaseUser) => {
+    setApiAccessTokenResolver(async (options) => {
+      const currentUser = firebaseAuth.currentUser;
+      if (!currentUser) {
+        return null;
+      }
+
+      const token = await currentUser.getIdToken(options?.forceRefresh ?? false);
+      if (mounted) {
+        setApiAccessToken(token);
+      }
+      return token;
+    });
+
+    const unsubscribe = onIdTokenChanged(firebaseAuth, async (firebaseUser) => {
       if (!mounted) {
         return;
       }
@@ -145,6 +163,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setApiAccessToken(null);
         resetManagerSettingsStore();
         setSession(unauthenticatedSession);
+        return;
+      }
+
+      try {
+        const idToken = await firebaseUser.getIdToken();
+        setApiAccessToken(idToken);
+      } catch {
+        setApiAccessToken(null);
+      }
+
+      const currentSession = sessionRef.current;
+      const isSameAuthenticatedUser =
+        currentSession.status === 'authenticated' &&
+        currentSession.user?.firebaseUid === firebaseUser.uid;
+
+      if (isSameAuthenticatedUser) {
+        if (currentSession.error) {
+          setSession((previous) => ({ ...previous, error: null }));
+        }
         return;
       }
 
@@ -167,6 +204,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mounted = false;
+      setApiAccessTokenResolver(null);
       unsubscribe();
     };
   }, [hydrateUser]);

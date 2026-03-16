@@ -1,6 +1,8 @@
 import axios from 'axios';
 
 let accessToken: string | null = null;
+type AccessTokenResolver = (options?: { forceRefresh?: boolean }) => Promise<string | null>;
+let accessTokenResolver: AccessTokenResolver | null = null;
 const API_TIMEOUT_MS = 20_000;
 const MAX_GET_RETRIES = 1;
 
@@ -40,12 +42,29 @@ function resolveApiBaseUrl(): string {
 
 const API_BASE_URL = resolveApiBaseUrl();
 
+async function resolveAccessToken(options?: { forceRefresh?: boolean }) {
+  if (!accessTokenResolver) {
+    return accessToken;
+  }
+
+  try {
+    const token = await accessTokenResolver(options);
+    accessToken = token && token.length > 0 ? token : null;
+  } catch {
+    if (options?.forceRefresh) {
+      accessToken = null;
+    }
+  }
+
+  return accessToken;
+}
+
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: API_TIMEOUT_MS,
 });
 
-apiClient.interceptors.request.use((config) => {
+apiClient.interceptors.request.use(async (config) => {
   config.headers = config.headers ?? {};
   if (!config.headers['Cache-Control']) {
     config.headers['Cache-Control'] = 'no-cache';
@@ -57,11 +76,12 @@ apiClient.interceptors.request.use((config) => {
     config.headers.Expires = '0';
   }
 
-  if (!accessToken) {
+  const token = await resolveAccessToken();
+  if (!token) {
     return config;
   }
 
-  config.headers.Authorization = `Bearer ${accessToken}`;
+  config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
@@ -72,9 +92,25 @@ apiClient.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    const requestConfig = error.config as typeof error.config & { __retryCount?: number };
+    const requestConfig = error.config as typeof error.config & {
+      __retryCount?: number;
+      __authRetried?: boolean;
+    };
     const method = (requestConfig.method ?? 'get').toLowerCase();
     const retryCount = requestConfig.__retryCount ?? 0;
+    const status = error.response?.status ?? 0;
+
+    if (status === 401 && !requestConfig.__authRetried) {
+      requestConfig.__authRetried = true;
+      const refreshedToken = await resolveAccessToken({ forceRefresh: true });
+
+      if (refreshedToken) {
+        requestConfig.headers = requestConfig.headers ?? {};
+        requestConfig.headers.Authorization = `Bearer ${refreshedToken}`;
+        return apiClient(requestConfig);
+      }
+    }
+
     const hasNoHttpResponse = !error.response;
     const isNetworkFailure =
       hasNoHttpResponse &&
@@ -94,6 +130,10 @@ apiClient.interceptors.response.use(
 
 export function setApiAccessToken(token: string | null) {
   accessToken = token;
+}
+
+export function setApiAccessTokenResolver(resolver: AccessTokenResolver | null) {
+  accessTokenResolver = resolver;
 }
 
 export function extractApiError(error: unknown): string {
