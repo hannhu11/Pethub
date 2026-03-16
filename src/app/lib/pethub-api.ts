@@ -316,6 +316,8 @@ export interface ApiSettingsProfile {
 
 export interface ApiSettingsBilling {
   startedAt: string | null;
+  expiresAt: string | null;
+  remainingDays: number | null;
 }
 
 export interface ApiSettingsUsage {

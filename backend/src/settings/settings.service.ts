@@ -50,7 +50,7 @@ export class SettingsService {
       throw new NotFoundException('User not found');
     }
 
-    const [clinic, clinicProfile, subscription, notificationSettings, petCount] = await Promise.all([
+    const [clinic, clinicProfile, rawSubscription, notificationSettings, petCount] = await Promise.all([
       this.prisma.clinicSettings.findFirst({
         where: {
           clinicId: currentUser.clinicId,
@@ -83,6 +83,40 @@ export class SettingsService {
       }),
     ]);
 
+    const now = new Date();
+    let subscription = rawSubscription;
+
+    if (
+      subscription &&
+      this.isPremiumSubscription(subscription.planCode, subscription.planName, subscription.isActive) &&
+      subscription.expiresAt &&
+      subscription.expiresAt.getTime() <= now.getTime()
+    ) {
+      subscription = await this.prisma.subscription.update({
+        where: { id: subscription.id },
+        data: {
+          planCode: 'basic-free',
+          planName: 'Basic',
+          amount: 0,
+          isActive: false,
+          startedAt: null,
+          expiresAt: null,
+        },
+      });
+    }
+
+    const isPremiumActive = Boolean(
+      subscription &&
+        this.isPremiumSubscription(subscription.planCode, subscription.planName, subscription.isActive),
+    );
+    const startedAt = isPremiumActive
+      ? subscription?.startedAt?.toISOString() ?? null
+      : clinicProfile?.createdAt?.toISOString() ?? null;
+    const expiresAt = isPremiumActive ? subscription?.expiresAt?.toISOString() ?? null : null;
+    const remainingDays = isPremiumActive
+      ? this.calculateRemainingDays(subscription?.expiresAt ?? null, now)
+      : null;
+
     return {
       profile: {
         id: user.id,
@@ -94,13 +128,39 @@ export class SettingsService {
       clinic,
       subscription,
       billing: {
-        startedAt: clinicProfile?.createdAt?.toISOString() ?? null,
+        startedAt,
+        expiresAt,
+        remainingDays,
       },
       usage: {
         petCount,
       },
       notifications: this.toNotificationSettingsResponse(notificationSettings),
     };
+  }
+
+  private isPremiumSubscription(planCode?: string | null, planName?: string | null, isActive?: boolean | null) {
+    if (!isActive) {
+      return false;
+    }
+
+    const hasPremiumCode = planCode?.toLowerCase().includes('premium') ?? false;
+    const hasPremiumName = planName?.toLowerCase().includes('premium') ?? false;
+    if (!planCode && !planName) {
+      return true;
+    }
+    return hasPremiumCode || hasPremiumName;
+  }
+
+  private calculateRemainingDays(expiresAt: Date | null, now: Date): number | null {
+    if (!expiresAt) {
+      return null;
+    }
+    const remainingMs = expiresAt.getTime() - now.getTime();
+    if (remainingMs <= 0) {
+      return 0;
+    }
+    return Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
   }
 
   async updateProfile(currentUser: AuthUser, dto: UpdateProfileDto) {
