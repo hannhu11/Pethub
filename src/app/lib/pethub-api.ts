@@ -294,6 +294,11 @@ export interface ApiNotificationsListResponse {
   items: ApiNotification[];
   unread: number;
   filter: 'all' | 'unread' | 'read';
+  counts: {
+    all: number;
+    unread: number;
+    read: number;
+  };
 }
 
 export interface ApiNotificationSettings {
@@ -316,6 +321,8 @@ export interface ApiSettingsProfile {
 
 export interface ApiSettingsBilling {
   startedAt: string | null;
+  expiresAt: string | null;
+  remainingDays: number | null;
 }
 
 export interface ApiSettingsUsage {

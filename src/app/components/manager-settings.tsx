@@ -110,10 +110,13 @@ export function ManagerSettingsPage() {
       address: data.clinic?.address ?? '',
       invoiceNote: data.clinic?.invoiceNote ?? '',
     };
-    const isPremiumPlan = Boolean(
-      data.subscription?.isActive ||
-        data.subscription?.planCode?.toLowerCase().includes('premium') ||
+    const hasPremiumMarker = Boolean(
+      data.subscription?.planCode?.toLowerCase().includes('premium') ||
         data.subscription?.planName?.toLowerCase().includes('premium'),
+    );
+    const isPremiumPlan = Boolean(
+      data.subscription?.isActive &&
+        (hasPremiumMarker || (!data.subscription?.planCode && !data.subscription?.planName)),
     );
     const nextSubscription = {
       plan: isPremiumPlan ? 'premium' : 'basic',
@@ -124,6 +127,14 @@ export function ManagerSettingsPage() {
       activatedAt: data.billing?.startedAt
         ? new Date(data.billing.startedAt).toLocaleDateString('vi-VN')
         : undefined,
+      expiresAt:
+        isPremiumPlan && data.billing?.expiresAt
+          ? new Date(data.billing.expiresAt).toLocaleDateString('vi-VN')
+          : undefined,
+      remainingDays:
+        isPremiumPlan && typeof data.billing?.remainingDays === 'number'
+          ? Math.max(0, Math.ceil(data.billing.remainingDays))
+          : null,
       petCount: Number(data.usage?.petCount ?? getSubscriptionSettings().petCount ?? 0),
     };
 
@@ -539,20 +550,30 @@ export function ManagerSettingsPage() {
                     {subscription.plan === 'premium' ? 'Premium đang hoạt động' : 'Đang sử dụng'}
                   </div>
                 </div>
-                <div className="mt-3 flex items-center gap-4 text-xs text-[#7a756e]">
-                  <span>{`Bắt đầu: ${subscription.activatedAt ?? '--/--/----'}`}</span>
+                <div className="mt-3 flex items-center gap-4 text-xs text-[#7a756e] flex-wrap">
+                  <span>
+                    {subscription.plan === 'premium'
+                      ? `Kích hoạt: ${subscription.activatedAt ?? '--/--/----'}`
+                      : `Bắt đầu: ${subscription.activatedAt ?? '--/--/----'}`}
+                  </span>
+                  {subscription.plan === 'premium' ? (
+                    <>
+                      <span>&bull;</span>
+                      <span>{`Hết hạn: ${subscription.expiresAt ?? '--/--/----'}`}</span>
+                      {typeof subscription.remainingDays === 'number' ? (
+                        <>
+                          <span>&bull;</span>
+                          <span>{`Còn: ${subscription.remainingDays} ngày`}</span>
+                        </>
+                      ) : null}
+                    </>
+                  ) : null}
                   <span>&bull;</span>
                   <span>
                     {subscription.plan === 'premium'
                       ? `Thú cưng: ${subscription.petCount} hồ sơ (không giới hạn)`
                       : `Thú cưng: ${subscription.petCount}/10${subscription.petCount >= 10 ? ' (đã dùng hết)' : ''}`}
                   </span>
-                  {subscription.paymentMethod ? (
-                    <>
-                      <span>&bull;</span>
-                      <span>{`Phương thức: ${subscription.paymentMethod.toUpperCase()}`}</span>
-                    </>
-                  ) : null}
                 </div>
               </div>
 
@@ -581,7 +602,7 @@ export function ManagerSettingsPage() {
                     ))}
                   </ul>
                   <div className="px-4 py-2.5 rounded-xl border border-[#2d2a26]/30 text-center text-sm text-[#7a756e]">
-                    {'Gói hiện tại'}
+                    {subscription.plan === 'basic' ? 'Gói hiện tại' : 'Gói miễn phí'}
                   </div>
                 </div>
 
@@ -626,7 +647,7 @@ export function ManagerSettingsPage() {
                     }`}
                     style={{ fontWeight: 600 }}
                   >
-                    {subscription.plan === 'premium' ? 'Bạn đang dùng Premium' : 'Nâng cấp lên Premium'}
+                    {subscription.plan === 'premium' ? 'Gói hiện tại' : 'Nâng cấp lên Premium'}
                   </button>
                 </div>
               </div>

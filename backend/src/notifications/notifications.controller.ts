@@ -13,7 +13,16 @@ export class NotificationsController {
   @Get()
   async list(@CurrentUser() user: AuthUser | null, @Query() query: NotificationsQueryDto) {
     if (!user) {
-      return { items: [], unread: 0, filter: query.filter ?? 'all' };
+      return {
+        items: [],
+        unread: 0,
+        filter: query.filter ?? 'all',
+        counts: {
+          all: 0,
+          unread: 0,
+          read: 0,
+        },
+      };
     }
 
     return this.notificationsService.list(user, query);

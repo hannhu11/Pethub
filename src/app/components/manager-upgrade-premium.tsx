@@ -318,7 +318,7 @@ export function ManagerUpgradePremiumPage() {
                   )}
                   <div className='min-w-[220px] text-xs space-y-1 text-[#2d2a26] font-mono'>
                     <p>
-                      <span className='text-[#7a756e]'>Nguồn:</span> PayOS QR Bank
+                      <span className='text-[#7a756e]'>Nguồn:</span> Chuyển khoản QR
                     </p>
                     <p>
                       <span className='text-[#7a756e]'>Mã giao dịch:</span> {checkout.orderCode}

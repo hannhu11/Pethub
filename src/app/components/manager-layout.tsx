@@ -273,6 +273,14 @@ export function ManagerLayout() {
         if (!mounted) {
           return;
         }
+        const hasPremiumMarker = Boolean(
+          data.subscription?.planCode?.toLowerCase().includes('premium') ||
+            data.subscription?.planName?.toLowerCase().includes('premium'),
+        );
+        const isPremiumPlan = Boolean(
+          data.subscription?.isActive &&
+            (hasPremiumMarker || (!data.subscription?.planCode && !data.subscription?.planName)),
+        );
         hydrateManagerSettings({
           profile: {
             name: data.profile.name,
@@ -288,12 +296,7 @@ export function ManagerLayout() {
             invoiceNote: data.clinic?.invoiceNote ?? '',
           },
           subscription: {
-            plan:
-              data.subscription?.isActive ||
-              data.subscription?.planCode?.toLowerCase().includes('premium') ||
-              data.subscription?.planName?.toLowerCase().includes('premium')
-                ? 'premium'
-                : 'basic',
+            plan: isPremiumPlan ? 'premium' : 'basic',
             amount: Number(data.subscription?.amount ?? 249000),
             currency: 'VND',
             billingCycle: 'monthly',
@@ -301,6 +304,13 @@ export function ManagerLayout() {
             activatedAt: data.billing?.startedAt
               ? new Date(data.billing.startedAt).toLocaleDateString('vi-VN')
               : undefined,
+            expiresAt: data.billing?.expiresAt
+              ? new Date(data.billing.expiresAt).toLocaleDateString('vi-VN')
+              : undefined,
+            remainingDays:
+              typeof data.billing?.remainingDays === 'number'
+                ? Math.max(0, Math.ceil(data.billing.remainingDays))
+                : null,
             petCount: Number(data.usage?.petCount ?? 0),
           },
         });

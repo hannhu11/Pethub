@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Bell, CheckCheck, Circle, Filter } from 'lucide-react';
 import { extractApiError } from '../lib/api-client';
@@ -25,32 +25,40 @@ export function ManagerNotificationsPage() {
   const [filter, setFilter] = useState<NotificationFilter>('all');
   const [notifications, setNotifications] = useState<ApiNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [counts, setCounts] = useState({ all: 0, unread: 0, read: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const loadInFlightRef = useRef(false);
+  const requestIdRef = useRef(0);
 
-  const loadNotifications = useMemo(
-    () => async (targetFilter: NotificationFilter, silent = false) => {
-      if (loadInFlightRef.current) {
-        return;
-      }
-      loadInFlightRef.current = true;
+  const loadNotifications = useCallback(
+    async (targetFilter: NotificationFilter, silent = false) => {
+      const requestId = requestIdRef.current + 1;
+      requestIdRef.current = requestId;
       if (!silent) {
         setLoading(true);
         setError('');
       }
       try {
         const data = await listNotifications(targetFilter);
+        if (requestId !== requestIdRef.current) {
+          return;
+        }
+        const fallbackUnread = data.items.filter((item) => !item.read).length;
+        const fallbackRead = data.items.filter((item) => item.read).length;
         setNotifications(data.items);
         setUnreadCount(data.unread);
+        setCounts({
+          all: data.counts?.all ?? data.items.length,
+          unread: data.counts?.unread ?? fallbackUnread,
+          read: data.counts?.read ?? fallbackRead,
+        });
         setError('');
       } catch (apiError) {
-        if (!silent) {
+        if (!silent && requestId === requestIdRef.current) {
           setError(extractApiError(apiError));
         }
       } finally {
-        loadInFlightRef.current = false;
-        if (!silent) {
+        if (!silent && requestId === requestIdRef.current) {
           setLoading(false);
         }
       }
@@ -109,9 +117,9 @@ export function ManagerNotificationsPage() {
   }, [filter, loadNotifications]);
 
   const filterOptions: Array<{ id: NotificationFilter; label: string; count: number }> = [
-    { id: 'all', label: 'Tất cả', count: notifications.length },
-    { id: 'unread', label: 'Chưa đọc', count: notifications.filter((item) => !item.read).length },
-    { id: 'read', label: 'Đã đọc', count: notifications.filter((item) => item.read).length },
+    { id: 'all', label: 'Tất cả', count: counts.all },
+    { id: 'unread', label: 'Chưa đọc', count: counts.unread },
+    { id: 'read', label: 'Đã đọc', count: counts.read },
   ];
   const selectedFilterLabel = filterOptions.find((item) => item.id === filter)?.label ?? 'Tất cả';
 

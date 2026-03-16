@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { NotificationTarget } from '@prisma/client';
+import { NotificationTarget, Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
 import { NotificationsQueryDto } from './dto/notifications-query.dto';
@@ -14,51 +14,53 @@ export class NotificationsService {
 
   async list(currentUser: AuthUser, query: NotificationsQueryDto) {
     const filter = query.filter ?? 'all';
+    const visibilityWhere = this.buildVisibilityWhere(currentUser);
+    const filterWhere = this.buildFilterWhere(filter);
 
-    const notifications = await this.prisma.notification.findMany({
-      where: {
-        clinicId: currentUser.clinicId,
-        OR: [
-          { userId: currentUser.userId },
-          { target: NotificationTarget.all },
-          { target: currentUser.role === 'manager' ? NotificationTarget.manager : NotificationTarget.customer },
-        ],
-        ...(filter === 'unread' ? { read: false } : {}),
-        ...(filter === 'read' ? { read: true } : {}),
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 200,
-    });
-
-    const unread = await this.prisma.notification.count({
-      where: {
-        clinicId: currentUser.clinicId,
-        OR: [
-          { userId: currentUser.userId },
-          { target: NotificationTarget.all },
-          { target: currentUser.role === 'manager' ? NotificationTarget.manager : NotificationTarget.customer },
-        ],
-        read: false,
-      },
-    });
+    const [notifications, totalCount, unreadCount, readCount] = await Promise.all([
+      this.prisma.notification.findMany({
+        where: {
+          ...visibilityWhere,
+          ...filterWhere,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 200,
+      }),
+      this.prisma.notification.count({
+        where: visibilityWhere,
+      }),
+      this.prisma.notification.count({
+        where: {
+          ...visibilityWhere,
+          read: false,
+        },
+      }),
+      this.prisma.notification.count({
+        where: {
+          ...visibilityWhere,
+          read: true,
+        },
+      }),
+    ]);
 
     return {
       items: notifications,
-      unread,
+      unread: unreadCount,
       filter,
+      counts: {
+        all: totalCount,
+        unread: unreadCount,
+        read: readCount,
+      },
     };
   }
 
   async markRead(currentUser: AuthUser, id: string) {
+    const visibilityWhere = this.buildVisibilityWhere(currentUser);
     const existing = await this.prisma.notification.findFirst({
       where: {
-        clinicId: currentUser.clinicId,
         id,
-        OR: [
-          { userId: currentUser.userId },
-          { target: NotificationTarget.all },
-          { target: currentUser.role === 'manager' ? NotificationTarget.manager : NotificationTarget.customer },
-        ],
+        ...visibilityWhere,
       },
     });
 
@@ -73,12 +75,7 @@ export class NotificationsService {
 
     const unread = await this.prisma.notification.count({
       where: {
-        clinicId: currentUser.clinicId,
-        OR: [
-          { userId: currentUser.userId },
-          { target: NotificationTarget.all },
-          { target: currentUser.role === 'manager' ? NotificationTarget.manager : NotificationTarget.customer },
-        ],
+        ...visibilityWhere,
         read: false,
       },
     });
@@ -94,14 +91,10 @@ export class NotificationsService {
   }
 
   async markAllRead(currentUser: AuthUser) {
+    const visibilityWhere = this.buildVisibilityWhere(currentUser);
     const updated = await this.prisma.notification.updateMany({
       where: {
-        clinicId: currentUser.clinicId,
-        OR: [
-          { userId: currentUser.userId },
-          { target: NotificationTarget.all },
-          { target: currentUser.role === 'manager' ? NotificationTarget.manager : NotificationTarget.customer },
-        ],
+        ...visibilityWhere,
         read: false,
       },
       data: {
@@ -121,5 +114,26 @@ export class NotificationsService {
       updated: updated.count,
       unread: 0,
     };
+  }
+
+  private buildVisibilityWhere(currentUser: AuthUser): Prisma.NotificationWhereInput {
+    return {
+      clinicId: currentUser.clinicId,
+      OR: [
+        { userId: currentUser.userId },
+        { target: NotificationTarget.all },
+        { target: currentUser.role === 'manager' ? NotificationTarget.manager : NotificationTarget.customer },
+      ],
+    };
+  }
+
+  private buildFilterWhere(filter: 'all' | 'unread' | 'read'): Prisma.NotificationWhereInput {
+    if (filter === 'unread') {
+      return { read: false };
+    }
+    if (filter === 'read') {
+      return { read: true };
+    }
+    return {};
   }
 }
