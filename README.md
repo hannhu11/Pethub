@@ -9,6 +9,8 @@ PetHub is a pet-care platform with:
 
 This repository is prepared for **public sharing** and does not include private secrets.
 
+Milestone status: **99% completed**.
+
 ## Project structure
 
 - `/src`: frontend application
