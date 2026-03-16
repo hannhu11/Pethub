@@ -77,26 +77,26 @@ export function AboutPage() {
             Về chúng tôi
           </h1>
           <p className='text-[#7a756e] leading-7'>
-            PetHub xây dựng nền tảng vận hành cho pet store và phòng khám thú y theo tiêu chuẩn quốc tế: rõ ràng quy trình,
-            dữ liệu nhất quán và trải nghiệm khách hàng có chiều sâu.
+            PetHub được xây dựng để giúp chủ pet clinic và pet store vận hành tự tin hơn mỗi ngày: lịch hẹn rõ ràng, chăm sóc khách hàng nhất quán
+            và tăng trưởng doanh thu dựa trên dữ liệu thực tế.
           </p>
         </div>
 
         <div className='grid md:grid-cols-3 gap-5 mt-10'>
           <div className='bg-white border border-[#2d2a26] rounded-2xl p-5'>
             <ShieldCheck className='w-6 h-6 text-[#6b8f5e] mb-3' />
-            <h2 className='text-lg mb-2' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Chuẩn hóa quy trình</h2>
-            <p className='text-sm text-[#7a756e]'>Từ đặt lịch đến lịch sử điều trị đều theo một luồng rõ ràng, nhất quán và dễ kiểm soát.</p>
+            <h2 className='text-lg mb-2' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Vận hành chuẩn hóa</h2>
+            <p className='text-sm text-[#7a756e]'>Từ tiếp nhận khách, đặt lịch, chăm sóc đến thanh toán đều theo một luồng rõ ràng và dễ kiểm soát.</p>
           </div>
           <div className='bg-white border border-[#2d2a26] rounded-2xl p-5'>
             <HeartHandshake className='w-6 h-6 text-[#c67d5b] mb-3' />
-            <h2 className='text-lg mb-2' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Trải nghiệm nhân văn</h2>
-            <p className='text-sm text-[#7a756e]'>UI tập trung sự rõ ràng và ấm áp, phù hợp cho môi trường dịch vụ chăm sóc thú cưng.</p>
+            <h2 className='text-lg mb-2' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Giữ chân khách hàng</h2>
+            <p className='text-sm text-[#7a756e]'>Nhắc lịch thông minh, dữ liệu khách hàng tập trung và trải nghiệm liền mạch giúp khách quay lại đều đặn hơn.</p>
           </div>
           <div className='bg-white border border-[#2d2a26] rounded-2xl p-5'>
             <Sparkles className='w-6 h-6 text-[#6b8f5e] mb-3' />
             <h2 className='text-lg mb-2' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Sẵn sàng mở rộng</h2>
-            <p className='text-sm text-[#7a756e]'>Thiết kế để mở rộng từ một cửa hàng đến chuỗi đa chi nhánh với hiệu suất ổn định.</p>
+            <p className='text-sm text-[#7a756e]'>Phù hợp cho cả cửa hàng đơn lẻ lẫn mô hình nhiều chi nhánh, giữ chuẩn dịch vụ đồng nhất khi tăng trưởng.</p>
           </div>
         </div>
       </div>
@@ -107,16 +107,16 @@ export function AboutPage() {
 export function BlogPage() {
   const posts = [
     {
-      title: '5 chỉ số vận hành pet clinic nên theo dõi hằng tuần',
-      desc: 'Khung KPI giúp quản lý doanh thu, tỉ lệ khách quay lại và mức độ sử dụng dịch vụ theo từng nhóm.',
+      title: '5 chỉ số doanh thu giúp pet clinic tăng trưởng ổn định mỗi tuần',
+      desc: 'Bộ KPI thực chiến để theo dõi hiệu suất dịch vụ, tỷ lệ khách quay lại và biên lợi nhuận theo từng nhóm.',
     },
     {
-      title: 'Thiết kế lịch hẹn giảm no-show cho pet store',
-      desc: 'Cách tổ chức slot, nhắc lịch và follow-up để giảm lịch hủy phút chót.',
+      title: 'Thiết kế lịch hẹn giảm no-show cho pet store trong 30 ngày',
+      desc: 'Cách tối ưu khung giờ, nhắc lịch và kịch bản chăm sóc trước hẹn để giảm hủy phút chót.',
     },
     {
-      title: 'Chuẩn hóa hồ sơ thú cưng theo chuẩn dịch vụ cao cấp',
-      desc: 'Mô hình dữ liệu hồ sơ y tế giúp đội vận hành và bác sĩ phối hợp nhất quán.',
+      title: 'Chuẩn hóa hồ sơ thú cưng để tăng tốc độ phục vụ tại quầy',
+      desc: 'Mô hình hồ sơ tập trung giúp đội ngũ tư vấn nhanh hơn, bác sĩ phối hợp tốt hơn và khách hàng tin tưởng hơn.',
     },
   ];
 
@@ -126,7 +126,7 @@ export function BlogPage() {
         <h1 className='text-4xl text-[#2d2a26] mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
           Blog
         </h1>
-        <p className='text-[#7a756e] mb-8'>Tài nguyên chiến lược cho vận hành pet business hiện đại.</p>
+        <p className='text-[#7a756e] mb-8'>Góc chia sẻ thực chiến cho chủ pet clinic và pet store muốn vận hành tinh gọn và tăng trưởng bền vững.</p>
         <div className='grid gap-4'>
           {posts.map((post) => (
             <article key={post.title} className='bg-white border border-[#2d2a26] rounded-2xl p-5'>

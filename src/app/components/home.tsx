@@ -8,10 +8,12 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import heroClinicImage from '../../assets/images/home/hero-clinic.jpg';
 
 const features = [
-  { icon: CalendarCheck, title: 'Đặt lịch thông minh', desc: 'Khách hàng đặt lịch online 24/7, tự động phân slot 30 phút, không lo trùng lịch.' },
-  { icon: QrCode, title: 'Digital Pet Card', desc: 'Thẻ định danh kỹ thuật số tích hợp QR, truy xuất lịch sử chăm sóc tức thì.' },
-  { icon: BarChart3, title: 'Báo cáo doanh thu', desc: 'Thống kê doanh thu theo tuần, tháng, dịch vụ. Ra quyết định dựa trên dữ liệu.' },
-  { icon: Shield, title: 'CRM tự động', desc: 'Nhắc lịch tiêm phòng, tái khám tự động qua email, tăng tỷ lệ giữ chân khách hàng.' },
+  { icon: CalendarCheck, title: 'Đặt lịch thông minh 24/7', desc: 'Khách chủ động chọn khung giờ phù hợp, hệ thống tự tối ưu slot để giảm trùng lịch và quá tải.' },
+  { icon: Check, title: 'Thanh toán POS đa phương thức', desc: 'Xử lý thanh toán tại quầy nhanh gọn với luồng xác nhận rõ ràng, đồng bộ trạng thái giao dịch tức thì.' },
+  { icon: PawPrint, title: 'Hồ sơ thú cưng tập trung', desc: 'Toàn bộ thông tin chăm sóc, lịch sử dịch vụ và ghi chú được quản lý tập trung, dễ tra cứu.' },
+  { icon: QrCode, title: 'Digital Pet Card', desc: 'Thẻ định danh kỹ thuật số tích hợp QR giúp nhận diện nhanh và phục vụ chính xác từng bé thú cưng.' },
+  { icon: Shield, title: 'Nhắc lịch tự động đa kênh', desc: 'Chủ động gửi nhắc lịch tiêm, tái khám và chăm sóc định kỳ để tăng tỷ lệ quay lại của khách hàng.' },
+  { icon: BarChart3, title: 'Báo cáo vận hành theo thời gian thực', desc: 'Theo dõi doanh thu, hiệu suất dịch vụ và tệp khách hàng để ra quyết định nhanh và chính xác hơn.' },
 ];
 
 const services = [
@@ -41,30 +43,30 @@ export function HomePage() {
             >
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#6b8f5e] text-[#6b8f5e] text-sm mb-6">
                 <PawPrint className="w-4 h-4" />
-                Nền tảng SaaS #1 cho ngành thú cưng Việt Nam
+                Nền tảng vận hành hiện đại cho pet clinic & pet store
               </div>
               <h1 className="text-4xl md:text-5xl mb-6 text-[#2d2a26]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, lineHeight: 1.2 }}>
-                Quản lý phòng khám thú y
-                <span className="text-[#6b8f5e]"> thông minh</span> &
-                <span className="text-[#c67d5b]"> nhân văn</span>
+                Tăng trưởng phòng khám thú y
+                <span className="text-[#6b8f5e]"> chuyên nghiệp</span> &
+                <span className="text-[#c67d5b]"> bền vững</span>
               </h1>
               <p className="text-lg text-[#7a756e] mb-8 max-w-lg">
-                PetHub số hóa toàn bộ vòng đời dịch vụ — từ đặt lịch, hồ sơ y tế, đến CRM tự động.
-                Được thiết kế dành riêng cho ngành chăm sóc thú cưng.
+                PetHub giúp bạn chuẩn hóa vận hành từ đặt lịch, chăm sóc khách hàng đến quản lý hồ sơ thú cưng.
+                Mọi quy trình quan trọng được gom về một nền tảng duy nhất để tăng hiệu suất và giữ chân khách hàng.
               </p>
               <div className="flex flex-wrap gap-4">
                 <Link
                   to="/login"
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#6b8f5e] text-white hover:-translate-y-1 transition-all border border-[#2d2a26]"
                 >
-                  Đăng nhập để trải nghiệm
+                  Khám phá nền tảng
                   <ArrowRight className="w-5 h-5" />
                 </Link>
                 <Link
                   to="/register"
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white text-[#2d2a26] hover:-translate-y-1 transition-all border border-[#2d2a26]"
                 >
-                  Dùng thử miễn phí
+                  Nhận tư vấn miễn phí
                 </Link>
               </div>
 
@@ -129,7 +131,7 @@ export function HomePage() {
               Dịch vụ của chúng tôi
             </h2>
             <p className="text-[#7a756e] max-w-lg mx-auto">
-              Chăm sóc toàn diện cho thú cưng yêu quý của bạn với đội ngũ chuyên gia giàu kinh nghiệm.
+              Danh mục dịch vụ được chuẩn hóa để khách hàng dễ đặt lịch và phòng khám dễ vận hành.
             </p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -154,7 +156,7 @@ export function HomePage() {
               to="/login"
               className="inline-flex items-center gap-2 text-[#6b8f5e] hover:underline"
             >
-              Đăng nhập để xem thêm <ArrowRight className="w-4 h-4" />
+              Xem toàn bộ dịch vụ <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>
@@ -168,7 +170,7 @@ export function HomePage() {
               Tại sao chọn PetHub?
             </h2>
             <p className="text-[#7a756e] max-w-lg mx-auto">
-              Giải pháp Vertical SaaS chuyên biệt, thiết kế riêng cho ngành chăm sóc thú cưng Việt Nam.
+              Những năng lực cốt lõi giúp PetHub đồng hành cùng chủ pet clinic/pet store ngay từ ngày đầu vận hành.
             </p>
           </div>
           <div className="grid md:grid-cols-2 gap-6">
