@@ -50,24 +50,38 @@ export class SettingsService {
       throw new NotFoundException('User not found');
     }
 
-    const clinic = await this.prisma.clinicSettings.findFirst({
-      where: {
-        clinicId: currentUser.clinicId,
-      },
-      orderBy: { updatedAt: 'desc' },
-    });
-
-    const subscription = await this.prisma.subscription.findFirst({
-      where: {
-        clinicId: currentUser.clinicId,
-      },
-      orderBy: { updatedAt: 'desc' },
-    });
-    const notificationSettings = await this.notificationSettingsModel.findUnique({
-      where: {
-        clinicId: currentUser.clinicId,
-      },
-    });
+    const [clinic, clinicProfile, subscription, notificationSettings, petCount] = await Promise.all([
+      this.prisma.clinicSettings.findFirst({
+        where: {
+          clinicId: currentUser.clinicId,
+        },
+        orderBy: { updatedAt: 'desc' },
+      }),
+      this.prisma.clinic.findUnique({
+        where: {
+          id: currentUser.clinicId,
+        },
+        select: {
+          createdAt: true,
+        },
+      }),
+      this.prisma.subscription.findFirst({
+        where: {
+          clinicId: currentUser.clinicId,
+        },
+        orderBy: { updatedAt: 'desc' },
+      }),
+      this.notificationSettingsModel.findUnique({
+        where: {
+          clinicId: currentUser.clinicId,
+        },
+      }),
+      this.prisma.pet.count({
+        where: {
+          clinicId: currentUser.clinicId,
+        },
+      }),
+    ]);
 
     return {
       profile: {
@@ -79,6 +93,12 @@ export class SettingsService {
       },
       clinic,
       subscription,
+      billing: {
+        startedAt: clinicProfile?.createdAt?.toISOString() ?? null,
+      },
+      usage: {
+        petCount,
+      },
       notifications: this.toNotificationSettingsResponse(notificationSettings),
     };
   }

@@ -314,6 +314,14 @@ export interface ApiSettingsProfile {
   role: 'customer' | 'manager';
 }
 
+export interface ApiSettingsBilling {
+  startedAt: string | null;
+}
+
+export interface ApiSettingsUsage {
+  petCount: number;
+}
+
 export interface ApiSettingsClinic {
   id: string;
   clinicId: string;
@@ -345,7 +353,26 @@ export interface ApiManagerSettingsResponse {
   profile: ApiSettingsProfile;
   clinic: ApiSettingsClinic | null;
   subscription: ApiSettingsSubscription | null;
+  billing: ApiSettingsBilling;
+  usage: ApiSettingsUsage;
   notifications: ApiNotificationSettings;
+}
+
+export interface ApiPayosLinkResponse {
+  provider: 'payos';
+  orderCode: string;
+  amount: number;
+  checkoutUrl: string;
+  qrCode: string | null;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ApiPayosTransactionStatusResponse {
+  orderCode: string;
+  status: 'unpaid' | 'paid' | 'refunded';
+  amount: number;
+  paidAt: string | null;
+  invoiceId: string | null;
 }
 
 export interface ApiMedicalRecord {
@@ -666,6 +693,27 @@ export async function updateNotificationSettings(payload: {
 
 export async function getManagerSettings(): Promise<ApiManagerSettingsResponse> {
   const { data } = await apiClient.get<ApiManagerSettingsResponse>('/settings');
+  return data;
+}
+
+export async function createPayosPaymentLink(payload: {
+  amount: number;
+  description: string;
+  orderCode?: string;
+  invoiceId?: string;
+  returnUrl?: string;
+  cancelUrl?: string;
+}): Promise<ApiPayosLinkResponse> {
+  const { data } = await apiClient.post<ApiPayosLinkResponse>('/payments/payos/create-link', payload);
+  return data;
+}
+
+export async function getPayosTransactionStatus(
+  orderCode: string,
+): Promise<ApiPayosTransactionStatusResponse> {
+  const { data } = await apiClient.get<ApiPayosTransactionStatusResponse>(
+    `/payments/payos/transaction/${encodeURIComponent(orderCode)}`,
+  );
   return data;
 }
 

@@ -106,6 +106,54 @@ export class PaymentsService {
     });
   }
 
+  async getPayosTransactionSnapshot(currentUser: AuthUser, orderCode: string) {
+    if (currentUser.role !== 'manager') {
+      throw new ForbiddenException('Only manager can view payOS transaction status');
+    }
+
+    const normalizedOrderCode = this.normalizeLookupOrderCode(orderCode);
+    const existingTxn = await this.prisma.paymentTransaction.findFirst({
+      where: {
+        clinicId: currentUser.clinicId,
+        providerRef: normalizedOrderCode,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!existingTxn?.id) {
+      throw new NotFoundException('Payment transaction not found');
+    }
+
+    await this.syncTransactionStatusFromPayos(existingTxn.id);
+
+    const txn = await this.prisma.paymentTransaction.findUnique({
+      where: {
+        id: existingTxn.id,
+      },
+      select: {
+        providerRef: true,
+        status: true,
+        amount: true,
+        paidAt: true,
+        invoiceId: true,
+      },
+    });
+
+    if (!txn) {
+      throw new NotFoundException('Payment transaction not found');
+    }
+
+    return {
+      orderCode: txn.providerRef ?? normalizedOrderCode,
+      status: txn.status,
+      amount: Number(txn.amount ?? 0),
+      paidAt: txn.paidAt?.toISOString() ?? null,
+      invoiceId: txn.invoiceId ?? null,
+    };
+  }
+
   async createPayosLinkForInvoice(input: CreatePayosLinkInput) {
     const orderCode = this.normalizeOrderCode(input.orderCode);
     const amount = Math.round(input.amount);
@@ -289,26 +337,7 @@ export class PaymentsService {
           paidAt: now,
         });
       } else if (paid) {
-        await tx.subscription.upsert({
-          where: { clinicId: txn.clinicId },
-          create: {
-            clinicId: txn.clinicId,
-            planCode: 'premium-monthly',
-            planName: 'Premium',
-            amount: payload.amount,
-            isActive: true,
-            startedAt: now,
-            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          },
-          update: {
-            planCode: 'premium-monthly',
-            planName: 'Premium',
-            amount: payload.amount,
-            isActive: true,
-            startedAt: now,
-            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          },
-        });
+        await this.upsertPremiumSubscriptionTx(tx, txn.clinicId, payload.amount, now);
       }
 
       return updatedTxn;
@@ -494,18 +523,25 @@ export class PaymentsService {
     }
 
     if (txn.status === PaymentStatus.paid) {
-      await this.syncPaidInvoiceState({
-        clinicId: txn.clinicId,
-        invoiceId: txn.invoiceId,
-        paidAt: txn.paidAt ?? new Date(),
-      });
-      await this.emitInvoicePaymentUpdated(
-        txn.clinicId,
-        txn.invoiceId,
-        PaymentStatus.paid,
-        txn.paidAt ?? new Date(),
-        txn.providerRef,
-      );
+      const paidAt = txn.paidAt ?? new Date();
+      if (txn.invoiceId) {
+        await this.syncPaidInvoiceState({
+          clinicId: txn.clinicId,
+          invoiceId: txn.invoiceId,
+          paidAt,
+        });
+        await this.emitInvoicePaymentUpdated(
+          txn.clinicId,
+          txn.invoiceId,
+          PaymentStatus.paid,
+          paidAt,
+          txn.providerRef,
+        );
+      } else {
+        await this.prisma.$transaction(async (tx) => {
+          await this.upsertPremiumSubscriptionTx(tx, txn.clinicId, Number(txn.amount ?? 0), paidAt);
+        });
+      }
       return;
     }
 
@@ -556,11 +592,20 @@ export class PaymentsService {
       }
 
       if (currentTxn.status === PaymentStatus.paid) {
-        await this.syncPaidInvoiceStateTx(tx, {
-          clinicId: txn.clinicId,
-          invoiceId: currentTxn.invoiceId,
-          paidAt: currentTxn.paidAt ?? now,
-        });
+        if (currentTxn.invoiceId) {
+          await this.syncPaidInvoiceStateTx(tx, {
+            clinicId: txn.clinicId,
+            invoiceId: currentTxn.invoiceId,
+            paidAt: currentTxn.paidAt ?? now,
+          });
+        } else {
+          await this.upsertPremiumSubscriptionTx(
+            tx,
+            txn.clinicId,
+            Number(currentTxn.amount ?? payosAmount),
+            currentTxn.paidAt ?? now,
+          );
+        }
         return currentTxn;
       }
 
@@ -582,6 +627,8 @@ export class PaymentsService {
           invoiceId: updatedTxn.invoiceId,
           paidAt: now,
         });
+      } else {
+        await this.upsertPremiumSubscriptionTx(tx, txn.clinicId, payosAmount, now);
       }
 
       return updatedTxn;
@@ -1252,5 +1299,46 @@ export class PaymentsService {
 
   private isBackgroundSyncEnabled() {
     return (process.env.PAYOS_BACKGROUND_SYNC_ENABLED ?? 'true').toLowerCase() === 'true';
+  }
+
+  private async upsertPremiumSubscriptionTx(
+    tx: Prisma.TransactionClient,
+    clinicId: string,
+    amount: number,
+    startedAt: Date,
+  ) {
+    const normalizedAmount = Math.max(0, Math.round(Number(amount) || 0));
+    await tx.subscription.upsert({
+      where: { clinicId },
+      create: {
+        clinicId,
+        planCode: 'premium-monthly',
+        planName: 'Premium',
+        amount: normalizedAmount,
+        isActive: true,
+        startedAt,
+        expiresAt: new Date(startedAt.getTime() + 30 * 24 * 60 * 60 * 1000),
+      },
+      update: {
+        planCode: 'premium-monthly',
+        planName: 'Premium',
+        amount: normalizedAmount,
+        isActive: true,
+        startedAt,
+        expiresAt: new Date(startedAt.getTime() + 30 * 24 * 60 * 60 * 1000),
+      },
+    });
+  }
+
+  private normalizeLookupOrderCode(orderCode: string): string {
+    const raw = orderCode.trim();
+    if (!raw) {
+      throw new BadRequestException('orderCode is required');
+    }
+    const digits = raw.replace(/\D/g, '');
+    if (!digits) {
+      throw new BadRequestException('Invalid orderCode');
+    }
+    return digits.slice(0, 18);
   }
 }

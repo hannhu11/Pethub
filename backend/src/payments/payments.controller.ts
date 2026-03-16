@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, HttpCode, Logger, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, Logger, Param, Post, UseGuards } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { CreatePayosLinkDto } from './dto/create-payos-link.dto';
 import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard';
@@ -21,6 +21,20 @@ export class PaymentsController {
       return null;
     }
     return this.paymentsService.createPayosLink(dto, user);
+  }
+
+  @Get('payos/transaction/:orderCode')
+  @UseGuards(FirebaseAuthGuard, RolesGuard)
+  @Roles('manager')
+  async getPayosTransactionStatus(
+    @CurrentUser() user: AuthUser | null,
+    @Param('orderCode') orderCode: string,
+  ) {
+    if (!user) {
+      return null;
+    }
+
+    return this.paymentsService.getPayosTransactionSnapshot(user, orderCode);
   }
 
   @Post('payos/webhook')
