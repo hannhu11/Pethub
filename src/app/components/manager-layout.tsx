@@ -298,9 +298,10 @@ export function ManagerLayout() {
             currency: 'VND',
             billingCycle: 'monthly',
             paymentMethod: null,
-            activatedAt: data.subscription?.startedAt
-              ? new Date(data.subscription.startedAt).toLocaleDateString('vi-VN')
+            activatedAt: data.billing?.startedAt
+              ? new Date(data.billing.startedAt).toLocaleDateString('vi-VN')
               : undefined,
+            petCount: Number(data.usage?.petCount ?? 0),
           },
         });
       } catch {

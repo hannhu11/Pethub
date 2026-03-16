@@ -121,9 +121,10 @@ export function ManagerSettingsPage() {
       currency: 'VND' as const,
       billingCycle: 'monthly' as const,
       paymentMethod: getSubscriptionSettings().paymentMethod,
-      activatedAt: data.subscription?.startedAt
-        ? new Date(data.subscription.startedAt).toLocaleDateString('vi-VN')
+      activatedAt: data.billing?.startedAt
+        ? new Date(data.billing.startedAt).toLocaleDateString('vi-VN')
         : undefined,
+      petCount: Number(data.usage?.petCount ?? getSubscriptionSettings().petCount ?? 0),
     };
 
     setProfile(nextProfile);
@@ -539,9 +540,13 @@ export function ManagerSettingsPage() {
                   </div>
                 </div>
                 <div className="mt-3 flex items-center gap-4 text-xs text-[#7a756e]">
-                  <span>{`Bắt đầu: ${subscription.activatedAt ?? '01/01/2026'}`}</span>
+                  <span>{`Bắt đầu: ${subscription.activatedAt ?? '--/--/----'}`}</span>
                   <span>&bull;</span>
-                  <span>{subscription.plan === 'premium' ? 'Không giới hạn hồ sơ thú cưng' : 'Thú cưng: 10/10 (đã dùng hết)'}</span>
+                  <span>
+                    {subscription.plan === 'premium'
+                      ? `Thú cưng: ${subscription.petCount} hồ sơ (không giới hạn)`
+                      : `Thú cưng: ${subscription.petCount}/10${subscription.petCount >= 10 ? ' (đã dùng hết)' : ''}`}
+                  </span>
                   {subscription.paymentMethod ? (
                     <>
                       <span>&bull;</span>

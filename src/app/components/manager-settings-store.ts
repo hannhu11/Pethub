@@ -14,8 +14,9 @@ export interface ManagerSubscriptionSettings {
   amount: number;
   currency: 'VND';
   billingCycle: 'monthly';
-  paymentMethod: 'vietqr' | 'momo' | 'zalopay' | 'card' | null;
+  paymentMethod: 'payos' | 'vietqr' | 'momo' | 'zalopay' | 'card' | null;
   activatedAt?: string;
+  petCount: number;
 }
 
 interface ManagerSettingsState {
@@ -44,6 +45,7 @@ const defaultSettings: ManagerSettingsState = {
     currency: 'VND',
     billingCycle: 'monthly',
     paymentMethod: null,
+    petCount: 0,
   },
 };
 

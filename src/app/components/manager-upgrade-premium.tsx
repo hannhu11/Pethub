@@ -1,7 +1,23 @@
-import { useMemo, useState } from 'react';
-import { ArrowLeft, CheckCircle2, LoaderCircle, QrCode, ShieldCheck, Wallet } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle2,
+  ExternalLink,
+  Loader2,
+  QrCode,
+  ShieldCheck,
+} from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { QRCodeSVG } from 'qrcode.react';
+import { extractApiError } from '../lib/api-client';
+import {
+  createPayosPaymentLink,
+  getPayosTransactionStatus,
+  type ApiPayosLinkResponse,
+  type ApiPayosTransactionStatusResponse,
+} from '../lib/pethub-api';
+import { connectRealtimeSocket } from '../lib/realtime';
 import {
   getClinicSettings,
   getProfileSettings,
@@ -18,103 +34,210 @@ const premiumBenefits = [
   'Hỗ trợ ưu tiên 24/7',
 ];
 
-type LocalPaymentMethod = 'vietqr' | 'momo' | 'zalopay';
-
-const paymentMethods: Array<{ id: LocalPaymentMethod; label: string; helper: string }> = [
-  {
-    id: 'vietqr',
-    label: 'VietQR (Khuyên dùng)',
-    helper: 'Quét mã từ app ngân hàng (Vietcombank, Techcombank, BIDV, MB...)',
-  },
-  {
-    id: 'momo',
-    label: 'Ví MoMo',
-    helper: 'Thanh toán nhanh bằng ví điện tử MoMo',
-  },
-  {
-    id: 'zalopay',
-    label: 'ZaloPay',
-    helper: 'Thanh toán QR bằng ZaloPay',
-  },
-];
+type UpgradePhase = 'idle' | 'waiting' | 'confirmed';
 
 function formatVnd(value: number) {
-  return new Intl.NumberFormat('vi-VN').format(value);
+  return new Intl.NumberFormat('vi-VN').format(Math.round(Number(value) || 0));
 }
 
-function formatDate(date: Date) {
-  const dd = String(date.getDate()).padStart(2, '0');
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  const yyyy = date.getFullYear();
-  return `${dd}/${mm}/${yyyy}`;
+function resolveQrValue(checkout: ApiPayosLinkResponse | null): string | null {
+  if (!checkout) {
+    return null;
+  }
+  return checkout.qrCode ?? checkout.checkoutUrl;
 }
 
 export function ManagerUpgradePremiumPage() {
   const navigate = useNavigate();
   const clinic = getClinicSettings();
   const profile = getProfileSettings();
-  const subscription = getSubscriptionSettings();
-  const [selectedMethod, setSelectedMethod] = useState<LocalPaymentMethod>('vietqr');
-  const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess] = useState(subscription.plan === 'premium');
+  const initialSubscription = getSubscriptionSettings();
+  const [checkout, setCheckout] = useState<ApiPayosLinkResponse | null>(null);
+  const [phase, setPhase] = useState<UpgradePhase>(
+    initialSubscription.plan === 'premium' ? 'confirmed' : 'idle',
+  );
+  const [loadingLink, setLoadingLink] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [message, setMessage] = useState(
+    initialSubscription.plan === 'premium' ? 'Bạn đang sử dụng gói Premium.' : '',
+  );
+  const [error, setError] = useState('');
+  const confirmedRef = useRef(initialSubscription.plan === 'premium');
+  const redirectTimerRef = useRef<number | null>(null);
+  const autoStartedRef = useRef(false);
 
-  const amount = subscription.amount;
-  const memo = useMemo(() => {
-    const digits = profile.phone.replace(/\D/g, '');
-    const suffix = digits.slice(-6) || '000000';
-    return `PETHUB-${suffix}`;
-  }, [profile.phone]);
+  const amount = Number(initialSubscription.amount ?? 249000);
+  const qrValue = useMemo(() => resolveQrValue(checkout), [checkout]);
 
-  const paymentDetails = useMemo(() => {
-    if (selectedMethod === 'momo') {
-      return {
-        title: 'MoMo Business',
-        accountLabel: 'SĐT MoMo',
-        accountValue: '0901 999 000',
-        owner: 'PETHUB SOFTWARE',
-        bank: 'Ví MoMo',
-      };
-    }
+  const confirmPaidAndRedirect = useCallback(
+    (snapshot?: ApiPayosTransactionStatusResponse) => {
+      if (confirmedRef.current) {
+        return;
+      }
+      confirmedRef.current = true;
+      setPhase('confirmed');
+      setChecking(false);
+      setError('');
+      setMessage('Thanh toán nâng cấp đã được xác nhận. Đang quay lại Gói & thanh toán...');
 
-    if (selectedMethod === 'zalopay') {
-      return {
-        title: 'ZaloPay Business',
-        accountLabel: 'Merchant ID',
-        accountValue: 'PETHUB-ZLP-2026',
-        owner: 'PETHUB SOFTWARE',
-        bank: 'Ví ZaloPay',
-      };
-    }
-
-    return {
-      title: 'VietQR Ngân hàng',
-      accountLabel: 'Số TK',
-      accountValue: '1900 2026 8888',
-      owner: 'PETHUB SOFTWARE',
-      bank: 'Vietcombank',
-    };
-  }, [selectedMethod]);
-
-  const handleConfirmPayment = () => {
-    if (submitting || success) return;
-
-    setSubmitting(true);
-    window.setTimeout(() => {
+      const current = getSubscriptionSettings();
       saveSubscriptionSettings({
+        ...current,
         plan: 'premium',
-        amount,
+        amount: Number(snapshot?.amount ?? checkout?.amount ?? amount),
         currency: 'VND',
         billingCycle: 'monthly',
-        paymentMethod: selectedMethod,
-        activatedAt: formatDate(new Date()),
+        paymentMethod: 'payos',
+        petCount: Number(current.petCount ?? 0),
       });
-      setSubmitting(false);
-      setSuccess(true);
-      window.setTimeout(() => {
+
+      if (redirectTimerRef.current) {
+        window.clearTimeout(redirectTimerRef.current);
+      }
+      redirectTimerRef.current = window.setTimeout(() => {
         navigate('/manager/settings?tab=subscription', { replace: true });
-      }, 1100);
+      }, 1500);
+    },
+    [amount, checkout?.amount, navigate],
+  );
+
+  const syncTransactionStatus = useCallback(
+    async (orderCode: string, source: 'poll' | 'realtime') => {
+      const snapshot = await getPayosTransactionStatus(orderCode);
+      if (snapshot.status === 'paid') {
+        confirmPaidAndRedirect(snapshot);
+      } else if (source === 'realtime') {
+        setMessage('Đã nhận tín hiệu realtime, đang chờ ngân hàng xác nhận hoàn tất...');
+      } else {
+        setMessage('Đang chờ thanh toán nâng cấp từ ngân hàng...');
+      }
+      return snapshot;
+    },
+    [confirmPaidAndRedirect],
+  );
+
+  const createCheckout = useCallback(async () => {
+    if (loadingLink || confirmedRef.current) {
+      return;
+    }
+
+    setLoadingLink(true);
+    setError('');
+    setMessage('Đang tạo phiên thanh toán Premium...');
+    try {
+      const payment = await createPayosPaymentLink({
+        amount,
+        description: 'Nang cap Premium PETHUB',
+        returnUrl: `${window.location.origin}/manager/settings/upgrade-premium?payment=success`,
+        cancelUrl: `${window.location.origin}/manager/settings/upgrade-premium?payment=cancel`,
+      });
+      setCheckout(payment);
+      setPhase('waiting');
+      setMessage('Đang chờ thanh toán nâng cấp từ ngân hàng...');
+    } catch (apiError) {
+      setError(extractApiError(apiError));
+      setMessage('');
+    } finally {
+      setLoadingLink(false);
+    }
+  }, [amount, loadingLink]);
+
+  useEffect(() => {
+    if (phase !== 'idle' || initialSubscription.plan === 'premium' || autoStartedRef.current) {
+      return;
+    }
+    autoStartedRef.current = true;
+    void createCheckout();
+  }, [createCheckout, initialSubscription.plan, phase]);
+
+  useEffect(() => {
+    if (phase !== 'waiting' || !checkout?.orderCode || confirmedRef.current) {
+      return;
+    }
+
+    let active = true;
+    const poll = async () => {
+      if (!active || confirmedRef.current) {
+        return;
+      }
+      setChecking(true);
+      try {
+        await syncTransactionStatus(checkout.orderCode, 'poll');
+      } catch (apiError) {
+        if (!active) {
+          return;
+        }
+        setError((prev) => prev || extractApiError(apiError));
+      } finally {
+        if (active) {
+          setChecking(false);
+        }
+      }
+    };
+
+    const timer = window.setInterval(() => {
+      void poll();
     }, 3000);
-  };
+
+    void poll();
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [checkout?.orderCode, phase, syncTransactionStatus]);
+
+  useEffect(() => {
+    if (phase !== 'waiting' || !checkout?.orderCode || confirmedRef.current) {
+      return;
+    }
+
+    let active = true;
+    let cleanup: (() => void) | null = null;
+
+    const setupRealtime = async () => {
+      let socket = null;
+      try {
+        socket = await connectRealtimeSocket();
+      } catch {
+        return;
+      }
+      if (!active || !socket) {
+        return;
+      }
+
+      const onSubscriptionUpdated = (event: {
+        type?: string;
+        orderCode?: string;
+      }) => {
+        if (!event?.orderCode || event.orderCode !== checkout.orderCode) {
+          return;
+        }
+
+        setMessage('Nhận tín hiệu realtime: đang xác minh thanh toán nâng cấp...');
+        void syncTransactionStatus(checkout.orderCode, 'realtime').catch(() => undefined);
+      };
+
+      socket.on('subscription.updated', onSubscriptionUpdated);
+      cleanup = () => {
+        socket.off('subscription.updated', onSubscriptionUpdated);
+        socket.disconnect();
+      };
+    };
+
+    void setupRealtime();
+    return () => {
+      active = false;
+      cleanup?.();
+    };
+  }, [checkout?.orderCode, phase, syncTransactionStatus]);
+
+  useEffect(() => {
+    return () => {
+      if (redirectTimerRef.current) {
+        window.clearTimeout(redirectTimerRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className='space-y-6'>
@@ -126,7 +249,6 @@ export function ManagerUpgradePremiumPage() {
           <ArrowLeft className='w-4 h-4' />
           Quay lại gói thanh toán
         </Link>
-        <p className='text-xs text-[#7a756e]'>Mô phỏng thanh toán chuẩn Việt Nam (VietQR/MoMo/ZaloPay), chưa nối API thật.</p>
       </div>
 
       <div className='grid lg:grid-cols-2 gap-6'>
@@ -154,7 +276,7 @@ export function ManagerUpgradePremiumPage() {
 
         <section className='bg-white border border-[#2d2a26] rounded-2xl p-6'>
           <h2 className='text-xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
-            Checkout Premium
+            Thanh toán nâng cấp Premium
           </h2>
           <p className='text-xs text-[#7a756e] mt-1'>Chu kỳ thanh toán: Hàng tháng • Giá đã gồm VAT</p>
 
@@ -175,64 +297,56 @@ export function ManagerUpgradePremiumPage() {
             </div>
           </div>
 
-          <div className='mt-4 grid sm:grid-cols-3 gap-2'>
-            {paymentMethods.map((method) => (
-              <button
-                key={method.id}
-                type='button'
-                onClick={() => setSelectedMethod(method.id)}
-                className={`px-3 py-2 rounded-xl border text-xs text-left transition-all ${
-                  selectedMethod === method.id
-                    ? 'bg-[#6b8f5e] text-white border-[#2d2a26]'
-                    : 'bg-white text-[#2d2a26] border-[#2d2a26]/20 hover:bg-[#f0ede8]'
-                }`}
-                style={{ fontWeight: 600 }}
-              >
-                {method.label}
-              </button>
-            ))}
-          </div>
-          <p className='text-[11px] text-[#7a756e] mt-2'>
-            {paymentMethods.find((method) => method.id === selectedMethod)?.helper}
-          </p>
-
           <div className='mt-4 border border-[#2d2a26]/15 rounded-xl p-4 bg-[#faf9f6]'>
-            <p className='text-xs text-[#2d2a26]' style={{ fontWeight: 600 }}>
+            <div className='flex items-center gap-2 text-xs text-[#2d2a26]' style={{ fontWeight: 700 }}>
+              <QrCode className='w-4 h-4' />
               Quét mã để thanh toán
-            </p>
+            </div>
             <div className='mt-3 flex items-start gap-4 flex-wrap'>
-              <div className='inline-flex items-center justify-center w-28 h-28 rounded-lg border border-[#2d2a26]/20 bg-white p-2'>
-                <QRCodeSVG
-                  value={`PAYMENT|PETHUB_PREMIUM|METHOD:${selectedMethod}|AMOUNT:${amount}|MEMO:${memo}`}
-                  size={96}
-                  level='M'
-                />
-              </div>
-              <div className='min-w-[220px] text-xs space-y-1 text-[#2d2a26] font-mono'>
-                <p>
-                  <span className='text-[#7a756e]'>Nguồn:</span> {paymentDetails.title}
-                </p>
-                <p>
-                  <span className='text-[#7a756e]'>Ngân hàng/Ví:</span> {paymentDetails.bank}
-                </p>
-                <p>
-                  <span className='text-[#7a756e]'>{paymentDetails.accountLabel}:</span> {paymentDetails.accountValue}
-                </p>
-                <p>
-                  <span className='text-[#7a756e]'>Chủ TK:</span> {paymentDetails.owner}
-                </p>
-                <p>
-                  <span className='text-[#7a756e]'>Số tiền:</span> {formatVnd(amount)} VND
-                </p>
-                <p>
-                  <span className='text-[#7a756e]'>Nội dung:</span> {memo}
-                </p>
-              </div>
+              {checkout ? (
+                <>
+                  {qrValue?.startsWith('http') || qrValue?.startsWith('data:image') ? (
+                    <img src={qrValue} alt='QR thanh toán Premium' className='w-32 h-32 object-contain rounded-lg border border-[#2d2a26]/20 bg-white p-2' />
+                  ) : qrValue ? (
+                    <div className='w-32 h-32 rounded-lg border border-[#2d2a26]/20 bg-white p-2 flex items-center justify-center'>
+                      <QRCodeSVG value={qrValue} size={112} />
+                    </div>
+                  ) : (
+                    <div className='w-32 h-32 rounded-lg border border-dashed border-[#2d2a26]/20 bg-white flex items-center justify-center text-[11px] text-[#7a756e] text-center px-2'>
+                      Chưa có QR thanh toán
+                    </div>
+                  )}
+                  <div className='min-w-[220px] text-xs space-y-1 text-[#2d2a26] font-mono'>
+                    <p>
+                      <span className='text-[#7a756e]'>Nguồn:</span> PayOS QR Bank
+                    </p>
+                    <p>
+                      <span className='text-[#7a756e]'>Mã giao dịch:</span> {checkout.orderCode}
+                    </p>
+                    <p>
+                      <span className='text-[#7a756e]'>Số tiền:</span> {formatVnd(checkout.amount)} VND
+                    </p>
+                    <a
+                      href={checkout.checkoutUrl}
+                      target='_blank'
+                      rel='noreferrer'
+                      className='inline-flex items-center gap-1 text-[#6b8f5e] underline'
+                    >
+                      Mở liên kết thanh toán
+                      <ExternalLink className='w-3.5 h-3.5' />
+                    </a>
+                  </div>
+                </>
+              ) : (
+                <div className='w-full rounded-lg border border-dashed border-[#2d2a26]/20 bg-white px-3 py-4 text-xs text-[#7a756e]'>
+                  Hệ thống đang chuẩn bị phiên thanh toán Premium...
+                </div>
+              )}
             </div>
           </div>
 
           <div className='mt-4 p-3 rounded-xl border border-[#2d2a26]/15 bg-white text-xs text-[#7a756e]'>
-            Hệ thống sẽ kích hoạt ngay sau khi xác nhận chuyển khoản thành công cho tài khoản quản lý{' '}
+            Hệ thống sẽ kích hoạt Premium ngay sau khi ngân hàng xác nhận thanh toán cho tài khoản quản lý{' '}
             <span className='text-[#2d2a26]' style={{ fontWeight: 600 }}>
               {profile.name}
             </span>{' '}
@@ -243,21 +357,68 @@ export function ManagerUpgradePremiumPage() {
             .
           </div>
 
+          {message ? (
+            <div className='mt-4 rounded-xl border border-[#2d2a26]/15 bg-[#f8f6f2] p-3 text-xs text-[#2d2a26]'>
+              <div className='flex items-center gap-2'>
+                {(loadingLink || checking) && phase !== 'confirmed' ? (
+                  <Loader2 className='w-4 h-4 animate-spin text-[#6b8f5e]' />
+                ) : phase === 'confirmed' ? (
+                  <CheckCircle2 className='w-4 h-4 text-emerald-600' />
+                ) : (
+                  <QrCode className='w-4 h-4 text-[#6b8f5e]' />
+                )}
+                <span>{message}</span>
+              </div>
+              {phase === 'waiting' ? (
+                <p className='mt-2 text-[11px] text-[#7a756e]'>Đang kiểm tra trạng thái thanh toán mỗi 3 giây...</p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {error ? (
+            <div className='mt-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800'>
+              <div className='flex items-start gap-2'>
+                <AlertTriangle className='w-4 h-4 mt-0.5' />
+                <span>{error}</span>
+              </div>
+            </div>
+          ) : null}
+
           <button
             type='button'
-            onClick={handleConfirmPayment}
-            disabled={submitting || success}
+            onClick={() => {
+              if (phase !== 'confirmed') {
+                void createCheckout();
+              }
+            }}
+            disabled={loadingLink || checking || phase === 'waiting' || phase === 'confirmed'}
             className={`mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-[#2d2a26] text-sm transition-all ${
-              success
+              phase === 'confirmed'
                 ? 'bg-emerald-600 text-white'
-                : submitting
-                  ? 'bg-[#2d2a26] text-white'
+                : loadingLink || checking || phase === 'waiting'
+                  ? 'bg-[#2d2a26] text-white cursor-not-allowed'
                   : 'bg-[#6b8f5e] text-white hover:-translate-y-0.5'
             }`}
             style={{ fontWeight: 700 }}
           >
-            {submitting ? <LoaderCircle className='w-4 h-4 animate-spin' /> : <Wallet className='w-4 h-4' />}
-            {success ? 'Nâng cấp thành công!' : submitting ? 'Đang xác nhận thanh toán...' : 'Tôi đã chuyển khoản'}
+            {phase === 'confirmed' ? (
+              <>
+                <CheckCircle2 className='w-4 h-4' />
+                Nâng cấp thành công!
+              </>
+            ) : loadingLink ? (
+              <>
+                <Loader2 className='w-4 h-4 animate-spin' />
+                Đang tạo mã thanh toán...
+              </>
+            ) : phase === 'waiting' ? (
+              <>
+                <Loader2 className='w-4 h-4 animate-spin' />
+                Đang chờ thanh toán nâng cấp từ ngân hàng...
+              </>
+            ) : (
+              'Tạo lại mã thanh toán'
+            )}
           </button>
         </section>
       </div>
