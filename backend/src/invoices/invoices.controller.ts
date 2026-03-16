@@ -10,6 +10,14 @@ import type { AuthUser } from '../common/interfaces/auth-user.interface';
 export class InvoicesController {
   constructor(private readonly invoicesService: InvoicesService) {}
 
+  @Get()
+  async list(@CurrentUser() user: AuthUser | null) {
+    if (!user) {
+      return { items: [] };
+    }
+    return this.invoicesService.listForLedger(user);
+  }
+
   @Get(':id')
   async getById(@CurrentUser() user: AuthUser | null, @Param('id') id: string) {
     if (!user) {
