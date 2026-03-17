@@ -68,6 +68,13 @@ const loadingSession: SessionState = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 const EMAIL_NOT_VERIFIED_MESSAGE =
   'Truy cập bị từ chối: Tài khoản của bạn chưa được xác thực email. Vui lòng kiểm tra hộp thư và nhấp vào liên kết xác thực.';
+const PENDING_REGISTRATION_PROFILE_KEY = 'pethub.auth.pending-registration-profile';
+
+type PendingRegistrationProfile = {
+  email: string;
+  name?: string;
+  phone?: string;
+};
 
 function getDefaultRoute(role: AuthRole | null) {
   return role === 'manager' ? '/manager' : '/customer/dashboard';
@@ -100,6 +107,68 @@ function resolveClinicSlug(): string | undefined {
   return window.sessionStorage.getItem('clinicSlug')?.trim() || undefined;
 }
 
+function normalizeEmail(value?: string | null) {
+  return value?.trim().toLowerCase() ?? '';
+}
+
+function setPendingRegistrationProfile(profile: PendingRegistrationProfile) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const normalizedEmail = normalizeEmail(profile.email);
+  if (!normalizedEmail) {
+    return;
+  }
+
+  const payload: PendingRegistrationProfile = {
+    email: normalizedEmail,
+    name: profile.name?.trim() || undefined,
+    phone: profile.phone?.trim() || undefined,
+  };
+
+  window.sessionStorage.setItem(PENDING_REGISTRATION_PROFILE_KEY, JSON.stringify(payload));
+}
+
+function clearPendingRegistrationProfile() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  window.sessionStorage.removeItem(PENDING_REGISTRATION_PROFILE_KEY);
+}
+
+function getPendingRegistrationProfile(email?: string | null): PendingRegistrationProfile | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const expectedEmail = normalizeEmail(email);
+  if (!expectedEmail) {
+    return null;
+  }
+
+  const raw = window.sessionStorage.getItem(PENDING_REGISTRATION_PROFILE_KEY);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as PendingRegistrationProfile;
+    if (normalizeEmail(parsed.email) !== expectedEmail) {
+      return null;
+    }
+
+    return {
+      email: expectedEmail,
+      name: parsed.name?.trim() || undefined,
+      phone: parsed.phone?.trim() || undefined,
+    };
+  } catch {
+    clearPendingRegistrationProfile();
+    return null;
+  }
+}
+
 function requiresEmailVerification(user: FirebaseUser) {
   const hasPasswordProvider = user.providerData.some((provider) => provider.providerId === 'password');
   return hasPasswordProvider && !user.emailVerified;
@@ -123,12 +192,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const syncTask = (async () => {
         try {
           const clinicSlug = resolveClinicSlug();
-          return await syncFirebaseUser({
+          const pendingProfile = profileOverride ? null : getPendingRegistrationProfile(firebaseUser.email);
+          const profile = profileOverride ?? pendingProfile ?? undefined;
+          const payload = await syncFirebaseUser({
             idToken,
-            name: profileOverride?.name,
-            phone: profileOverride?.phone ?? firebaseUser.phoneNumber ?? undefined,
+            name: profile?.name,
+            phone: profile?.phone ?? firebaseUser.phoneNumber ?? undefined,
             clinicSlug,
           });
+          if (pendingProfile) {
+            clearPendingRegistrationProfile();
+          }
+          return payload;
         } catch (error) {
           throw new Error(toFriendlyAuthError(error, 'sync'));
         }
@@ -289,6 +364,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Registration should remain successful even if email sending is delayed.
           }
         }
+        setPendingRegistrationProfile({
+          email: email.trim(),
+          name: name.trim(),
+          phone: phone?.trim(),
+        });
         try {
           await signOut(firebaseAuth);
         } catch {

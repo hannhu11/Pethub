@@ -39,14 +39,18 @@ export class AuthService {
       const decoded = await this.verifyIdTokenWithTimeout(dto.idToken);
       const clinicId = await this.resolveClinicId(dto.clinicSlug);
       const email = decoded.email ?? `${decoded.uid}@pethub.vn`;
-      const normalizedPhone = dto.phone?.trim() ?? decoded.phone_number?.trim() ?? '';
-      const displayName = dto.name?.trim() || decoded.name?.trim() || null;
+      const explicitPhone = dto.phone?.trim();
+      const explicitName = dto.name?.trim();
+      const tokenPhone = decoded.phone_number?.trim() ?? '';
+      const tokenName = decoded.name?.trim() || null;
       const user = await this.upsertUserForSync({
         firebaseUid: decoded.uid,
         clinicId,
         email,
-        phone: normalizedPhone,
-        displayName,
+        explicitPhone: explicitPhone && explicitPhone.length > 0 ? explicitPhone : undefined,
+        explicitName: explicitName && explicitName.length > 0 ? explicitName : undefined,
+        tokenPhone,
+        tokenName,
       });
 
       await this.upsertCustomerProfile(user);
@@ -149,26 +153,41 @@ export class AuthService {
     firebaseUid: string;
     clinicId: string;
     email: string;
-    phone: string;
-    displayName: string | null;
+    explicitPhone?: string;
+    explicitName?: string;
+    tokenPhone: string;
+    tokenName: string | null;
   }): Promise<User> {
-    const safeName = input.displayName ?? input.email.split('@')[0] ?? 'PetHub User';
+    const safeName = input.explicitName ?? input.tokenName ?? input.email.split('@')[0] ?? 'PetHub User';
+    const safePhone = input.explicitPhone ?? input.tokenPhone ?? '';
+    const updateData: {
+      clinicId: string;
+      name?: string;
+      phone?: string;
+    } = {
+      clinicId: input.clinicId,
+    };
+
+    // Only trust explicit values from PetHub forms to avoid stale token values
+    // from overwriting profile fields managed inside PetHub.
+    if (input.explicitName) {
+      updateData.name = input.explicitName;
+    }
+    if (input.explicitPhone) {
+      updateData.phone = input.explicitPhone;
+    }
 
     try {
       return await this.prisma.user.upsert({
         where: { firebaseUid: input.firebaseUid },
-        update: {
-          clinicId: input.clinicId,
-          // Preserve profile fields managed in PetHub settings to avoid stale Firebase
-          // token payload overwriting user-edited data after refresh/login.
-        },
+        update: updateData,
         create: {
           clinicId: input.clinicId,
           firebaseUid: input.firebaseUid,
           email: input.email,
           role: Role.customer,
           name: safeName,
-          phone: input.phone,
+          phone: safePhone,
         },
       });
     } catch (error) {
@@ -198,6 +217,8 @@ export class AuthService {
         data: {
           firebaseUid: input.firebaseUid,
           clinicId: input.clinicId,
+          ...(input.explicitName ? { name: input.explicitName } : {}),
+          ...(input.explicitPhone ? { phone: input.explicitPhone } : {}),
         },
       });
     }
