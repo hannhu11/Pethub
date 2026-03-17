@@ -106,6 +106,14 @@ export class InvoicesService {
       },
       include: {
         customer: true,
+        manager: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
         items: true,
         paymentTxns: {
           orderBy: {
@@ -179,6 +187,7 @@ export class InvoicesService {
     draw('HOA DON THANH TOAN', 350, 790, 18, true);
     draw(`Ma: ${invoice.invoiceNo}`, 350, 770, 12);
     draw(`Ngay: ${invoice.issuedAt.toISOString()}`, 350, 754, 10);
+    draw(`Nguoi lap: ${invoice.manager?.name ?? 'Chua cap nhat'}`, 350, 738, 10);
 
     y = 720;
     draw('Khach hang:', 50, y, 12, true);
