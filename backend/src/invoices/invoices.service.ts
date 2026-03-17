@@ -50,33 +50,49 @@ export class InvoicesService {
             },
           },
         },
+        items: {
+          select: {
+            pet: {
+              select: {
+                id: true,
+                name: true,
+                species: true,
+              },
+            },
+          },
+        },
       },
     });
 
     return {
-      items: invoices.map((invoice) => ({
-        id: invoice.id,
-        invoiceNo: invoice.invoiceNo,
-        issuedAt: invoice.issuedAt.toISOString(),
-        createdAt: invoice.createdAt.toISOString(),
-        paymentMethod: invoice.paymentMethod,
-        paymentStatus: invoice.paymentStatus,
-        grandTotal: Number(invoice.grandTotal ?? 0),
-        customer: invoice.customer
-          ? {
-              id: invoice.customer.id,
-              name: invoice.customer.name,
-              phone: invoice.customer.phone,
-            }
-          : null,
-        pet: invoice.appointment?.pet
-          ? {
-              id: invoice.appointment.pet.id,
-              name: invoice.appointment.pet.name,
-              species: invoice.appointment.pet.species,
-            }
-          : null,
-      })),
+      items: invoices.map((invoice) => {
+        const fallbackPet = invoice.items.find((item) => item.pet)?.pet ?? null;
+        const resolvedPet = invoice.appointment?.pet ?? fallbackPet;
+
+        return {
+          id: invoice.id,
+          invoiceNo: invoice.invoiceNo,
+          issuedAt: invoice.issuedAt.toISOString(),
+          createdAt: invoice.createdAt.toISOString(),
+          paymentMethod: invoice.paymentMethod,
+          paymentStatus: invoice.paymentStatus,
+          grandTotal: Number(invoice.grandTotal ?? 0),
+          customer: invoice.customer
+            ? {
+                id: invoice.customer.id,
+                name: invoice.customer.name,
+                phone: invoice.customer.phone,
+              }
+            : null,
+          pet: resolvedPet
+            ? {
+                id: resolvedPet.id,
+                name: resolvedPet.name,
+                species: resolvedPet.species,
+              }
+            : null,
+        };
+      }),
     };
   }
 

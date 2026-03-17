@@ -25,7 +25,15 @@ function formatDateTime(value: string) {
   if (Number.isNaN(date.getTime())) {
     return value;
   }
-  return date.toLocaleString('vi-VN');
+  const datePart = date.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+  const timePart = date.toLocaleTimeString('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  return `${datePart} ${timePart}`;
 }
 
 export function ManagerInvoicePage() {

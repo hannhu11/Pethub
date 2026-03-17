@@ -5,9 +5,11 @@ import { extractApiError } from '../lib/api-client';
 import {
   getInvoiceById,
   listInvoicesLedger,
+  listPets,
   type ApiInvoiceLedgerItem,
   type InvoiceDetailsResponse,
 } from '../lib/pethub-api';
+import type { ApiPet } from '../types';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 
 function formatCurrency(value: number | string) {
@@ -20,7 +22,15 @@ function formatDateTime(value: string) {
   if (Number.isNaN(date.getTime())) {
     return value;
   }
-  return date.toLocaleString('vi-VN');
+  const datePart = date.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+  const timePart = date.toLocaleTimeString('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  return `${datePart} ${timePart}`;
 }
 
 function resolvePaymentMethodMeta(method: ApiInvoiceLedgerItem['paymentMethod']) {
@@ -73,6 +83,7 @@ export function ManagerRevenueLedgerPage() {
   const [error, setError] = useState('');
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [selectedDetails, setSelectedDetails] = useState<InvoiceDetailsResponse | null>(null);
+  const [detailsFallbackPet, setDetailsFallbackPet] = useState<ApiPet | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState('');
 
@@ -119,6 +130,7 @@ export function ManagerRevenueLedgerPage() {
   const openDetails = async (invoiceId: string) => {
     setSelectedInvoiceId(invoiceId);
     setSelectedDetails(null);
+    setDetailsFallbackPet(null);
     setDetailsLoading(true);
     setDetailsError('');
     try {
@@ -130,6 +142,50 @@ export function ManagerRevenueLedgerPage() {
       setDetailsLoading(false);
     }
   };
+
+  const detailsInvoice = selectedDetails?.invoice ?? null;
+  const detailsAppointmentPet = detailsInvoice?.appointment?.pet ?? null;
+  const detailsFallbackPetId = detailsInvoice?.items.find((item) => item.petId)?.petId ?? null;
+  const detailsResolvedPet = detailsAppointmentPet
+    ? {
+        name: detailsAppointmentPet.name,
+        species: detailsAppointmentPet.species,
+      }
+    : detailsFallbackPet
+      ? {
+          name: detailsFallbackPet.name,
+          species: detailsFallbackPet.species,
+        }
+      : null;
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadFallbackPet = async () => {
+      if (!detailsInvoice || detailsAppointmentPet || !detailsFallbackPetId) {
+        setDetailsFallbackPet(null);
+        return;
+      }
+
+      try {
+        const customerPets = await listPets(detailsInvoice.customerId);
+        if (!mounted) {
+          return;
+        }
+        setDetailsFallbackPet(customerPets.find((pet) => pet.id === detailsFallbackPetId) ?? null);
+      } catch {
+        if (mounted) {
+          setDetailsFallbackPet(null);
+        }
+      }
+    };
+
+    void loadFallbackPet();
+
+    return () => {
+      mounted = false;
+    };
+  }, [detailsAppointmentPet, detailsFallbackPetId, detailsInvoice]);
 
   return (
     <div className='space-y-5'>
@@ -234,6 +290,7 @@ export function ManagerRevenueLedgerPage() {
           if (!open) {
             setSelectedInvoiceId(null);
             setSelectedDetails(null);
+            setDetailsFallbackPet(null);
             setDetailsError('');
           }
         }}
@@ -257,20 +314,20 @@ export function ManagerRevenueLedgerPage() {
                 <span>{detailsError}</span>
               </div>
             </div>
-          ) : selectedDetails?.invoice ? (
+          ) : detailsInvoice ? (
             <div className='space-y-4'>
               <div className='bg-white border border-[#2d2a26] rounded-2xl p-5'>
                 <div className='flex items-start justify-between gap-3'>
                   <div>
                     <p className='text-lg text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
-                      Hóa đơn {selectedDetails.invoice.invoiceNo}
+                      Hóa đơn {detailsInvoice.invoiceNo}
                     </p>
                     <p className='text-sm text-[#7a756e] mt-1'>
-                      Ngày phát hành: {formatDateTime(selectedDetails.invoice.issuedAt)}
+                      Ngày phát hành: {formatDateTime(detailsInvoice.issuedAt)}
                     </p>
                   </div>
                   <Link
-                    to={`/manager/pos/receipt/${selectedDetails.invoice.id}`}
+                    to={`/manager/pos/receipt/${detailsInvoice.id}`}
                     className='inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-[#2d2a26] text-sm bg-white hover:-translate-y-0.5 transition-all'
                   >
                     Mở hóa đơn gốc
@@ -282,17 +339,17 @@ export function ManagerRevenueLedgerPage() {
                   <div className='border border-[#2d2a26]/20 rounded-xl p-3'>
                     <p className='text-xs text-[#7a756e]'>Khách hàng</p>
                     <p className='text-sm text-[#2d2a26] mt-1' style={{ fontWeight: 600 }}>
-                      {selectedDetails.invoice.customer.name}
+                      {detailsInvoice.customer.name}
                     </p>
-                    <p className='text-xs text-[#7a756e]'>{selectedDetails.invoice.customer.phone}</p>
+                    <p className='text-xs text-[#7a756e]'>{detailsInvoice.customer.phone}</p>
                   </div>
                   <div className='border border-[#2d2a26]/20 rounded-xl p-3'>
                     <p className='text-xs text-[#7a756e]'>Thú cưng</p>
                     <p className='text-sm text-[#2d2a26] mt-1' style={{ fontWeight: 600 }}>
-                      {selectedDetails.invoice.appointment?.pet?.name ?? 'Không có'}
+                      {detailsResolvedPet?.name ?? 'Không có'}
                     </p>
                     <p className='text-xs text-[#7a756e]'>
-                      {selectedDetails.invoice.appointment?.pet?.species ?? 'Chưa xác định'}
+                      {detailsResolvedPet?.species ?? 'Chưa xác định'}
                     </p>
                   </div>
                 </div>
@@ -308,7 +365,7 @@ export function ManagerRevenueLedgerPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {selectedDetails.invoice.items.map((line) => (
+                      {detailsInvoice.items.map((line) => (
                         <tr key={line.id} className='border-b last:border-b-0 border-[#2d2a26]/10'>
                           <td className='px-3 py-2'>{line.name}</td>
                           <td className='px-3 py-2 text-right'>{line.qty}</td>
@@ -323,15 +380,15 @@ export function ManagerRevenueLedgerPage() {
                 <div className='mt-4 ml-auto max-w-xs border border-[#2d2a26]/20 rounded-xl p-3 space-y-1 text-sm'>
                   <div className='flex justify-between'>
                     <span className='text-[#7a756e]'>Tạm tính</span>
-                    <span>{formatCurrency(selectedDetails.invoice.subtotal)}</span>
+                    <span>{formatCurrency(detailsInvoice.subtotal)}</span>
                   </div>
                   <div className='flex justify-between'>
-                    <span className='text-[#7a756e]'>VAT ({Number(selectedDetails.invoice.taxPercent)}%)</span>
-                    <span>{formatCurrency(selectedDetails.invoice.taxAmount)}</span>
+                    <span className='text-[#7a756e]'>VAT ({Number(detailsInvoice.taxPercent)}%)</span>
+                    <span>{formatCurrency(detailsInvoice.taxAmount)}</span>
                   </div>
                   <div className='flex justify-between text-[#2d2a26]' style={{ fontWeight: 700 }}>
                     <span>Tổng cộng</span>
-                    <span>{formatCurrency(selectedDetails.invoice.grandTotal)}</span>
+                    <span>{formatCurrency(detailsInvoice.grandTotal)}</span>
                   </div>
                 </div>
               </div>
