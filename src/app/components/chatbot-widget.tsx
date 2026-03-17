@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Bot, MessageCircle, SendHorizontal, X } from 'lucide-react';
+import { Bot, SendHorizontal, Sparkles, X } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useAuthSession } from '../auth-session';
 import { extractApiError } from '../lib/api-client';
 import { chatWithAi, type AiChatHistoryItem } from '../lib/pethub-api';
@@ -23,7 +25,7 @@ function createMessage(role: 'user' | 'assistant', content: string): ChatMessage
 function buildWelcomeMessage(): ChatMessage {
   return createMessage(
     'assistant',
-    'Xin chao! Toi la tro ly AI cua PetHub. Ban can tu van dich vu, lich hen, hay thong tin thu cung nao?',
+    'Xin chào! Mình là trợ lý AI của PetHub. Bạn cần tư vấn **dịch vụ**, **lịch hẹn** hay thông tin **thú cưng** nào?',
   );
 }
 
@@ -115,14 +117,14 @@ export function ChatbotWidget() {
         history,
       });
       const assistantText =
-        response.text?.trim() || 'Toi chua nhan duoc noi dung phu hop. Ban vui long thu lai.';
+        response.text?.trim() || 'Mình chưa nhận được nội dung phù hợp. Bạn vui lòng thử lại.';
       setMessages((previous) => [...previous, createMessage('assistant', assistantText)]);
     } catch (error) {
       const reason = extractApiError(error);
       const fallback =
         reason.toLowerCase().includes('ai_chat_enabled')
-          ? 'Tro ly AI dang tam tat. Vui long lien he quan tri vien.'
-          : 'He thong AI tam thoi gian doan. Ban vui long thu lai sau.';
+          ? 'Trợ lý AI đang tạm tắt. Vui lòng liên hệ quản trị viên.'
+          : 'Hệ thống AI tạm thời gián đoạn. Bạn vui lòng thử lại sau.';
       setMessages((previous) => [...previous, createMessage('assistant', fallback)]);
     } finally {
       setSending(false);
@@ -135,10 +137,17 @@ export function ChatbotWidget() {
         <button
           type='button'
           onClick={() => setOpen((value) => !value)}
-          className='w-14 h-14 rounded-full border border-[#2d2a26] bg-[#6b8f5e] text-white shadow-[0_16px_30px_rgba(45,42,38,0.2)] hover:-translate-y-0.5 transition-all flex items-center justify-center'
-          aria-label={open ? 'Dong chatbot' : 'Mo chatbot'}
+          className='relative w-14 h-14 rounded-full border border-[#2d2a26] bg-[#6b8f5e] text-white shadow-[0_16px_30px_rgba(45,42,38,0.2)] hover:-translate-y-0.5 transition-all flex items-center justify-center'
+          aria-label={open ? 'Đóng chatbot' : 'Mở chatbot'}
         >
-          {open ? <X className='w-6 h-6' /> : <MessageCircle className='w-6 h-6' />}
+          {!open ? (
+            <>
+              <span className='absolute inset-0 rounded-full bg-[#8fad80]/40 animate-pulse' />
+              <Sparkles className='w-6 h-6 relative z-10' />
+            </>
+          ) : (
+            <X className='w-6 h-6' />
+          )}
         </button>
       </div>
 
@@ -147,13 +156,14 @@ export function ChatbotWidget() {
           <div className='h-full rounded-3xl border border-[#2d2a26]/30 bg-white/85 backdrop-blur-md shadow-[0_18px_48px_rgba(45,42,38,0.2)] flex flex-col overflow-hidden'>
             <header className='px-4 py-3 border-b border-[#2d2a26]/10 bg-gradient-to-r from-[#6b8f5e] to-[#8fad80] text-white flex items-center gap-2'>
               <div className='w-8 h-8 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center'>
-                <Bot className='w-4 h-4' />
+                <Bot className='w-4 h-4 mr-0.5' />
+                <Sparkles className='w-3.5 h-3.5 -ml-1' />
               </div>
               <div>
                 <p className='text-sm' style={{ fontWeight: 700 }}>
                   PetHub AI Assistant
                 </p>
-                <p className='text-[11px] text-white/85'>Tra loi ngan gon, dung trong tam</p>
+                <p className='text-[11px] text-white/85'>Trả lời ngắn gọn, đúng trọng tâm</p>
               </div>
             </header>
 
@@ -170,14 +180,28 @@ export function ChatbotWidget() {
                         : 'bg-white text-[#2d2a26] border-[#2d2a26]/15'
                     }`}
                   >
-                    {item.content}
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        p: ({ children }) => <p className='my-1 leading-relaxed'>{children}</p>,
+                        ul: ({ children }) => <ul className='my-1 pl-5 list-disc space-y-1'>{children}</ul>,
+                        ol: ({ children }) => <ol className='my-1 pl-5 list-decimal space-y-1'>{children}</ol>,
+                        li: ({ children }) => <li className='leading-relaxed'>{children}</li>,
+                        strong: ({ children }) => <strong className='font-semibold'>{children}</strong>,
+                        code: ({ children }) => (
+                          <code className='px-1 py-0.5 rounded bg-[#2d2a26]/10 text-[0.92em]'>{children}</code>
+                        ),
+                      }}
+                    >
+                      {item.content}
+                    </ReactMarkdown>
                   </div>
                 </div>
               ))}
               {sending && (
                 <div className='flex justify-start'>
                   <div className='rounded-2xl px-3 py-2 text-sm border border-[#2d2a26]/15 bg-white text-[#7a756e]'>
-                    Dang tra loi...
+                    AI đang soạn...
                   </div>
                 </div>
               )}
@@ -194,7 +218,7 @@ export function ChatbotWidget() {
                 <textarea
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
-                  placeholder='Nhap cau hoi ve PetHub...'
+                  placeholder='Nhập câu hỏi về PetHub...'
                   rows={2}
                   className='flex-1 resize-none rounded-2xl border border-[#2d2a26]/20 bg-[#faf9f6] px-3 py-2 text-sm text-[#2d2a26] focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]/40'
                   onKeyDown={(event) => {
@@ -208,7 +232,7 @@ export function ChatbotWidget() {
                   type='submit'
                   disabled={sending || input.trim().length === 0}
                   className='h-10 w-10 rounded-full border border-[#2d2a26] bg-[#6b8f5e] text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center'
-                  aria-label='Gui tin nhan'
+                  aria-label='Gửi tin nhắn'
                 >
                   <SendHorizontal className='w-4 h-4' />
                 </button>
@@ -220,4 +244,3 @@ export function ChatbotWidget() {
     </>
   );
 }
-
