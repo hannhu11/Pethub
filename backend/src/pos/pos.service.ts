@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { AppointmentStatus, InvoiceItemType, PaymentMethod, PaymentStatus } from '@prisma/client';
+import { AppointmentStatus, InvoiceItemType, NotificationTarget, PaymentMethod, PaymentStatus } from '@prisma/client';
 import { createHash } from 'node:crypto';
 import { PrismaService } from '../database/prisma.service';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
@@ -256,6 +256,26 @@ export class PosService {
           cancelUrl: dto.cancelUrl,
         });
 
+    if (instantPayment) {
+      const paymentMethodLabel = this.resolveInstantPaymentLabel(dto.paymentMethod);
+      await this.prisma.notification.create({
+        data: {
+          clinicId: currentUser.clinicId,
+          customerId: data.customerId,
+          target: NotificationTarget.manager,
+          title: 'Thanh toán hoàn tất',
+          body: `Hóa đơn #${data.invoiceNo} đã thanh toán thành công bằng ${paymentMethodLabel}.`,
+          linkTo: '/manager/pos',
+          read: false,
+        },
+      });
+      this.realtimeService.emitNotificationCreated({
+        type: 'payment.paid',
+        clinicId: currentUser.clinicId,
+        invoiceId: data.id,
+      });
+    }
+
     this.realtimeService.emitSubscriptionUpdated({
       type: 'invoice.created',
       clinicId: currentUser.clinicId,
@@ -357,6 +377,16 @@ export class PosService {
 
   private isInstantPayment(method: PaymentMethod): boolean {
     return method === PaymentMethod.cash || method === PaymentMethod.card;
+  }
+
+  private resolveInstantPaymentLabel(method: PaymentMethod): string {
+    if (method === PaymentMethod.cash) {
+      return 'Tiền mặt';
+    }
+    if (method === PaymentMethod.card) {
+      return 'Thẻ';
+    }
+    return 'không xác định';
   }
 
   private generateInvoiceNo(): string {
