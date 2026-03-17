@@ -1,0 +1,27 @@
+import { Type } from 'class-transformer';
+import { ArrayMaxSize, IsArray, IsIn, IsOptional, IsString, MaxLength, MinLength, ValidateNested } from 'class-validator';
+
+export class ChatHistoryItemDto {
+  @IsString()
+  @IsIn(['user', 'assistant'])
+  role!: 'user' | 'assistant';
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(600)
+  content!: string;
+}
+
+export class ChatRequestDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(1000)
+  message!: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @ValidateNested({ each: true })
+  @Type(() => ChatHistoryItemDto)
+  history?: ChatHistoryItemDto[];
+}

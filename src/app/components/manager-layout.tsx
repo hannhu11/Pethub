@@ -27,6 +27,7 @@ import {
   hydrateManagerSettings,
   subscribeManagerSettingsUpdates,
 } from './manager-settings-store';
+import { ChatbotWidget } from './chatbot-widget';
 import {
   listNotifications,
   listCustomers,
@@ -720,6 +721,8 @@ export function ManagerLayout() {
           </CommandGroup>
         </CommandList>
       </CommandDialog>
+
+      <ChatbotWidget />
     </div>
   );
 }
