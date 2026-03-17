@@ -18,6 +18,7 @@ import {
   Shield,
 } from 'lucide-react';
 import { useAuthSession } from '../auth-session';
+import { ChatbotWidget } from './chatbot-widget';
 
 function SiteFooter() {
   return (
@@ -332,6 +333,7 @@ export function CustomerLayout() {
       </main>
 
       <SiteFooter />
+      <ChatbotWidget />
     </div>
   );
 }

@@ -47,6 +47,23 @@ export interface AuthSessionPayload {
   onboarding: OnboardingState;
 }
 
+export interface AiChatHistoryItem {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface AiChatRequestPayload {
+  message: string;
+  history?: AiChatHistoryItem[];
+}
+
+export interface AiChatResponse {
+  text: string;
+  provider: 'gemini' | 'fallback-template';
+  model: string;
+  scope: 'customer' | 'manager';
+}
+
 export interface ApiProduct {
   id: string;
   sku: string;
@@ -487,6 +504,11 @@ export interface UpsertMedicalRecordPayload {
 
 export async function syncFirebaseUser(payload: SyncFirebasePayload): Promise<AuthSessionPayload> {
   const { data } = await apiClient.post<AuthSessionPayload>('/auth/sync-firebase', payload);
+  return data;
+}
+
+export async function chatWithAi(payload: AiChatRequestPayload): Promise<AiChatResponse> {
+  const { data } = await apiClient.post<AiChatResponse>('/ai/chat', payload);
   return data;
 }
 
