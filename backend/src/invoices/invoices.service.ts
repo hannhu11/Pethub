@@ -12,6 +12,90 @@ export class InvoicesService {
     private readonly paymentsService: PaymentsService,
   ) {}
 
+  async listForLedger(currentUser: AuthUser) {
+    if (currentUser.role !== 'manager') {
+      throw new ForbiddenException('Only manager can view invoice ledger');
+    }
+
+    const invoices = await this.prisma.invoice.findMany({
+      where: {
+        clinicId: currentUser.clinicId,
+      },
+      orderBy: [{ issuedAt: 'desc' }, { createdAt: 'desc' }],
+      take: 500,
+      select: {
+        id: true,
+        invoiceNo: true,
+        issuedAt: true,
+        createdAt: true,
+        paymentMethod: true,
+        paymentStatus: true,
+        grandTotal: true,
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+          },
+        },
+        appointment: {
+          select: {
+            id: true,
+            pet: {
+              select: {
+                id: true,
+                name: true,
+                species: true,
+              },
+            },
+          },
+        },
+        items: {
+          select: {
+            pet: {
+              select: {
+                id: true,
+                name: true,
+                species: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return {
+      items: invoices.map((invoice) => {
+        const fallbackPet = invoice.items.find((item) => item.pet)?.pet ?? null;
+        const resolvedPet = invoice.appointment?.pet ?? fallbackPet;
+
+        return {
+          id: invoice.id,
+          invoiceNo: invoice.invoiceNo,
+          issuedAt: invoice.issuedAt.toISOString(),
+          createdAt: invoice.createdAt.toISOString(),
+          paymentMethod: invoice.paymentMethod,
+          paymentStatus: invoice.paymentStatus,
+          grandTotal: Number(invoice.grandTotal ?? 0),
+          customer: invoice.customer
+            ? {
+                id: invoice.customer.id,
+                name: invoice.customer.name,
+                phone: invoice.customer.phone,
+              }
+            : null,
+          pet: resolvedPet
+            ? {
+                id: resolvedPet.id,
+                name: resolvedPet.name,
+                species: resolvedPet.species,
+              }
+            : null,
+        };
+      }),
+    };
+  }
+
   async getById(id: string, currentUser: AuthUser) {
     await this.paymentsService.syncInvoicePaymentStatusIfNeeded(currentUser.clinicId, id);
 

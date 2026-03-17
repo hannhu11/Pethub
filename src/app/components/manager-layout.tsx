@@ -11,6 +11,7 @@ import {
   Bell,
   Settings,
   ShoppingCart,
+  Receipt,
   Search,
   Zap,
   UserCircle2,
@@ -75,6 +76,7 @@ type SidebarItem =
 const sidebarItems: SidebarItem[] = [
   { type: 'link', to: '/manager', label: 'Tổng quan', icon: LayoutDashboard, exact: true },
   { type: 'link', to: '/manager/pos', label: 'Thanh toán POS', icon: ShoppingCart },
+  { type: 'link', to: '/manager/revenue-ledger', label: 'Đối soát doanh thu', icon: Receipt },
   { type: 'link', to: '/manager/bookings', label: 'Lịch hẹn', icon: CalendarDays },
   { type: 'separator', label: 'CRM' },
   { type: 'link', to: '/manager/customers', label: 'Khách hàng', icon: Users },

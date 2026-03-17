@@ -207,6 +207,30 @@ export interface InvoiceDetailsResponse {
   } | null;
 }
 
+export interface ApiInvoiceLedgerItem {
+  id: string;
+  invoiceNo: string;
+  issuedAt: string;
+  createdAt: string;
+  paymentMethod: 'cash' | 'transfer' | 'card' | 'payos' | 'momo' | 'zalopay';
+  paymentStatus: 'unpaid' | 'paid' | 'refunded';
+  grandTotal: number;
+  customer: {
+    id: string;
+    name: string;
+    phone: string;
+  } | null;
+  pet: {
+    id: string;
+    name: string;
+    species: string;
+  } | null;
+}
+
+export interface ApiInvoiceLedgerListResponse {
+  items: ApiInvoiceLedgerItem[];
+}
+
 export interface UpsertCatalogServicePayload {
   code: string;
   name: string;
@@ -631,6 +655,11 @@ export async function getAnalyticsCustomerLtvSummary(): Promise<AnalyticsLtvSumm
 
 export async function getInvoiceById(id: string): Promise<InvoiceDetailsResponse> {
   const { data } = await apiClient.get<InvoiceDetailsResponse>(`/invoices/${id}`);
+  return data;
+}
+
+export async function listInvoicesLedger(): Promise<ApiInvoiceLedgerListResponse> {
+  const { data } = await apiClient.get<ApiInvoiceLedgerListResponse>('/invoices');
   return data;
 }
 

@@ -16,6 +16,7 @@ import { ManagerUpgradePremiumPage } from './components/manager-upgrade-premium'
 import { ManagerPOSPage } from './components/manager-pos';
 import { ManagerPosTransactionStatusPage } from './components/manager-pos-transaction';
 import { ManagerInvoicePage } from './components/manager-invoice';
+import { ManagerRevenueLedgerPage } from './components/manager-revenue-ledger';
 import { ManagerNotificationsPage } from './components/manager-notifications';
 import { RequireCustomerGuard, RequireManagerGuard, useAuthSession } from './auth-session';
 import {
@@ -118,6 +119,7 @@ export const router = createBrowserRouter([
         children: [
           { index: true, Component: ManagerDashboardPage, handle: { access: access.manager } },
           { path: 'pos', Component: ManagerPOSPage, handle: { access: access.manager } },
+          { path: 'revenue-ledger', Component: ManagerRevenueLedgerPage, handle: { access: access.manager } },
           { path: 'pos/transaction/:invoiceId', Component: ManagerPosTransactionStatusPage, handle: { access: access.manager } },
           { path: 'pos/receipt/:invoiceId', Component: ManagerInvoicePage, handle: { access: access.manager } },
           { path: 'bookings', Component: ManagerBookingsPage, handle: { access: access.manager } },
