@@ -157,6 +157,8 @@ export interface ApiService {
   code: string;
   name: string;
   description: string | null;
+  imageUrl: string | null;
+  iconName: string | null;
   durationMin: number;
   price: number | string;
   isActive: boolean;

@@ -16,6 +16,14 @@ export class UpsertProductDto {
   @IsString()
   description?: string;
 
+  @IsOptional()
+  @IsString()
+  imageUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  iconName?: string;
+
   @Type(() => Number)
   @IsNumber()
   @Min(0)

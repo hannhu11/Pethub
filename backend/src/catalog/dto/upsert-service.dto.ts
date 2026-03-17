@@ -12,6 +12,14 @@ export class UpsertServiceDto {
   @IsString()
   description?: string;
 
+  @IsOptional()
+  @IsString()
+  imageUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  iconName?: string;
+
   @Type(() => Number)
   @IsInt()
   @Min(1)

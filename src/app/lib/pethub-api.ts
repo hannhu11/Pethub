@@ -53,6 +53,8 @@ export interface ApiProduct {
   name: string;
   category: string | null;
   description: string | null;
+  imageUrl: string | null;
+  iconName: string | null;
   price: number | string;
   stock: number;
   isActive: boolean;
@@ -235,6 +237,8 @@ export interface UpsertCatalogServicePayload {
   code: string;
   name: string;
   description?: string;
+  imageUrl?: string;
+  iconName?: string;
   durationMin: number;
   price: number;
 }
@@ -244,6 +248,8 @@ export interface UpsertCatalogProductPayload {
   name: string;
   category?: string;
   description?: string;
+  imageUrl?: string;
+  iconName?: string;
   price: number;
   stock: number;
 }

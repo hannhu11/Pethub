@@ -1,7 +1,7 @@
-import { useEffect, useState, type ElementType } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { Stethoscope, Droplets, Scissors, Syringe, HeartPulse, Home, Clock, ChevronRight } from 'lucide-react';
+import { Clock, ChevronRight } from 'lucide-react';
 import serviceCheckupImage from '../../assets/images/services/checkup.jpg';
 import serviceSpaImage from '../../assets/images/services/spa.jpg';
 import serviceGroomingImage from '../../assets/images/services/grooming.jpg';
@@ -10,6 +10,7 @@ import serviceSpecialistImage from '../../assets/images/services/specialist.jpg'
 import serviceBoardingImage from '../../assets/images/services/boarding.jpg';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { extractApiError } from '../lib/api-client';
+import { resolveCatalogIcon } from '../lib/catalog-icons';
 import { listCatalogServices } from '../lib/pethub-api';
 import type { ApiService } from '../types';
 
@@ -21,15 +22,6 @@ const serviceImages = [
   serviceSpecialistImage,
   serviceBoardingImage,
 ] as const;
-
-const iconMap: Record<string, ElementType> = {
-  checkup: Stethoscope,
-  spa: Droplets,
-  grooming: Scissors,
-  vaccine: Syringe,
-  specialist: HeartPulse,
-  boarding: Home,
-};
 
 function formatCurrency(value: number | string) {
   return `${Math.round(Number(value ?? 0)).toLocaleString('vi-VN')} ₫`;
@@ -47,16 +39,6 @@ function formatDuration(durationMin: number) {
   const hours = Math.floor(durationMin / 60);
   const minutes = durationMin % 60;
   return minutes > 0 ? `${hours} giờ ${minutes} phút` : `${hours} giờ`;
-}
-
-function resolveIcon(service: ApiService): ElementType {
-  const key = `${service.code} ${service.name}`.toLowerCase();
-  if (key.includes('spa') || key.includes('tam')) return iconMap.spa;
-  if (key.includes('cat') || key.includes('groom')) return iconMap.grooming;
-  if (key.includes('tiem') || key.includes('vaccine')) return iconMap.vaccine;
-  if (key.includes('chuyen-khoa') || key.includes('special')) return iconMap.specialist;
-  if (key.includes('luu') || key.includes('boarding')) return iconMap.boarding;
-  return iconMap.checkup;
 }
 
 export function ServicesPage() {
@@ -121,7 +103,8 @@ export function ServicesPage() {
 
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
           {services.map((service, index) => {
-            const Icon = resolveIcon(service);
+            const iconOption = resolveCatalogIcon(service.iconName);
+            const Icon = iconOption.icon;
             return (
               <motion.article
                 key={service.id}
@@ -132,7 +115,7 @@ export function ServicesPage() {
               >
                 <div className='relative h-48 overflow-hidden'>
                   <ImageWithFallback
-                    src={serviceImages[index % serviceImages.length]}
+                    src={service.imageUrl || serviceImages[index % serviceImages.length]}
                     alt={service.name}
                     className='w-full h-full object-cover'
                   />
@@ -147,8 +130,11 @@ export function ServicesPage() {
 
                 <div className='p-5'>
                   <div className='flex items-start gap-3 mb-3'>
-                    <div className='w-10 h-10 rounded-xl bg-[#6b8f5e]/10 flex items-center justify-center flex-shrink-0'>
-                      <Icon className='w-5 h-5 text-[#6b8f5e]' />
+                    <div
+                      className='w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0'
+                      style={{ backgroundColor: iconOption.bgColor }}
+                    >
+                      <Icon className='w-5 h-5' style={{ color: iconOption.color }} />
                     </div>
                     <div>
                       <h3 className='text-[#2d2a26] mb-1' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>

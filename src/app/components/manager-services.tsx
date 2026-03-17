@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { motion } from 'motion/react';
 import { Package, Plus, ShoppingBag, Stethoscope, X } from 'lucide-react';
 import { extractApiError } from '../lib/api-client';
+import { filterCatalogIconOptions, resolveCatalogIcon } from '../lib/catalog-icons';
 import {
   listCatalogProducts,
   listCatalogServices,
@@ -10,6 +11,7 @@ import {
   upsertCatalogProduct,
   upsertCatalogService,
 } from '../lib/pethub-api';
+import { ImageWithFallback } from './figma/ImageWithFallback';
 
 type CatalogTab = 'services' | 'products' | 'categories';
 
@@ -17,6 +19,8 @@ type ServiceFormState = {
   code: string;
   name: string;
   description: string;
+  imageUrl: string;
+  iconName: string;
   durationMin: string;
   price: string;
 };
@@ -26,6 +30,8 @@ type ProductFormState = {
   name: string;
   category: string;
   description: string;
+  imageUrl: string;
+  iconName: string;
   price: string;
   stock: string;
 };
@@ -34,6 +40,8 @@ const emptyServiceForm: ServiceFormState = {
   code: '',
   name: '',
   description: '',
+  imageUrl: '',
+  iconName: 'checkup',
   durationMin: '30',
   price: '',
 };
@@ -43,6 +51,8 @@ const emptyProductForm: ProductFormState = {
   name: '',
   category: '',
   description: '',
+  imageUrl: '',
+  iconName: 'product',
   price: '',
   stock: '0',
 };
@@ -83,6 +93,84 @@ function inferProductSku(name: string, existingSkus: Set<string>) {
   return candidate;
 }
 
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Không thể đọc ảnh tải lên.'));
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+    reader.readAsDataURL(file);
+  });
+}
+
+const MAX_CATALOG_IMAGE_BYTES = 700_000;
+
+function estimateDataUrlBytes(dataUrl: string) {
+  const base64 = dataUrl.split(',')[1] ?? '';
+  return Math.floor((base64.length * 3) / 4);
+}
+
+function loadImageFromFile(file: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('Không thể xử lý ảnh tải lên.'));
+    };
+    image.src = objectUrl;
+  });
+}
+
+async function optimizeCatalogImageForUpload(file: File) {
+  const originalDataUrl = await readFileAsDataUrl(file);
+  if (estimateDataUrlBytes(originalDataUrl) <= MAX_CATALOG_IMAGE_BYTES) {
+    return originalDataUrl;
+  }
+
+  const source = await loadImageFromFile(file);
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  if (!context) {
+    return originalDataUrl;
+  }
+
+  const maxDimension = 1200;
+  const largerEdge = Math.max(source.naturalWidth, source.naturalHeight);
+  let width = source.naturalWidth;
+  let height = source.naturalHeight;
+  if (largerEdge > maxDimension) {
+    const ratio = maxDimension / largerEdge;
+    width = Math.max(320, Math.round(width * ratio));
+    height = Math.max(320, Math.round(height * ratio));
+  }
+
+  const qualitySteps = [0.86, 0.78, 0.7, 0.62, 0.54, 0.46, 0.4];
+  let bestAttempt = originalDataUrl;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    canvas.width = Math.max(320, Math.round(width));
+    canvas.height = Math.max(320, Math.round(height));
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(source, 0, 0, canvas.width, canvas.height);
+
+    for (const quality of qualitySteps) {
+      const output = canvas.toDataURL('image/jpeg', quality);
+      bestAttempt = output;
+      if (estimateDataUrlBytes(output) <= MAX_CATALOG_IMAGE_BYTES) {
+        return output;
+      }
+    }
+
+    width *= 0.82;
+    height *= 0.82;
+  }
+
+  return bestAttempt;
+}
+
 export function ManagerCatalogPage() {
   const [tab, setTab] = useState<CatalogTab>('services');
   const [services, setServices] = useState<ApiService[]>([]);
@@ -97,6 +185,8 @@ export function ManagerCatalogPage() {
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [serviceForm, setServiceForm] = useState<ServiceFormState>(emptyServiceForm);
   const [productForm, setProductForm] = useState<ProductFormState>(emptyProductForm);
+  const [serviceIconSearch, setServiceIconSearch] = useState('');
+  const [productIconSearch, setProductIconSearch] = useState('');
 
   const loadCatalog = useMemo(
     () => async (silent = false) => {
@@ -149,6 +239,7 @@ export function ManagerCatalogPage() {
 
   const openCreateService = () => {
     setServiceForm(emptyServiceForm);
+    setServiceIconSearch('');
     setServiceDialogOpen(true);
   };
 
@@ -157,14 +248,18 @@ export function ManagerCatalogPage() {
       code: service.code,
       name: service.name,
       description: service.description ?? '',
+      imageUrl: service.imageUrl ?? '',
+      iconName: service.iconName ?? 'checkup',
       durationMin: String(service.durationMin || 30),
       price: String(Number(service.price ?? 0)),
     });
+    setServiceIconSearch('');
     setServiceDialogOpen(true);
   };
 
   const openCreateProduct = () => {
     setProductForm(emptyProductForm);
+    setProductIconSearch('');
     setProductDialogOpen(true);
   };
 
@@ -174,10 +269,66 @@ export function ManagerCatalogPage() {
       name: product.name,
       category: product.category ?? '',
       description: product.description ?? '',
+      imageUrl: product.imageUrl ?? '',
+      iconName: product.iconName ?? 'product',
       price: String(Number(product.price ?? 0)),
       stock: String(product.stock ?? 0),
     });
+    setProductIconSearch('');
     setProductDialogOpen(true);
+  };
+
+  const serviceIconChoices = useMemo(
+    () => filterCatalogIconOptions(serviceIconSearch),
+    [serviceIconSearch],
+  );
+  const productIconChoices = useMemo(
+    () => filterCatalogIconOptions(productIconSearch),
+    [productIconSearch],
+  );
+
+  const handleServiceImageUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const dataUrl = await optimizeCatalogImageForUpload(file);
+      if (estimateDataUrlBytes(dataUrl) > MAX_CATALOG_IMAGE_BYTES) {
+        throw new Error('Ảnh quá lớn sau khi nén. Vui lòng chọn ảnh nhẹ hơn.');
+      }
+      setServiceForm((prev) => ({
+        ...prev,
+        imageUrl: dataUrl,
+      }));
+    } catch (apiError) {
+      setError(extractApiError(apiError));
+    } finally {
+      event.target.value = '';
+    }
+  };
+
+  const handleProductImageUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const dataUrl = await optimizeCatalogImageForUpload(file);
+      if (estimateDataUrlBytes(dataUrl) > MAX_CATALOG_IMAGE_BYTES) {
+        throw new Error('Ảnh quá lớn sau khi nén. Vui lòng chọn ảnh nhẹ hơn.');
+      }
+      setProductForm((prev) => ({
+        ...prev,
+        imageUrl: dataUrl,
+      }));
+    } catch (apiError) {
+      setError(extractApiError(apiError));
+    } finally {
+      event.target.value = '';
+    }
   };
 
   const saveService = async () => {
@@ -200,6 +351,8 @@ export function ManagerCatalogPage() {
         code,
         name,
         description: serviceForm.description.trim() || undefined,
+        imageUrl: serviceForm.imageUrl.trim() || undefined,
+        iconName: serviceForm.iconName.trim() || undefined,
         durationMin,
         price,
       });
@@ -234,6 +387,8 @@ export function ManagerCatalogPage() {
         name,
         category: productForm.category.trim() || undefined,
         description: productForm.description.trim() || undefined,
+        imageUrl: productForm.imageUrl.trim() || undefined,
+        iconName: productForm.iconName.trim() || undefined,
         price,
         stock,
       });
@@ -308,29 +463,62 @@ export function ManagerCatalogPage() {
           </div>
 
           <div className='grid md:grid-cols-2 xl:grid-cols-3 gap-4'>
-            {services.map((service, index) => (
-              <motion.button
-                key={service.id}
-                type='button'
-                onClick={() => openEditService(service)}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.03 }}
-                className='bg-white border border-[#2d2a26] rounded-2xl p-4 text-left hover:-translate-y-0.5 transition-all'
-              >
-                <p className='text-xs text-[#7a756e] uppercase tracking-[0.08em]'>{service.code}</p>
-                <p className='text-base text-[#2d2a26] mt-1' style={{ fontWeight: 700 }}>
-                  {service.name}
-                </p>
-                <p className='text-sm text-[#7a756e] mt-1 line-clamp-2'>{service.description || 'Chưa có mô tả.'}</p>
-                <div className='mt-3 flex items-center justify-between'>
-                  <span className='text-xs text-[#7a756e]'>{service.durationMin} phút</span>
-                  <span className='text-base text-[#6b8f5e]' style={{ fontWeight: 700 }}>
-                    {formatCurrency(service.price)}
-                  </span>
-                </div>
-              </motion.button>
-            ))}
+            {services.map((service, index) => {
+              const iconOption = resolveCatalogIcon(service.iconName);
+              const ServiceIcon = iconOption.icon;
+              const hasImage = Boolean(service.imageUrl);
+              return (
+                <motion.button
+                  key={service.id}
+                  type='button'
+                  onClick={() => openEditService(service)}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.03 }}
+                  className='bg-white border border-[#2d2a26] rounded-2xl p-4 text-left hover:-translate-y-0.5 transition-all'
+                >
+                  <div className='flex items-start gap-3'>
+                    <div className='w-16 h-16 rounded-xl border border-[#2d2a26]/15 overflow-hidden bg-[#f0ede8] shrink-0'>
+                      {hasImage ? (
+                        <ImageWithFallback
+                          src={service.imageUrl || ''}
+                          alt={service.name}
+                          className='w-full h-full object-cover'
+                        />
+                      ) : (
+                        <div
+                          className='w-full h-full flex items-center justify-center'
+                          style={{ backgroundColor: iconOption.bgColor }}
+                        >
+                          <ServiceIcon className='w-5 h-5' style={{ color: iconOption.color }} />
+                        </div>
+                      )}
+                    </div>
+                    <div className='min-w-0 flex-1'>
+                      <div className='flex items-center gap-2'>
+                        <span
+                          className='w-7 h-7 rounded-lg flex items-center justify-center shrink-0'
+                          style={{ backgroundColor: iconOption.bgColor }}
+                        >
+                          <ServiceIcon className='w-4 h-4' style={{ color: iconOption.color }} />
+                        </span>
+                        <p className='text-xs text-[#7a756e] uppercase tracking-[0.08em]'>{service.code}</p>
+                      </div>
+                      <p className='text-base text-[#2d2a26] mt-1 line-clamp-1' style={{ fontWeight: 700 }}>
+                        {service.name}
+                      </p>
+                      <p className='text-sm text-[#7a756e] mt-1 line-clamp-2'>{service.description || 'Chưa có mô tả.'}</p>
+                    </div>
+                  </div>
+                  <div className='mt-3 flex items-center justify-between'>
+                    <span className='text-xs text-[#7a756e]'>{service.durationMin} phút</span>
+                    <span className='text-base text-[#6b8f5e]' style={{ fontWeight: 700 }}>
+                      {formatCurrency(service.price)}
+                    </span>
+                  </div>
+                </motion.button>
+              );
+            })}
           </div>
 
           {!loading && services.length === 0 ? (
@@ -356,30 +544,65 @@ export function ManagerCatalogPage() {
           </div>
 
           <div className='grid md:grid-cols-2 xl:grid-cols-3 gap-4'>
-            {products.map((product, index) => (
-              <motion.button
-                key={product.id}
-                type='button'
-                onClick={() => openEditProduct(product)}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.03 }}
-                className='bg-white border border-[#2d2a26] rounded-2xl p-4 text-left hover:-translate-y-0.5 transition-all'
-              >
-                <p className='text-xs text-[#7a756e] uppercase tracking-[0.08em]'>{product.sku}</p>
-                <p className='text-base text-[#2d2a26] mt-1' style={{ fontWeight: 700 }}>
-                  {product.name}
-                </p>
-                <p className='text-sm text-[#7a756e] mt-1 line-clamp-2'>{product.description || 'Chưa có mô tả.'}</p>
-                <div className='mt-3 flex items-center justify-between text-xs text-[#7a756e]'>
-                  <span>{product.category || 'Chưa phân loại'}</span>
-                  <span>Tồn kho: {product.stock}</span>
-                </div>
-                <p className='text-base text-[#6b8f5e] mt-2' style={{ fontWeight: 700 }}>
-                  {formatCurrency(product.price)}
-                </p>
-              </motion.button>
-            ))}
+            {products.map((product, index) => {
+              const iconOption = resolveCatalogIcon(product.iconName);
+              const ProductIcon = iconOption.icon;
+              const hasImage = Boolean(product.imageUrl);
+              return (
+                <motion.button
+                  key={product.id}
+                  type='button'
+                  onClick={() => openEditProduct(product)}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.03 }}
+                  className='bg-white border border-[#2d2a26] rounded-2xl p-4 text-left hover:-translate-y-0.5 transition-all'
+                >
+                  <div className='flex items-start gap-3'>
+                    <div className='w-16 h-16 rounded-xl border border-[#2d2a26]/15 overflow-hidden bg-[#f0ede8] shrink-0'>
+                      {hasImage ? (
+                        <ImageWithFallback
+                          src={product.imageUrl || ''}
+                          alt={product.name}
+                          className='w-full h-full object-cover'
+                        />
+                      ) : (
+                        <div
+                          className='w-full h-full flex items-center justify-center'
+                          style={{ backgroundColor: iconOption.bgColor }}
+                        >
+                          <ProductIcon className='w-5 h-5' style={{ color: iconOption.color }} />
+                        </div>
+                      )}
+                    </div>
+                    <div className='min-w-0 flex-1'>
+                      <div className='flex items-center gap-2'>
+                        <span
+                          className='w-7 h-7 rounded-lg flex items-center justify-center shrink-0'
+                          style={{ backgroundColor: iconOption.bgColor }}
+                        >
+                          <ProductIcon className='w-4 h-4' style={{ color: iconOption.color }} />
+                        </span>
+                        <p className='text-xs text-[#7a756e] uppercase tracking-[0.08em]'>{product.sku}</p>
+                      </div>
+                      <p className='text-base text-[#2d2a26] mt-1 line-clamp-1' style={{ fontWeight: 700 }}>
+                        {product.name}
+                      </p>
+                      <p className='text-sm text-[#7a756e] mt-1 line-clamp-2'>
+                        {product.description || 'Chưa có mô tả.'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className='mt-3 flex items-center justify-between text-xs text-[#7a756e]'>
+                    <span>{product.category || 'Chưa phân loại'}</span>
+                    <span>Tồn kho: {product.stock}</span>
+                  </div>
+                  <p className='text-base text-[#6b8f5e] mt-2' style={{ fontWeight: 700 }}>
+                    {formatCurrency(product.price)}
+                  </p>
+                </motion.button>
+              );
+            })}
           </div>
 
           {!loading && products.length === 0 ? (
@@ -463,6 +686,76 @@ export function ManagerCatalogPage() {
                 className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
               />
             </div>
+            <div className='grid sm:grid-cols-[136px_1fr] gap-3'>
+              <div className='space-y-2'>
+                <p className='text-xs text-[#7a756e] uppercase tracking-[0.08em]'>Ảnh dịch vụ</p>
+                <div className='w-[136px] h-[96px] rounded-xl overflow-hidden border border-[#2d2a26]/20 bg-[#f0ede8]'>
+                  {serviceForm.imageUrl ? (
+                    <ImageWithFallback src={serviceForm.imageUrl} alt='Service preview' className='w-full h-full object-cover' />
+                  ) : (
+                    <div className='w-full h-full flex items-center justify-center text-[11px] text-[#7a756e] text-center px-3'>
+                      Chưa có ảnh
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className='space-y-2'>
+                <label className='text-xs text-[#7a756e] uppercase tracking-[0.08em]'>Tải ảnh từ máy</label>
+                <input
+                  type='file'
+                  accept='image/*'
+                  onChange={(event) => void handleServiceImageUpload(event)}
+                  className='block w-full text-sm text-[#2d2a26] file:mr-3 file:rounded-lg file:border file:border-[#2d2a26]/30 file:bg-white file:px-3 file:py-1.5 file:text-xs file:text-[#2d2a26]'
+                />
+                <div className='flex items-center gap-2'>
+                  <button
+                    type='button'
+                    onClick={() => setServiceForm((prev) => ({ ...prev, imageUrl: '' }))}
+                    className='px-3 py-1.5 rounded-lg border border-[#2d2a26]/25 text-xs text-[#2d2a26] bg-white'
+                  >
+                    Xóa ảnh
+                  </button>
+                  <span className='text-xs text-[#7a756e]'>Ảnh sẽ đồng bộ sang trang khách hàng.</span>
+                </div>
+              </div>
+            </div>
+            <div className='space-y-2'>
+              <p className='text-xs text-[#7a756e] uppercase tracking-[0.08em]'>Icon dịch vụ</p>
+              <input
+                value={serviceIconSearch}
+                onChange={(event) => setServiceIconSearch(event.target.value)}
+                placeholder='Tìm icon: spa, grooming, vaccine...'
+                className='w-full p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
+              />
+              <div className='max-h-40 overflow-auto rounded-xl border border-[#2d2a26]/15 bg-white p-2 grid grid-cols-2 sm:grid-cols-3 gap-2'>
+                {serviceIconChoices.map((option) => {
+                  const OptionIcon = option.icon;
+                  const selected = serviceForm.iconName === option.key;
+                  return (
+                    <button
+                      key={option.key}
+                      type='button'
+                      onClick={() => setServiceForm((prev) => ({ ...prev, iconName: option.key }))}
+                      className={`p-2 rounded-lg border text-left transition-colors ${
+                        selected
+                          ? 'border-[#2d2a26] bg-[#f0ede8]'
+                          : 'border-[#2d2a26]/15 bg-white hover:bg-[#faf9f6]'
+                      }`}
+                    >
+                      <span className='inline-flex items-center gap-2'>
+                        <span className='w-7 h-7 rounded-lg flex items-center justify-center' style={{ backgroundColor: option.bgColor }}>
+                          <OptionIcon className='w-4 h-4' style={{ color: option.color }} />
+                        </span>
+                        <span className='text-xs text-[#2d2a26]'>{option.label}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+                {serviceIconChoices.length === 0 ? (
+                  <p className='text-xs text-[#7a756e] px-1 py-2 col-span-full'>Không tìm thấy icon phù hợp.</p>
+                ) : null}
+              </div>
+            </div>
             <textarea
               value={serviceForm.description}
               onChange={(event) => setServiceForm((prev) => ({ ...prev, description: event.target.value }))}
@@ -534,6 +827,76 @@ export function ManagerCatalogPage() {
                 placeholder='Giá bán'
                 className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white sm:col-span-2'
               />
+            </div>
+            <div className='grid sm:grid-cols-[136px_1fr] gap-3'>
+              <div className='space-y-2'>
+                <p className='text-xs text-[#7a756e] uppercase tracking-[0.08em]'>Ảnh sản phẩm</p>
+                <div className='w-[136px] h-[96px] rounded-xl overflow-hidden border border-[#2d2a26]/20 bg-[#f0ede8]'>
+                  {productForm.imageUrl ? (
+                    <ImageWithFallback src={productForm.imageUrl} alt='Product preview' className='w-full h-full object-cover' />
+                  ) : (
+                    <div className='w-full h-full flex items-center justify-center text-[11px] text-[#7a756e] text-center px-3'>
+                      Chưa có ảnh
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className='space-y-2'>
+                <label className='text-xs text-[#7a756e] uppercase tracking-[0.08em]'>Tải ảnh từ máy</label>
+                <input
+                  type='file'
+                  accept='image/*'
+                  onChange={(event) => void handleProductImageUpload(event)}
+                  className='block w-full text-sm text-[#2d2a26] file:mr-3 file:rounded-lg file:border file:border-[#2d2a26]/30 file:bg-white file:px-3 file:py-1.5 file:text-xs file:text-[#2d2a26]'
+                />
+                <div className='flex items-center gap-2'>
+                  <button
+                    type='button'
+                    onClick={() => setProductForm((prev) => ({ ...prev, imageUrl: '' }))}
+                    className='px-3 py-1.5 rounded-lg border border-[#2d2a26]/25 text-xs text-[#2d2a26] bg-white'
+                  >
+                    Xóa ảnh
+                  </button>
+                  <span className='text-xs text-[#7a756e]'>Ảnh dùng cho hiển thị catalog đồng bộ.</span>
+                </div>
+              </div>
+            </div>
+            <div className='space-y-2'>
+              <p className='text-xs text-[#7a756e] uppercase tracking-[0.08em]'>Icon sản phẩm</p>
+              <input
+                value={productIconSearch}
+                onChange={(event) => setProductIconSearch(event.target.value)}
+                placeholder='Tìm icon: product, retail, pharmacy...'
+                className='w-full p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
+              />
+              <div className='max-h-40 overflow-auto rounded-xl border border-[#2d2a26]/15 bg-white p-2 grid grid-cols-2 sm:grid-cols-3 gap-2'>
+                {productIconChoices.map((option) => {
+                  const OptionIcon = option.icon;
+                  const selected = productForm.iconName === option.key;
+                  return (
+                    <button
+                      key={option.key}
+                      type='button'
+                      onClick={() => setProductForm((prev) => ({ ...prev, iconName: option.key }))}
+                      className={`p-2 rounded-lg border text-left transition-colors ${
+                        selected
+                          ? 'border-[#2d2a26] bg-[#f0ede8]'
+                          : 'border-[#2d2a26]/15 bg-white hover:bg-[#faf9f6]'
+                      }`}
+                    >
+                      <span className='inline-flex items-center gap-2'>
+                        <span className='w-7 h-7 rounded-lg flex items-center justify-center' style={{ backgroundColor: option.bgColor }}>
+                          <OptionIcon className='w-4 h-4' style={{ color: option.color }} />
+                        </span>
+                        <span className='text-xs text-[#2d2a26]'>{option.label}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+                {productIconChoices.length === 0 ? (
+                  <p className='text-xs text-[#7a756e] px-1 py-2 col-span-full'>Không tìm thấy icon phù hợp.</p>
+                ) : null}
+              </div>
             </div>
             <textarea
               value={productForm.description}
