@@ -396,10 +396,10 @@ export class AppointmentsService {
     }
 
     const recordedAt = appointment.paidAt ?? new Date();
-    const diagnosis = `Hoàn tất dịch vụ: ${appointment.service.name}`;
+    const diagnosis = `Dịch vụ sử dụng: ${appointment.service.name}`;
     const treatment = appointment.note?.trim()
       ? `Theo ghi chú cuộc hẹn: ${appointment.note.trim()}`
-      : `Thực hiện dịch vụ ${appointment.service.name} theo lịch hẹn.`;
+      : `Hoàn tất dịch vụ ${appointment.service.name} theo lịch hẹn.`;
 
     await tx.medicalRecord.upsert({
       where: { appointmentId: appointment.id },

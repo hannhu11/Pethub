@@ -212,6 +212,45 @@ function formatRecordDate(value: string) {
   return parsed.toISOString().slice(0, 10);
 }
 
+function mapMedicalRecordDisplay(record: ApiMedicalRecord) {
+  const diagnosis = record.diagnosis?.trim() ?? '';
+  const treatment = record.treatment?.trim() ?? '';
+  const diagnosisLower = diagnosis.toLowerCase();
+  const treatmentLower = treatment.toLowerCase();
+  const isServiceDiagnosis =
+    diagnosisLower.startsWith('hoàn tất dịch vụ:') ||
+    diagnosisLower.startsWith('hoan tat dich vu:') ||
+    diagnosisLower.startsWith('dịch vụ sử dụng:') ||
+    diagnosisLower.startsWith('dich vu su dung:') ||
+    diagnosisLower.startsWith('dịch vụ:') ||
+    diagnosisLower.startsWith('dich vu:');
+  const isServiceLog =
+    isServiceDiagnosis ||
+    treatmentLower.includes('thực hiện dịch vụ') ||
+    treatmentLower.includes('thuc hien dich vu') ||
+    treatmentLower.includes('hoàn tất dịch vụ') ||
+    treatmentLower.includes('hoan tat dich vu');
+  const colonIndex = diagnosis.indexOf(':');
+  const serviceName =
+    isServiceLog && colonIndex >= 0 ? diagnosis.slice(colonIndex + 1).trim() : diagnosis;
+
+  if (isServiceLog) {
+    return {
+      primaryLabel: 'Dịch vụ sử dụng',
+      primaryValue: serviceName || diagnosis,
+      secondaryLabel: 'Chi tiết thực hiện',
+      secondaryValue: treatment,
+    };
+  }
+
+  return {
+    primaryLabel: 'Chẩn đoán',
+    primaryValue: diagnosis,
+    secondaryLabel: 'Điều trị',
+    secondaryValue: treatment,
+  };
+}
+
 function mapApiPetToUiPet(pet: ApiPet): Pet {
   const view = mapApiPetToCardView(pet);
   return {
@@ -892,37 +931,40 @@ export function ManagerPetsPage() {
                         Chưa có bệnh án nào.
                       </div>
                     ) : null}
-                    {medicalRecords.map((record) => (
-                      <article key={record.id} className='rounded-xl border border-[#2d2a26]/15 bg-[#faf9f6] p-3'>
-                        <div className='flex items-center justify-between gap-2'>
-                          <div className='flex items-center gap-2 text-sm text-[#2d2a26]'>
-                            <CalendarDays className='w-4 h-4 text-[#6b8f5e]' />
-                            <span style={{ fontWeight: 700 }}>{formatRecordDate(record.recordedAt)}</span>
-                            <span className='text-[#7a756e]'>- {record.doctorName || 'BS. Chưa cập nhật'}</span>
+                    {medicalRecords.map((record) => {
+                      const view = mapMedicalRecordDisplay(record);
+                      return (
+                        <article key={record.id} className='rounded-xl border border-[#2d2a26]/15 bg-[#faf9f6] p-3'>
+                          <div className='flex items-center justify-between gap-2'>
+                            <div className='flex items-center gap-2 text-sm text-[#2d2a26]'>
+                              <CalendarDays className='w-4 h-4 text-[#6b8f5e]' />
+                              <span style={{ fontWeight: 700 }}>{formatRecordDate(record.recordedAt)}</span>
+                              <span className='text-[#7a756e]'>- {record.doctorName || 'BS. Chưa cập nhật'}</span>
+                            </div>
+                            <div className='flex items-center gap-1'>
+                              <button
+                                onClick={() => openEditMedicalForm(record)}
+                                className='p-1.5 rounded-lg border border-[#2d2a26]/20 hover:bg-white'
+                              >
+                                <Edit3 className='w-4 h-4' />
+                              </button>
+                              <button
+                                onClick={() => void removeMedical(record.id)}
+                                className='p-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50'
+                              >
+                                <Trash2 className='w-4 h-4' />
+                              </button>
+                            </div>
                           </div>
-                          <div className='flex items-center gap-1'>
-                            <button
-                              onClick={() => openEditMedicalForm(record)}
-                              className='p-1.5 rounded-lg border border-[#2d2a26]/20 hover:bg-white'
-                            >
-                              <Edit3 className='w-4 h-4' />
-                            </button>
-                            <button
-                              onClick={() => void removeMedical(record.id)}
-                              className='p-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50'
-                            >
-                              <Trash2 className='w-4 h-4' />
-                            </button>
-                          </div>
-                        </div>
-                        <p className='text-sm mt-2'>Chẩn đoán: {record.diagnosis}</p>
-                        <p className='text-sm mt-1'>Điều trị: {record.treatment}</p>
-                        <p className='text-sm mt-1'>Ghi chú: {record.notes || 'Không có ghi chú'}</p>
-                        {record.nextVisitAt ? (
-                          <p className='text-sm mt-1 text-[#b25f2f]'>Tái khám: {formatRecordDate(record.nextVisitAt)}</p>
-                        ) : null}
-                      </article>
-                    ))}
+                          <p className='text-sm mt-2'>{view.primaryLabel}: {view.primaryValue}</p>
+                          <p className='text-sm mt-1'>{view.secondaryLabel}: {view.secondaryValue}</p>
+                          <p className='text-sm mt-1'>Ghi chú: {record.notes || 'Không có ghi chú'}</p>
+                          {record.nextVisitAt ? (
+                            <p className='text-sm mt-1 text-[#b25f2f]'>Tái khám: {formatRecordDate(record.nextVisitAt)}</p>
+                          ) : null}
+                        </article>
+                      );
+                    })}
 
                     {medicalFormOpen ? (
                       <div className='rounded-2xl border border-[#2d2a26] bg-white p-4 space-y-3'>
