@@ -508,7 +508,9 @@ export async function syncFirebaseUser(payload: SyncFirebasePayload): Promise<Au
 }
 
 export async function chatWithAi(payload: AiChatRequestPayload): Promise<AiChatResponse> {
-  const { data } = await apiClient.post<AiChatResponse>('/ai/chat', payload);
+  const { data } = await apiClient.post<AiChatResponse>('/ai/chat', payload, {
+    timeout: 65_000,
+  });
   return data;
 }
 

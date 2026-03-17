@@ -15,7 +15,7 @@ export class ChatHistoryItemDto {
 export class ChatRequestDto {
   @IsString()
   @MinLength(1)
-  @MaxLength(1000)
+  @MaxLength(2000)
   message!: string;
 
   @IsOptional()
