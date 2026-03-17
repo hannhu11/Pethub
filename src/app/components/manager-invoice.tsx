@@ -212,6 +212,7 @@ export function ManagerInvoicePage() {
             </p>
             <p className='text-sm text-[#7a756e] mt-1'>Mã: {invoice.invoiceNo}</p>
             <p className='text-sm text-[#7a756e]'>Ngày: {formatDateTime(invoice.issuedAt)}</p>
+            <p className='text-sm text-[#7a756e]'>Người lập: {invoice.manager?.name || 'Chưa cập nhật'}</p>
           </div>
         </div>
 

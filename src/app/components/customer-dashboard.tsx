@@ -28,6 +28,45 @@ function formatDateLabel(value: string | Date | null | undefined) {
   return date.toLocaleDateString('vi-VN');
 }
 
+function mapMedicalRecordDisplay(record: ApiMedicalRecord) {
+  const diagnosis = record.diagnosis?.trim() ?? '';
+  const treatment = record.treatment?.trim() ?? '';
+  const diagnosisLower = diagnosis.toLowerCase();
+  const treatmentLower = treatment.toLowerCase();
+  const isServiceDiagnosis =
+    diagnosisLower.startsWith('hoàn tất dịch vụ:') ||
+    diagnosisLower.startsWith('hoan tat dich vu:') ||
+    diagnosisLower.startsWith('dịch vụ sử dụng:') ||
+    diagnosisLower.startsWith('dich vu su dung:') ||
+    diagnosisLower.startsWith('dịch vụ:') ||
+    diagnosisLower.startsWith('dich vu:');
+  const isServiceLog =
+    isServiceDiagnosis ||
+    treatmentLower.includes('thực hiện dịch vụ') ||
+    treatmentLower.includes('thuc hien dich vu') ||
+    treatmentLower.includes('hoàn tất dịch vụ') ||
+    treatmentLower.includes('hoan tat dich vu');
+  const colonIndex = diagnosis.indexOf(':');
+  const serviceName =
+    isServiceLog && colonIndex >= 0 ? diagnosis.slice(colonIndex + 1).trim() : diagnosis;
+
+  if (isServiceLog) {
+    return {
+      primaryLabel: 'Dịch vụ sử dụng',
+      primaryValue: serviceName || diagnosis,
+      secondaryLabel: 'Chi tiết thực hiện',
+      secondaryValue: treatment,
+    };
+  }
+
+  return {
+    primaryLabel: 'Chẩn đoán',
+    primaryValue: diagnosis,
+    secondaryLabel: 'Điều trị',
+    secondaryValue: treatment,
+  };
+}
+
 function mapDigitalCardToView(card: ApiDigitalCard): DigitalPet {
   const weightNumber = Number(card.pet.weightKg ?? 0);
 
@@ -213,10 +252,12 @@ export function PetListPage() {
   const [pets, setPets] = useState<ApiPet[]>([]);
   const [selectedPet, setSelectedPet] = useState<ApiPet | null>(null);
   const [records, setRecords] = useState<ApiMedicalRecord[]>([]);
+  const [recordsForPetId, setRecordsForPetId] = useState<string | null>(null);
   const [loadingRecords, setLoadingRecords] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const medicalRequestSeqRef = useRef(0);
 
   useEffect(() => {
     let mounted = true;
@@ -246,19 +287,51 @@ export function PetListPage() {
     };
   }, []);
 
+  const resetMedicalPreview = () => {
+    medicalRequestSeqRef.current += 1;
+    setRecords([]);
+    setRecordsForPetId(null);
+    setLoadingRecords(false);
+  };
+
+  const openDetail = (pet: ApiPet) => {
+    setSelectedPet(pet);
+    resetMedicalPreview();
+  };
+
+  const closeDetail = () => {
+    setSelectedPet(null);
+    resetMedicalPreview();
+  };
+
   const openMedical = async (pet: ApiPet) => {
+    const requestSeq = medicalRequestSeqRef.current + 1;
+    medicalRequestSeqRef.current = requestSeq;
     setSelectedPet(pet);
     setRecords([]);
+    setRecordsForPetId(pet.id);
     setLoadingRecords(true);
+    setError('');
     try {
       const data = await listMedicalRecords(pet.id);
+      if (medicalRequestSeqRef.current !== requestSeq) {
+        return;
+      }
       setRecords(data);
+      setRecordsForPetId(pet.id);
     } catch (apiError) {
+      if (medicalRequestSeqRef.current !== requestSeq) {
+        return;
+      }
       setError(extractApiError(apiError));
     } finally {
+      if (medicalRequestSeqRef.current !== requestSeq) {
+        return;
+      }
       setLoadingRecords(false);
     }
   };
+  const visibleRecords = selectedPet && recordsForPetId === selectedPet.id ? records : [];
 
   return (
     <div className='py-12'>
@@ -296,7 +369,7 @@ export function PetListPage() {
                 </div>
               </div>
               <div className='grid grid-cols-3 border-t border-[#2d2a26]/10 text-sm'>
-                <button type='button' onClick={() => setSelectedPet(pet)} className='py-3 text-[#6b8f5e] hover:bg-[#6b8f5e]/5'>
+                <button type='button' onClick={() => openDetail(pet)} className='py-3 text-[#6b8f5e] hover:bg-[#6b8f5e]/5'>
                   <Eye className='w-4 h-4 inline-block mr-1' />
                   Chi tiết
                 </button>
@@ -320,7 +393,7 @@ export function PetListPage() {
         ) : null}
 
         {selectedPet ? (
-          <div className='fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4' onClick={() => setSelectedPet(null)}>
+          <div className='fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4' onClick={closeDetail}>
             <div className='w-full max-w-xl bg-[#faf9f6] border border-[#2d2a26] rounded-2xl p-5 max-h-[80vh] overflow-y-auto' onClick={(event) => event.stopPropagation()}>
               <h2 className='text-lg text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
                 {selectedPet.name}
@@ -338,15 +411,18 @@ export function PetListPage() {
                   Bệnh án gần đây
                 </h3>
                 {loadingRecords ? <p className='text-xs text-[#7a756e] mt-2'>Đang tải bệnh án...</p> : null}
-                {!loadingRecords && records.length === 0 ? <p className='text-xs text-[#7a756e] mt-2'>Chưa có bệnh án.</p> : null}
+                {!loadingRecords && visibleRecords.length === 0 ? <p className='text-xs text-[#7a756e] mt-2'>Chưa có bệnh án.</p> : null}
                 <div className='space-y-2 mt-2'>
-                  {records.slice(0, 5).map((record) => (
-                    <div key={record.id} className='rounded-xl border border-[#2d2a26]/15 p-2 text-xs'>
-                      <p className='text-[#7a756e]'>{formatDateLabel(record.recordedAt)}</p>
-                      <p><span className='text-[#7a756e]'>Chẩn đoán:</span> {record.diagnosis}</p>
-                      <p><span className='text-[#7a756e]'>Điều trị:</span> {record.treatment}</p>
-                    </div>
-                  ))}
+                  {visibleRecords.slice(0, 5).map((record) => {
+                    const view = mapMedicalRecordDisplay(record);
+                    return (
+                      <div key={record.id} className='rounded-xl border border-[#2d2a26]/15 p-2 text-xs'>
+                        <p className='text-[#7a756e]'>{formatDateLabel(record.recordedAt)}</p>
+                        <p><span className='text-[#7a756e]'>{view.primaryLabel}:</span> {view.primaryValue}</p>
+                        <p><span className='text-[#7a756e]'>{view.secondaryLabel}:</span> {view.secondaryValue}</p>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>

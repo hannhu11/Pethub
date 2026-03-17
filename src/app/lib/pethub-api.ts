@@ -175,6 +175,12 @@ export interface InvoiceDetailsResponse {
       phone: string;
       email: string | null;
     };
+    manager?: {
+      id: string;
+      name: string;
+      email: string | null;
+      phone: string;
+    } | null;
     appointment: {
       id: string;
       pet: {
