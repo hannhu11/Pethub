@@ -429,12 +429,14 @@ export function RegisterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [googleSubmitting, setGoogleSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
+  const [registerNotice, setRegisterNotice] = useState('');
   const navigate = useNavigate();
   const { loginWithGoogle, register } = useAuthSession();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
+    setRegisterNotice('');
 
     if (password.length < 8) {
       setFormError('Mật khẩu cần tối thiểu 8 ký tự.');
@@ -447,13 +449,19 @@ export function RegisterPage() {
 
     setSubmitting(true);
     try {
-      const authUser = await register({
+      await register({
         email,
         password,
         name: name || email.split('@')[0] || 'PetHub User',
         phone,
       });
-      navigate(resolveDefaultPath(authUser.role), { replace: true });
+      setPassword('');
+      setConfirmPassword('');
+      setShowPass(false);
+      setShowConfirmPass(false);
+      setRegisterNotice(
+        'Đăng ký thành công! Vui lòng kiểm tra hộp thư email (bao gồm cả mục Spam) và nhấp vào liên kết để xác thực tài khoản trước khi đăng nhập.',
+      );
     } catch (error) {
       setFormError(toFriendlyAuthError(error, 'register'));
     } finally {
@@ -482,6 +490,15 @@ export function RegisterPage() {
       image={registerVisual}
     >
       <form onSubmit={handleSubmit} className='space-y-4'>
+        {registerNotice ? (
+          <div className='rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-3 text-sm text-emerald-800'>
+            <p>{registerNotice}</p>
+            <Link to='/login' className='mt-2 inline-block text-[#2f6b2f] underline underline-offset-2' style={{ fontWeight: 600 }}>
+              Đến trang đăng nhập
+            </Link>
+          </div>
+        ) : null}
+
         <div>
           <label className='text-sm text-[#2d2a26] mb-2 block' style={{ fontWeight: 700 }}>Họ và tên</label>
           <div className='relative'>

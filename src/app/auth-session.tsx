@@ -3,6 +3,7 @@ import { Navigate, Outlet, useLocation } from 'react-router';
 import {
   createUserWithEmailAndPassword,
   onIdTokenChanged,
+  sendEmailVerification,
   sendPasswordResetEmail,
   signInWithPopup,
   signInWithEmailAndPassword,
@@ -34,11 +35,16 @@ type UpdateProfileInput = {
   phone?: string;
 };
 
+type RegisterResult = {
+  requiresVerification: true;
+  email: string;
+};
+
 type AuthContextValue = {
   session: SessionState;
   login: (input: LoginInput) => Promise<AuthUser>;
   loginWithGoogle: () => Promise<AuthUser>;
-  register: (input: RegisterInput) => Promise<AuthUser>;
+  register: (input: RegisterInput) => Promise<RegisterResult>;
   logout: () => Promise<void>;
   sendResetPasswordEmail: (email: string) => Promise<void>;
   updateSessionProfile: (input: UpdateProfileInput) => Promise<AuthUser>;
@@ -60,6 +66,8 @@ const loadingSession: SessionState = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+const EMAIL_NOT_VERIFIED_MESSAGE =
+  'Truy cập bị từ chối: Tài khoản của bạn chưa được xác thực email. Vui lòng kiểm tra hộp thư và nhấp vào liên kết xác thực.';
 
 function getDefaultRoute(role: AuthRole | null) {
   return role === 'manager' ? '/manager' : '/customer/dashboard';
@@ -90,6 +98,11 @@ function resolveClinicSlug(): string | undefined {
   }
 
   return window.sessionStorage.getItem('clinicSlug')?.trim() || undefined;
+}
+
+function requiresEmailVerification(user: FirebaseUser) {
+  const hasPasswordProvider = user.providerData.some((provider) => provider.providerId === 'password');
+  return hasPasswordProvider && !user.emailVerified;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -166,6 +179,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      if (requiresEmailVerification(firebaseUser)) {
+        setApiAccessToken(null);
+        try {
+          await signOut(firebaseAuth);
+        } catch {
+          // No-op: security gate should still force unauthenticated state.
+        }
+        resetManagerSettingsStore();
+        setSession({ ...unauthenticatedSession, error: EMAIL_NOT_VERIFIED_MESSAGE });
+        return;
+      }
+
       try {
         const idToken = await firebaseUser.getIdToken();
         setApiAccessToken(idToken);
@@ -214,6 +239,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession((previous) => ({ ...previous, status: 'loading', error: null }));
       try {
         const credential = await signInWithEmailAndPassword(firebaseAuth, email.trim(), password);
+        if (requiresEmailVerification(credential.user)) {
+          await signOut(firebaseAuth);
+          setApiAccessToken(null);
+          resetManagerSettingsStore();
+          setSession({ ...unauthenticatedSession, error: EMAIL_NOT_VERIFIED_MESSAGE });
+          throw new Error(EMAIL_NOT_VERIFIED_MESSAGE);
+        }
         const payload = await hydrateUser(credential.user);
         const nextSession = toSession(payload);
         setSession(nextSession);
@@ -250,17 +282,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (name.trim().length > 0) {
           await updateProfile(credential.user, { displayName: name.trim() });
         }
-        const payload = await hydrateUser(credential.user, { name, phone });
-        const nextSession = toSession(payload);
-        setSession(nextSession);
-        return payload.user;
+        if (!credential.user.emailVerified) {
+          try {
+            await sendEmailVerification(credential.user);
+          } catch {
+            // Registration should remain successful even if email sending is delayed.
+          }
+        }
+        try {
+          await signOut(firebaseAuth);
+        } catch {
+          // Keep the flow in unauthenticated state even if sign-out throws.
+        }
+        setApiAccessToken(null);
+        resetManagerSettingsStore();
+        setSession(unauthenticatedSession);
+        return {
+          requiresVerification: true,
+          email: email.trim(),
+        };
       } catch (error) {
         const message = toFriendlyAuthError(error, 'register');
         setSession({ ...unauthenticatedSession, error: message });
         throw new Error(message);
       }
     },
-    [hydrateUser],
+    [],
   );
 
   const logout = useCallback(async () => {

@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router';
 import { PublicLayout, CustomerLayout } from './components/layout';
 import { HomePage } from './components/home';
 import { LoginPage, RegisterPage } from './components/auth';
+import { AuthActionPage } from './components/auth-action';
 import { ServicesPage } from './components/services';
 import { ProfilePage, PetListPage, DigitalCardPage } from './components/customer-dashboard';
 import { ManagerLayout } from './components/manager-layout';
@@ -88,6 +89,8 @@ export const router = createBrowserRouter([
       { path: 'privacy', Component: PrivacyPage, handle: { access: access.public } },
       { path: 'login', Component: GuestLoginPage, handle: { access: access.public } },
       { path: 'register', Component: GuestRegisterPage, handle: { access: access.public } },
+      { path: 'auth/action', Component: AuthActionPage, handle: { access: access.public } },
+      { path: '__/auth/action', Component: AuthActionPage, handle: { access: access.public } },
     ],
   },
   {

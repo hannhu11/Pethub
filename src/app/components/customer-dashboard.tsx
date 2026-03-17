@@ -125,7 +125,7 @@ export function ProfilePage() {
 
         {onboardingRequired ? (
           <div className='mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800'>
-            Tài khoản Google mới cần hoàn thiện hồ sơ trước khi dùng Dashboard.
+            Tài khoản mới cần hoàn thiện hồ sơ trước khi dùng Dashboard.
           </div>
         ) : null}
 
