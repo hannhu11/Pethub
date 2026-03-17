@@ -3,6 +3,7 @@ import { Navigate, Outlet, useLocation } from 'react-router';
 import {
   createUserWithEmailAndPassword,
   onIdTokenChanged,
+  sendEmailVerification,
   sendPasswordResetEmail,
   signInWithPopup,
   signInWithEmailAndPassword,
@@ -249,6 +250,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const credential = await createUserWithEmailAndPassword(firebaseAuth, email.trim(), password);
         if (name.trim().length > 0) {
           await updateProfile(credential.user, { displayName: name.trim() });
+        }
+        if (!credential.user.emailVerified) {
+          try {
+            await sendEmailVerification(credential.user);
+          } catch {
+            // Registration should remain successful even if email sending is delayed.
+          }
         }
         const payload = await hydrateUser(credential.user, { name, phone });
         const nextSession = toSession(payload);

@@ -6,6 +6,8 @@ export type AuthAction =
   | 'register'
   | 'google-login'
   | 'reset-password'
+  | 'reset-password-confirm'
+  | 'verify-email'
   | 'profile-update'
   | 'sync'
   | 'generic';
@@ -64,6 +66,8 @@ const ACTION_DEFAULT_MESSAGES: Record<AuthAction, string> = {
   register: 'Đăng ký thất bại. Vui lòng thử lại.',
   'google-login': 'Đăng nhập Google thất bại. Vui lòng thử lại.',
   'reset-password': 'Không gửi được email khôi phục. Vui lòng thử lại.',
+  'reset-password-confirm': 'Không thể đặt lại mật khẩu. Vui lòng thử lại.',
+  'verify-email': 'Không thể xác minh email. Vui lòng thử lại.',
   'profile-update': 'Không thể cập nhật hồ sơ. Vui lòng thử lại.',
   sync: 'Lỗi máy chủ: Không thể đồng bộ tài khoản. Vui lòng thử lại.',
   generic: 'Đã xảy ra lỗi không xác định. Vui lòng thử lại.',
