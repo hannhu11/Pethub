@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { CatalogService } from './catalog.service';
 import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -47,5 +47,23 @@ export class CatalogController {
       return null;
     }
     return this.catalogService.upsertProduct(user, dto);
+  }
+
+  @Delete('services/:id')
+  @Roles('manager')
+  async deleteService(@CurrentUser() user: AuthUser | null, @Param('id') id: string) {
+    if (!user) {
+      return { success: false };
+    }
+    return this.catalogService.softDeleteService(user, id);
+  }
+
+  @Delete('products/:id')
+  @Roles('manager')
+  async deleteProduct(@CurrentUser() user: AuthUser | null, @Param('id') id: string) {
+    if (!user) {
+      return { success: false };
+    }
+    return this.catalogService.softDeleteProduct(user, id);
   }
 }

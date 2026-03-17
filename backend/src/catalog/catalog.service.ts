@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { UpsertServiceDto } from './dto/upsert-service.dto';
 import { UpsertProductDto } from './dto/upsert-product.dto';
@@ -124,5 +124,43 @@ export class CatalogService {
       },
       update: updateData,
     });
+  }
+
+  async softDeleteService(currentUser: AuthUser, id: string) {
+    const result = await this.prisma.service.updateMany({
+      where: {
+        id,
+        clinicId: currentUser.clinicId,
+        isActive: true,
+      },
+      data: {
+        isActive: false,
+      },
+    });
+
+    if (result.count === 0) {
+      throw new NotFoundException('Không tìm thấy dịch vụ để xóa.');
+    }
+
+    return { success: true };
+  }
+
+  async softDeleteProduct(currentUser: AuthUser, id: string) {
+    const result = await this.prisma.product.updateMany({
+      where: {
+        id,
+        clinicId: currentUser.clinicId,
+        isActive: true,
+      },
+      data: {
+        isActive: false,
+      },
+    });
+
+    if (result.count === 0) {
+      throw new NotFoundException('Không tìm thấy sản phẩm để xóa.');
+    }
+
+    return { success: true };
   }
 }

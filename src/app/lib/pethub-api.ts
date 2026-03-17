@@ -518,6 +518,16 @@ export async function upsertCatalogProduct(payload: UpsertCatalogProductPayload)
   return data;
 }
 
+export async function deleteCatalogService(id: string): Promise<{ success: boolean }> {
+  const { data } = await apiClient.delete<{ success: boolean }>(`/catalog/services/${id}`);
+  return data;
+}
+
+export async function deleteCatalogProduct(id: string): Promise<{ success: boolean }> {
+  const { data } = await apiClient.delete<{ success: boolean }>(`/catalog/products/${id}`);
+  return data;
+}
+
 export async function listCustomers(segment?: CustomerSegment): Promise<ApiCustomer[]> {
   const { data } = await apiClient.get<ApiCustomer[]>('/customers', {
     params: segment ? { segment } : undefined,

@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { motion } from 'motion/react';
-import { Package, Plus, ShoppingBag, Stethoscope, X } from 'lucide-react';
+import { Package, Plus, ShoppingBag, Stethoscope, Trash2, X } from 'lucide-react';
 import { extractApiError } from '../lib/api-client';
 import { filterCatalogIconOptions, resolveCatalogIcon } from '../lib/catalog-icons';
 import {
+  deleteCatalogProduct,
+  deleteCatalogService,
   listCatalogProducts,
   listCatalogServices,
   type ApiProduct,
@@ -12,6 +14,16 @@ import {
   upsertCatalogService,
 } from '../lib/pethub-api';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog';
 
 type CatalogTab = 'services' | 'products' | 'categories';
 
@@ -34,6 +46,12 @@ type ProductFormState = {
   iconName: string;
   price: string;
   stock: string;
+};
+
+type DeleteTarget = {
+  type: 'service' | 'product';
+  id: string;
+  name: string;
 };
 
 const emptyServiceForm: ServiceFormState = {
@@ -187,6 +205,8 @@ export function ManagerCatalogPage() {
   const [productForm, setProductForm] = useState<ProductFormState>(emptyProductForm);
   const [serviceIconSearch, setServiceIconSearch] = useState('');
   const [productIconSearch, setProductIconSearch] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const loadCatalog = useMemo(
     () => async (silent = false) => {
@@ -402,6 +422,35 @@ export function ManagerCatalogPage() {
     }
   };
 
+  const requestDelete = (type: 'service' | 'product', id: string, name: string) => {
+    setDeleteTarget({ type, id, name });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) {
+      return;
+    }
+
+    setDeleting(true);
+    setError('');
+    setMessage('');
+    try {
+      if (deleteTarget.type === 'service') {
+        await deleteCatalogService(deleteTarget.id);
+        setMessage(`Đã xóa dịch vụ "${deleteTarget.name}" khỏi danh mục hoạt động.`);
+      } else {
+        await deleteCatalogProduct(deleteTarget.id);
+        setMessage(`Đã xóa sản phẩm "${deleteTarget.name}" khỏi danh mục hoạt động.`);
+      }
+      setDeleteTarget(null);
+      await loadCatalog();
+    } catch (apiError) {
+      setError(extractApiError(apiError));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className='space-y-6'>
       <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4'>
@@ -503,6 +552,17 @@ export function ManagerCatalogPage() {
                           <ServiceIcon className='w-4 h-4' style={{ color: iconOption.color }} />
                         </span>
                         <p className='text-xs text-[#7a756e] uppercase tracking-[0.08em]'>{service.code}</p>
+                        <button
+                          type='button'
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            requestDelete('service', service.id, service.name);
+                          }}
+                          className='ml-auto w-7 h-7 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 flex items-center justify-center'
+                          aria-label={`Xóa dịch vụ ${service.name}`}
+                        >
+                          <Trash2 className='w-4 h-4' />
+                        </button>
                       </div>
                       <p className='text-base text-[#2d2a26] mt-1 line-clamp-1' style={{ fontWeight: 700 }}>
                         {service.name}
@@ -584,6 +644,17 @@ export function ManagerCatalogPage() {
                           <ProductIcon className='w-4 h-4' style={{ color: iconOption.color }} />
                         </span>
                         <p className='text-xs text-[#7a756e] uppercase tracking-[0.08em]'>{product.sku}</p>
+                        <button
+                          type='button'
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            requestDelete('product', product.id, product.name);
+                          }}
+                          className='ml-auto w-7 h-7 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 flex items-center justify-center'
+                          aria-label={`Xóa sản phẩm ${product.name}`}
+                        >
+                          <Trash2 className='w-4 h-4' />
+                        </button>
                       </div>
                       <p className='text-base text-[#2d2a26] mt-1 line-clamp-1' style={{ fontWeight: 700 }}>
                         {product.name}
@@ -638,6 +709,41 @@ export function ManagerCatalogPage() {
       ) : null}
 
       {loading ? <p className='text-sm text-[#7a756e]'>Đang tải catalog...</p> : null}
+
+      <AlertDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => {
+          if (!open && !deleting) {
+            setDeleteTarget(null);
+          }
+        }}
+      >
+        <AlertDialogContent className='bg-[#faf9f6] border border-[#2d2a26]'>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận xóa?</AlertDialogTitle>
+            <AlertDialogDescription className='text-[#6c675f]'>
+              Bạn có chắc chắn muốn xóa{' '}
+              <span className='font-semibold text-[#2d2a26]'>
+                {deleteTarget?.type === 'service' ? 'dịch vụ' : 'sản phẩm'} "{deleteTarget?.name || ''}"
+              </span>
+              ? Hành động này sẽ gỡ mục này khỏi trang Khách hàng và POS. Dữ liệu hóa đơn cũ vẫn được giữ nguyên.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              onClick={(event) => {
+                event.preventDefault();
+                void confirmDelete();
+              }}
+              className='bg-red-600 text-white border border-red-700 hover:bg-red-700'
+            >
+              {deleting ? 'Đang xóa...' : 'Xóa'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {serviceDialogOpen ? (
         <div
