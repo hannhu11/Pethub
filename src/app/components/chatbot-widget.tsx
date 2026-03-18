@@ -166,17 +166,13 @@ export function ChatbotWidget() {
         <button
           type='button'
           onClick={() => setOpen((value) => !value)}
-          className='relative w-16 h-16 rounded-full border border-[#2d2a26]/60 bg-gradient-to-br from-[#7eb66a] to-[#6b8f5e] shadow-[0_20px_38px_rgba(15,23,42,0.3)] hover:-translate-y-0.5 transition-all flex items-center justify-center overflow-hidden'
+          className='relative w-16 h-16 rounded-full border border-[#2d2a26]/50 bg-white shadow-[0_20px_38px_rgba(15,23,42,0.28)] hover:-translate-y-0.5 transition-all flex items-center justify-center overflow-hidden'
           aria-label={open ? 'Đóng chatbot' : 'Mở chatbot'}
         >
           {!open ? (
-            <>
-              <span className='absolute inset-0 rounded-full bg-gradient-to-br from-[#6b8f5e]/65 via-[#79b66e]/45 to-[#35a2a6]/60 blur-[1px] animate-pulse' />
-              <span className='absolute -inset-1 rounded-full border-2 border-[#99d08e]/55 animate-pulse' />
-              <AssistantAvatar size='lg' />
-            </>
+            <AssistantAvatar size='lg' />
           ) : (
-            <X className='w-6 h-6 text-white' />
+            <X className='w-6 h-6 text-[#2d2a26]' />
           )}
         </button>
       </div>

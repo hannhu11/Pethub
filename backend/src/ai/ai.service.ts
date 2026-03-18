@@ -25,14 +25,36 @@ const DEFAULT_CHAT_MODEL = 'gemini-2.5-flash';
 const DEFAULT_HISTORY_TURNS = 6;
 const CHAT_PROVIDER_TIMEOUT_MS = 55_000;
 const DEFAULT_CLINIC_TIMEZONE = 'Asia/Ho_Chi_Minh';
+const DEFAULT_CONTEXT_BUDGET_CHARS = 14_000;
+const RETRY_CONTEXT_BUDGET_CHARS = 8_000;
 const UI_PLAYBOOK = [
-  'UI_PLAYBOOK (PetHub - thao tác có thật):',
-  '- Thêm thú cưng cho quản lý:',
-  '1. Mở trang Quản lý thú cưng tại /manager/pets.',
-  '2. Bấm nút "Quick Add Walk-in" (hoặc mở /manager/pets?action=quick-add).',
-  '3. Trong form, chọn Chủ nuôi có sẵn hoặc chuyển sang tạo Chủ nuôi mới.',
-  '4. Nhập thông tin thú cưng bắt buộc (tên, loài, giống nếu có) rồi bấm lưu.',
-  '5. Sau khi lưu thành công, thú cưng mới xuất hiện trong danh sách quản lý thú cưng.',
+  'UI_PLAYBOOK (PetHub - chỉ hướng dẫn theo các luồng thật):',
+  '',
+  '[Customer]',
+  '- Dashboard: /customer/dashboard -> xem lịch hẹn gần nhất, thú cưng của tôi, vào nhanh trang lịch hẹn/thú cưng.',
+  '- Dịch vụ: /customer/services -> xem danh sách dịch vụ, chọn dịch vụ để đặt lịch.',
+  '- Lịch hẹn: /customer/appointments -> chọn Dịch vụ + Thú cưng + Ngày + Khung giờ, nhập ghi chú, bấm "Xác nhận đặt lịch".',
+  '- Hủy lịch hẹn (khách): tại /customer/appointments, chọn lịch ở trạng thái phù hợp và xác nhận hủy.',
+  '- Hồ sơ cá nhân: /customer/profile -> chỉnh họ tên, số điện thoại, bấm "Lưu thay đổi".',
+  '- Thú cưng của tôi: /customer/my-pets -> xem hồ sơ thú cưng, bệnh án, thẻ số.',
+  '- Thẻ số: /customer/digital-card/:petId -> xem/thao tác tải thẻ số thú cưng.',
+  '',
+  '[Manager]',
+  '- Tổng quan: /manager -> xem KPI, biểu đồ doanh thu tháng, doanh thu theo dịch vụ, LTV khách hàng.',
+  '- Lịch hẹn: /manager/bookings -> lọc trạng thái (Tất cả/Chờ duyệt/Đã xác nhận/Hoàn thành/Đã hủy), tìm kiếm, cập nhật trạng thái hoặc hủy.',
+  '- Thanh toán POS: /manager/pos -> chọn khách hàng + thú cưng, thêm dịch vụ/sản phẩm vào giỏ, chọn phương thức thanh toán, checkout.',
+  '- Đối soát doanh thu: /manager/revenue-ledger -> xem danh sách hóa đơn và mở chi tiết từng hóa đơn.',
+  '- Khách hàng: /manager/customers -> quản lý danh sách khách hàng (tạo/sửa theo giao diện CRM).',
+  '- Thú cưng: /manager/pets -> quản lý hồ sơ thú cưng, bệnh án, thẻ số; thêm nhanh bằng "Quick Add Walk-in".',
+  '- Thêm thú cưng nhanh: vào /manager/pets -> bấm "Quick Add Walk-in" (hoặc /manager/pets?action=quick-add) -> chọn chủ nuôi có sẵn hoặc tạo mới -> nhập thông tin bắt buộc -> lưu.',
+  '- Sản phẩm & Dịch vụ: /manager/catalog -> thêm/sửa/xóa dịch vụ và sản phẩm, cập nhật giá, thời lượng, tồn kho.',
+  '- Nhắc nhở: /manager/reminders -> bấm "Tạo nhắc nhở", chọn khách hàng + thú cưng + kênh + nội dung, chọn gửi ngay hoặc lên lịch.',
+  '- Nhắc nhở từ mẫu: /manager/reminders/templates -> chọn mẫu, chọn khách hàng/thú cưng, tùy chỉnh nội dung, gửi hoặc lên lịch.',
+  '- Cài đặt: /manager/settings -> quản lý hồ sơ, thông tin phòng khám, mật khẩu, gói/thanh toán, thông báo.',
+  '',
+  '[Quy tắc trả lời thao tác]',
+  '- Chỉ hướng dẫn các bước có trong playbook trên.',
+  '- Nếu người dùng hỏi thao tác ngoài playbook, phải trả lời đúng câu từ chối chuẩn.',
 ].join('\n');
 
 @Injectable()
@@ -85,6 +107,7 @@ export class AiService {
   async chat(dto: ChatRequestDto, currentUser: AuthUser | null): Promise<ChatResponse> {
     const scope: ChatScope = currentUser?.role === Role.manager ? 'manager' : 'customer';
     const model = this.getChatModel();
+    const requestId = this.createRequestId();
 
     if (!currentUser) {
       return this.buildFallbackResponse(scope, model, 'unauthorized');
@@ -101,7 +124,27 @@ export class AiService {
 
     const history = this.normalizeHistory(dto.history);
     const userMessage = this.sanitizePromptText(dto.message, 2000);
-    const context = await this.buildContextPayload(currentUser, scope);
+    let context = '';
+    try {
+      context = await this.buildContextPayload(currentUser, scope);
+    } catch (contextError) {
+      this.logger.error(
+        `Failed to build ${scope} context: ${this.describeGeminiError(contextError)}`,
+      );
+      context = this.buildEmergencyContext(currentUser, scope);
+    }
+    context = this.enforceContextBudget(context, DEFAULT_CONTEXT_BUDGET_CHARS);
+    this.logger.log(
+      JSON.stringify({
+        event: 'ai_chat_request',
+        requestId,
+        scope,
+        model,
+        contextSize: context.length,
+        historySize: history.length,
+        userMessageSize: userMessage.length,
+      }),
+    );
     const systemPrompt = this.buildSystemPrompt(context);
 
     try {
@@ -126,14 +169,27 @@ export class AiService {
     } catch (error) {
       if (this.shouldRetryGeminiChat(error)) {
         const retryReason = this.describeGeminiError(error);
-        this.logger.warn(`Retrying Gemini chat once due to: ${retryReason}`);
+        this.logger.warn(
+          JSON.stringify({
+            event: 'ai_chat_retry',
+            requestId,
+            scope,
+            reason: retryReason,
+            contextSize: context.length,
+            historySize: history.length,
+          }),
+        );
 
         try {
+          const retryContext = this.enforceContextBudget(
+            this.compactContextPayload(context),
+            RETRY_CONTEXT_BUDGET_CHARS,
+          );
           const retryText = await this.callGeminiChat({
             model,
             key,
-            systemPrompt: this.buildSystemPrompt(this.compactContextPayload(context)),
-            history,
+            systemPrompt: this.buildSystemPrompt(retryContext),
+            history: this.compactHistory(history),
             userMessage,
           });
 
@@ -146,12 +202,25 @@ export class AiService {
             };
           }
         } catch (retryError) {
-          this.logger.warn(
-            `Gemini retry failed: ${this.describeGeminiError(retryError)}`,
+          this.logger.error(
+            JSON.stringify({
+              event: 'ai_chat_retry_failed',
+              requestId,
+              scope,
+              reason: this.describeGeminiError(retryError),
+            }),
           );
         }
       }
 
+      this.logger.error(
+        JSON.stringify({
+          event: 'ai_chat_fallback_provider_error',
+          requestId,
+          scope,
+          reason: this.describeGeminiError(error),
+        }),
+      );
       return this.buildFallbackResponse(scope, model, 'provider-error');
     }
   }
@@ -197,6 +266,20 @@ export class AiService {
     }
 
     const status = error.response?.status;
+    if (status === 408 || status === 413) {
+      return true;
+    }
+    if (status === 400) {
+      const payload = JSON.stringify(error.response?.data ?? '').toLowerCase();
+      if (
+        payload.includes('token') ||
+        payload.includes('context') ||
+        payload.includes('too large') ||
+        payload.includes('quota')
+      ) {
+        return true;
+      }
+    }
     return status === 429 || (typeof status === 'number' && status >= 500);
   }
 
@@ -281,6 +364,30 @@ export class AiService {
       }));
   }
 
+  private compactHistory(history: GeminiHistoryMessage[]): GeminiHistoryMessage[] {
+    if (history.length <= 6) {
+      return history;
+    }
+
+    return history.slice(-6).map((item) => ({
+      role: item.role,
+      parts: item.parts.map((part) => ({
+        text: this.sanitizePromptText(part.text, 320),
+      })),
+    }));
+  }
+
+  private buildEmergencyContext(currentUser: AuthUser, scope: ChatScope): string {
+    return JSON.stringify({
+      scope,
+      actor: {
+        name: this.sanitizePromptText(currentUser.name, 80),
+        role: currentUser.role,
+      },
+      note: 'Context vận hành tạm thời bị giới hạn. Trả lời ngắn gọn theo dữ liệu tối thiểu và yêu cầu người dùng hỏi cụ thể hơn nếu cần.',
+    });
+  }
+
   private buildGeminiUrl(model: string, key: string): string {
     return `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${key}`;
   }
@@ -298,9 +405,12 @@ export class AiService {
       '- Chỉ được hướng dẫn thao tác khi thông tin đó có trong UI_PLAYBOOK.',
       '- Nếu câu hỏi thao tác không nằm trong UI_PLAYBOOK, bắt buộc trả lời đúng câu này: "Tính năng này hiện không nằm trong phạm vi hướng dẫn của tôi, vui lòng thao tác trực tiếp trên giao diện hoặc xem tài liệu."',
       '- Nếu câu hỏi không liên quan đến PetHub hoặc thú cưng, từ chối lịch sự.',
+      '- Khi câu hỏi không nêu mốc thời gian, ưu tiên số liệu tổng quan toàn hệ thống trong summary; sau đó mới bổ sung số liệu hôm nay/7 ngày nếu có.',
       '- Trả lời linh hoạt: câu ngắn thì trả lời súc tích; câu phức tạp thì phân tích đủ ý, rõ ràng.',
       '- Luôn trình bày rõ ràng bằng Markdown: có thể dùng **in đậm** từ khóa và danh sách gạch đầu dòng khi cần.',
       '- Duy trì tiếng Việt có dấu, câu văn tự nhiên.',
+      '- Không ngắt dở câu. Nếu nội dung dài, chia thành các mục ngắn và kết thúc đầy đủ ý.',
+      '- LUẬT VỀ TỪ VỰNG Y KHOA: Nếu bản ghi có loại "service-log" hoặc nội dung chứa "Hoàn tất dịch vụ"/"Dịch vụ sử dụng", TUYỆT ĐỐI KHÔNG dùng nhãn "Chẩn đoán"/"Điều trị". Bắt buộc trình bày: "Dịch vụ: ...", "Chi tiết: ...".',
       '- Khi người dùng hỏi "tôi là ai" hoặc "quyền của tôi", chỉ trả lời theo trường actor trong CONTEXT.',
       '',
       'UI_PLAYBOOK:',
@@ -322,478 +432,772 @@ export class AiService {
   }
 
   private async buildCustomerContext(currentUser: AuthUser): Promise<string> {
-    const [clinic, services, products, customer] = await Promise.all([
-      this.prisma.clinicSettings.findFirst({
-        where: { clinicId: currentUser.clinicId },
-        orderBy: { updatedAt: 'desc' },
-        select: {
-          clinicName: true,
-          phone: true,
-          address: true,
-          timezone: true,
-        },
-      }),
-      this.prisma.service.findMany({
-        where: {
-          clinicId: currentUser.clinicId,
-          isActive: true,
-        },
-        orderBy: { name: 'asc' },
-        take: 60,
-        select: {
-          name: true,
-          description: true,
-          durationMin: true,
-          price: true,
-        },
-      }),
-      this.prisma.product.findMany({
-        where: {
-          clinicId: currentUser.clinicId,
-          isActive: true,
-        },
-        orderBy: { name: 'asc' },
-        take: 80,
-        select: {
-          name: true,
-          category: true,
-          description: true,
-          price: true,
-          stock: true,
-        },
-      }),
-      this.prisma.customer.findFirst({
-        where: {
-          clinicId: currentUser.clinicId,
-          userId: currentUser.userId,
-        },
-        select: {
-          id: true,
-          name: true,
-        },
-      }),
-    ]);
+    try {
+      const [clinic, services, products, customer] = await Promise.all([
+        this.prisma.clinicSettings.findFirst({
+          where: { clinicId: currentUser.clinicId },
+          orderBy: { updatedAt: 'desc' },
+          select: {
+            clinicName: true,
+            phone: true,
+            address: true,
+            timezone: true,
+          },
+        }),
+        this.prisma.service.findMany({
+          where: {
+            clinicId: currentUser.clinicId,
+            isActive: true,
+          },
+          orderBy: { name: 'asc' },
+          take: 20,
+          select: {
+            name: true,
+            description: true,
+            durationMin: true,
+            price: true,
+          },
+        }),
+        this.prisma.product.findMany({
+          where: {
+            clinicId: currentUser.clinicId,
+            isActive: true,
+          },
+          orderBy: { name: 'asc' },
+          take: 20,
+          select: {
+            name: true,
+            category: true,
+            description: true,
+            price: true,
+            stock: true,
+          },
+        }),
+        this.prisma.customer.findFirst({
+          where: {
+            clinicId: currentUser.clinicId,
+            userId: currentUser.userId,
+          },
+          select: {
+            id: true,
+            name: true,
+          },
+        }),
+      ]);
 
-    if (!customer) {
-      return JSON.stringify({
-        scope: 'customer',
-        actor: {
-          name: this.sanitizePromptText(currentUser.name, 80),
-          role: currentUser.role,
-        },
-        note: 'Không tìm thấy hồ sơ khách hàng gắn với tài khoản hiện tại.',
-        clinic: this.mapClinic(clinic),
-        catalog: {
-          services: this.mapServicesForPrompt(services),
-          products: this.mapProductsForPrompt(products),
-        },
-      });
-    }
+      if (!customer) {
+        return JSON.stringify({
+          scope: 'customer',
+          actor: {
+            name: this.sanitizePromptText(currentUser.name, 80),
+            role: currentUser.role,
+            permission: 'customer_readonly',
+          },
+          note: 'Không tìm thấy hồ sơ khách hàng gắn với tài khoản hiện tại.',
+          clinic: this.mapClinic(clinic),
+          catalog: {
+            services: this.mapServicesForPrompt(services, { includeDescription: false }),
+            products: this.mapProductsForPrompt(products, { includeDescription: false }),
+          },
+        });
+      }
 
-    const [pets, appointments, reminders, medicalRecords] = await Promise.all([
-      this.prisma.pet.findMany({
+      const pets = await this.prisma.pet.findMany({
         where: {
           clinicId: currentUser.clinicId,
           customerId: customer.id,
         },
         orderBy: { name: 'asc' },
-        take: 20,
+        take: 6,
         select: {
+          id: true,
           name: true,
           species: true,
           breed: true,
           specialNotes: true,
         },
-      }),
-      this.prisma.appointment.findMany({
-        where: {
-          clinicId: currentUser.clinicId,
-          customerId: customer.id,
-        },
-        orderBy: { appointmentAt: 'desc' },
-        take: 12,
-        select: {
-          appointmentAt: true,
-          status: true,
-          pet: {
-            select: { name: true },
-          },
-          service: {
-            select: { name: true },
-          },
-        },
-      }),
-      this.prisma.reminder.findMany({
-        where: {
-          clinicId: currentUser.clinicId,
-          customerId: customer.id,
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 12,
-        select: {
-          channel: true,
-          status: true,
-          scheduledAt: true,
-          sentAt: true,
-          pet: {
-            select: { name: true },
-          },
-        },
-      }),
-      this.prisma.medicalRecord.findMany({
-        where: {
-          clinicId: currentUser.clinicId,
-          customerId: customer.id,
-        },
-        orderBy: { recordedAt: 'desc' },
-        take: 10,
-        select: {
-          diagnosis: true,
-          treatment: true,
-          recordedAt: true,
-          nextVisitAt: true,
-          pet: {
-            select: { name: true },
-          },
-        },
-      }),
-    ]);
+      });
 
-    return JSON.stringify({
-      scope: 'customer',
-      actor: {
-        name: this.sanitizePromptText(currentUser.name, 80),
-        role: currentUser.role,
-      },
-      customer: {
-        name: this.sanitizePromptText(customer.name, 80),
-      },
-      clinic: this.mapClinic(clinic),
-      pets: pets.map((pet) => ({
-        name: this.sanitizePromptText(pet.name, 80),
-        species: this.sanitizePromptText(pet.species, 40),
-        breed: this.sanitizePromptText(pet.breed, 60),
-        notes: this.sanitizePromptText(pet.specialNotes, 90),
-      })),
-      recentAppointments: appointments.map((item) => ({
-        time: item.appointmentAt.toISOString(),
-        status: item.status,
-        petName: this.sanitizePromptText(item.pet.name, 80),
-        serviceName: this.sanitizePromptText(item.service.name, 80),
-      })),
-      recentReminders: reminders.map((item) => ({
-        channel: item.channel,
-        status: item.status,
-        petName: this.sanitizePromptText(item.pet.name, 80),
-        scheduledAt: item.scheduledAt?.toISOString() ?? null,
-        sentAt: item.sentAt?.toISOString() ?? null,
-      })),
-      recentMedicalRecords: medicalRecords.map((item) => ({
-        petName: this.sanitizePromptText(item.pet.name, 80),
-        diagnosis: this.sanitizePromptText(item.diagnosis, 150),
-        treatment: this.sanitizePromptText(item.treatment, 140),
-        recordedAt: item.recordedAt.toISOString(),
-        nextVisitAt: item.nextVisitAt?.toISOString() ?? null,
-      })),
-      catalog: {
-        services: this.mapServicesForPrompt(services),
-        products: this.mapProductsForPrompt(products),
-      },
-    });
+      const petNameById = new Map(
+        pets.map((pet) => [pet.id, this.sanitizePromptText(pet.name, 80)]),
+      );
+
+      const [appointments, reminders, medicalRecords] = await Promise.all([
+        this.prisma.appointment.findMany({
+          where: {
+            clinicId: currentUser.clinicId,
+            customerId: customer.id,
+          },
+          orderBy: { appointmentAt: 'desc' },
+          take: 6,
+          select: {
+            appointmentAt: true,
+            status: true,
+            petId: true,
+            serviceId: true,
+          },
+        }),
+        this.prisma.reminder.findMany({
+          where: {
+            clinicId: currentUser.clinicId,
+            customerId: customer.id,
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 6,
+          select: {
+            channel: true,
+            status: true,
+            petId: true,
+            scheduledAt: true,
+            sentAt: true,
+          },
+        }),
+        this.prisma.medicalRecord.findMany({
+          where: {
+            clinicId: currentUser.clinicId,
+            customerId: customer.id,
+          },
+          orderBy: { recordedAt: 'desc' },
+          take: 3,
+          select: {
+            diagnosis: true,
+            treatment: true,
+            notes: true,
+            petId: true,
+            recordedAt: true,
+            nextVisitAt: true,
+          },
+        }),
+      ]);
+
+      const appointmentServiceIds = Array.from(
+        new Set(appointments.map((item) => item.serviceId).filter((id) => typeof id === 'string' && id.length > 0)),
+      );
+      const appointmentServices =
+        appointmentServiceIds.length > 0
+          ? await this.prisma.service.findMany({
+              where: {
+                clinicId: currentUser.clinicId,
+                id: { in: appointmentServiceIds },
+              },
+              select: {
+                id: true,
+                name: true,
+              },
+            })
+          : [];
+      const serviceNameById = new Map(
+        appointmentServices.map((service) => [service.id, this.sanitizePromptText(service.name, 80)]),
+      );
+
+      const recentMedicalRecords = medicalRecords.map((item) => {
+        const diagnosis = this.sanitizePromptText(item.diagnosis, 180);
+        const treatment = this.sanitizePromptText(item.treatment, 180);
+        const notes = this.sanitizePromptText(item.notes, 180);
+        const type = this.classifyMedicalRecordEntry(diagnosis, treatment);
+        const petName = petNameById.get(item.petId) ?? 'Thú cưng không xác định';
+
+        if (type === 'service-log') {
+          return {
+            type,
+            petName,
+            service: diagnosis || 'Hoàn tất dịch vụ',
+            detail: treatment || notes || 'Không có ghi chú bổ sung.',
+            recordedAt: item.recordedAt.toISOString(),
+            nextVisitAt: item.nextVisitAt?.toISOString() ?? null,
+          };
+        }
+
+        return {
+          type,
+          petName,
+          diagnosis,
+          treatment,
+          notes,
+          recordedAt: item.recordedAt.toISOString(),
+          nextVisitAt: item.nextVisitAt?.toISOString() ?? null,
+        };
+      });
+
+      return JSON.stringify({
+        scope: 'customer',
+        actor: {
+          name: this.sanitizePromptText(currentUser.name, 80),
+          role: currentUser.role,
+          permission: 'customer_readonly',
+        },
+        customer: {
+          name: this.sanitizePromptText(customer.name, 80),
+        },
+        clinic: this.mapClinic(clinic),
+        pets: pets.map((pet) => ({
+          name: this.sanitizePromptText(pet.name, 80),
+          species: this.sanitizePromptText(pet.species, 40),
+          breed: this.sanitizePromptText(pet.breed, 60),
+          notes: this.sanitizePromptText(pet.specialNotes, 90),
+        })),
+        recentAppointments: appointments.map((item) => ({
+          time: item.appointmentAt.toISOString(),
+          status: item.status,
+          petName: petNameById.get(item.petId) ?? 'Thú cưng không xác định',
+          serviceName: serviceNameById.get(item.serviceId) ?? 'Dịch vụ không xác định',
+        })),
+        recentReminders: reminders.map((item) => ({
+          channel: item.channel,
+          status: item.status,
+          petName: petNameById.get(item.petId) ?? 'Thú cưng không xác định',
+          scheduledAt: item.scheduledAt?.toISOString() ?? null,
+          sentAt: item.sentAt?.toISOString() ?? null,
+        })),
+        recentMedicalRecords,
+        catalog: {
+          services: this.mapServicesForPrompt(services, { includeDescription: false }),
+          products: this.mapProductsForPrompt(products, { includeDescription: false }),
+        },
+      });
+    } catch (error) {
+      this.logger.error(
+        `Customer context query failed for user=${currentUser.userId}: ${this.describeGeminiError(error)}`,
+      );
+      return JSON.stringify({
+        scope: 'customer',
+        actor: {
+          name: this.sanitizePromptText(currentUser.name, 80),
+          role: currentUser.role,
+          permission: 'customer_readonly',
+        },
+        note: 'Không thể tải đầy đủ dữ liệu khách hàng ở thời điểm hiện tại. Ưu tiên trả lời ngắn gọn theo dữ liệu còn lại.',
+      });
+    }
   }
 
   private async buildManagerContext(currentUser: AuthUser): Promise<string> {
-    const [clinic, services, products] = await Promise.all([
-      this.prisma.clinicSettings.findFirst({
-        where: { clinicId: currentUser.clinicId },
-        orderBy: { updatedAt: 'desc' },
-        select: {
-          clinicName: true,
-          phone: true,
-          address: true,
-          timezone: true,
-        },
-      }),
-      this.prisma.service.findMany({
-        where: {
-          clinicId: currentUser.clinicId,
-          isActive: true,
-        },
-        orderBy: { name: 'asc' },
-        take: 80,
-        select: {
-          name: true,
-          description: true,
-          durationMin: true,
-          price: true,
-        },
-      }),
-      this.prisma.product.findMany({
-        where: {
-          clinicId: currentUser.clinicId,
-          isActive: true,
-        },
-        orderBy: { name: 'asc' },
-        take: 120,
-        select: {
-          name: true,
-          category: true,
-          description: true,
-          price: true,
-          stock: true,
-        },
-      }),
-    ]);
+    try {
+      const [clinic, services, products] = await Promise.all([
+        this.prisma.clinicSettings.findFirst({
+          where: { clinicId: currentUser.clinicId },
+          orderBy: { updatedAt: 'desc' },
+          select: {
+            clinicName: true,
+            phone: true,
+            address: true,
+            timezone: true,
+          },
+        }),
+        this.prisma.service.findMany({
+          where: {
+            clinicId: currentUser.clinicId,
+            isActive: true,
+          },
+          orderBy: { name: 'asc' },
+          take: 20,
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            durationMin: true,
+            price: true,
+          },
+        }),
+        this.prisma.product.findMany({
+          where: {
+            clinicId: currentUser.clinicId,
+            isActive: true,
+          },
+          orderBy: { name: 'asc' },
+          take: 20,
+          select: {
+            id: true,
+            name: true,
+            category: true,
+            description: true,
+            price: true,
+            stock: true,
+          },
+        }),
+      ]);
 
-    const timezone = this.resolveTimezone(clinic?.timezone ?? null);
-    const now = new Date();
-    const { startUtc: todayStartUtc, endUtc: tomorrowStartUtc } = this.getZonedDayRangeUtc(
-      timezone,
-      now,
-    );
-    const sevenDaysAheadUtc = new Date(todayStartUtc);
-    sevenDaysAheadUtc.setUTCDate(sevenDaysAheadUtc.getUTCDate() + 7);
-    const sevenDaysAgoUtc = new Date(todayStartUtc);
-    sevenDaysAgoUtc.setUTCDate(sevenDaysAgoUtc.getUTCDate() - 6);
-    const thirtyDaysAgoUtc = new Date(todayStartUtc);
-    thirtyDaysAgoUtc.setUTCDate(thirtyDaysAgoUtc.getUTCDate() - 29);
+      const timezone = this.resolveTimezone(clinic?.timezone ?? null);
+      const now = new Date();
+      const { startUtc: todayStartUtc, endUtc: tomorrowStartUtc } = this.getZonedDayRangeUtc(
+        timezone,
+        now,
+      );
+      const sevenDaysAheadUtc = new Date(todayStartUtc);
+      sevenDaysAheadUtc.setUTCDate(sevenDaysAheadUtc.getUTCDate() + 7);
+      const sevenDaysAgoUtc = new Date(todayStartUtc);
+      sevenDaysAgoUtc.setUTCDate(sevenDaysAgoUtc.getUTCDate() - 6);
+      const thirtyDaysAgoUtc = new Date(todayStartUtc);
+      thirtyDaysAgoUtc.setUTCDate(thirtyDaysAgoUtc.getUTCDate() - 29);
 
-    const [
-      totalCustomers,
-      totalPets,
-      pendingAppointments,
-      confirmedAppointments,
-      completedAppointments,
-      cancelledAppointments,
-      upcoming7Days,
-      reminderScheduled,
-      reminderSent,
-      reminderFailed,
-      reminderCancelled,
-      todayAppointmentsByStatus,
-      paidRevenueToday,
-      paidRevenue7,
-      paidRevenue30,
-      agendaNextAppointments,
-    ] = await Promise.all([
-      this.prisma.customer.count({ where: { clinicId: currentUser.clinicId } }),
-      this.prisma.pet.count({ where: { clinicId: currentUser.clinicId } }),
-      this.prisma.appointment.count({
-        where: {
-          clinicId: currentUser.clinicId,
-          status: AppointmentStatus.pending,
-        },
-      }),
-      this.prisma.appointment.count({
-        where: {
-          clinicId: currentUser.clinicId,
-          status: AppointmentStatus.confirmed,
-        },
-      }),
-      this.prisma.appointment.count({
-        where: {
-          clinicId: currentUser.clinicId,
-          status: AppointmentStatus.completed,
-        },
-      }),
-      this.prisma.appointment.count({
-        where: {
-          clinicId: currentUser.clinicId,
-          status: AppointmentStatus.cancelled,
-        },
-      }),
-      this.prisma.appointment.count({
-        where: {
-          clinicId: currentUser.clinicId,
-          appointmentAt: {
-            gte: todayStartUtc,
-            lt: sevenDaysAheadUtc,
+      const [
+        totalCustomers,
+        totalPets,
+        pendingAppointments,
+        confirmedAppointments,
+        completedAppointments,
+        cancelledAppointments,
+        upcoming7Days,
+        reminderScheduled,
+        reminderSent,
+        reminderFailed,
+        reminderCancelled,
+        todayAppointmentsByStatus,
+        paidRevenueToday,
+        paidRevenue7,
+        paidRevenue30,
+        agendaNextAppointmentsRaw,
+        openConfirmedAppointmentsRaw,
+        todayPaidInvoicesRaw,
+        topSpendersRaw,
+        lowStockProductsRaw,
+      ] = await Promise.all([
+        this.prisma.customer.count({ where: { clinicId: currentUser.clinicId } }),
+        this.prisma.pet.count({ where: { clinicId: currentUser.clinicId } }),
+        this.prisma.appointment.count({
+          where: {
+            clinicId: currentUser.clinicId,
+            status: AppointmentStatus.pending,
           },
-          status: {
-            in: [AppointmentStatus.pending, AppointmentStatus.confirmed],
+        }),
+        this.prisma.appointment.count({
+          where: {
+            clinicId: currentUser.clinicId,
+            status: AppointmentStatus.confirmed,
           },
-        },
-      }),
-      this.prisma.reminder.count({
-        where: {
-          clinicId: currentUser.clinicId,
-          status: ReminderStatus.scheduled,
-        },
-      }),
-      this.prisma.reminder.count({
-        where: {
-          clinicId: currentUser.clinicId,
-          status: ReminderStatus.sent,
-        },
-      }),
-      this.prisma.reminder.count({
-        where: {
-          clinicId: currentUser.clinicId,
-          status: ReminderStatus.failed,
-        },
-      }),
-      this.prisma.reminder.count({
-        where: {
-          clinicId: currentUser.clinicId,
-          status: ReminderStatus.cancelled,
-        },
-      }),
-      this.prisma.appointment.groupBy({
-        by: ['status'],
-        where: {
-          clinicId: currentUser.clinicId,
-          appointmentAt: {
-            gte: todayStartUtc,
-            lt: tomorrowStartUtc,
+        }),
+        this.prisma.appointment.count({
+          where: {
+            clinicId: currentUser.clinicId,
+            status: AppointmentStatus.completed,
           },
-        },
-        _count: { _all: true },
-      }),
-      this.prisma.invoice.aggregate({
-        where: {
-          clinicId: currentUser.clinicId,
-          paymentStatus: PaymentStatus.paid,
-          issuedAt: {
-            gte: todayStartUtc,
-            lt: tomorrowStartUtc,
+        }),
+        this.prisma.appointment.count({
+          where: {
+            clinicId: currentUser.clinicId,
+            status: AppointmentStatus.cancelled,
           },
-        },
-        _sum: { grandTotal: true },
-        _count: { _all: true },
-      }),
-      this.prisma.invoice.aggregate({
-        where: {
-          clinicId: currentUser.clinicId,
-          paymentStatus: PaymentStatus.paid,
-          issuedAt: {
-            gte: sevenDaysAgoUtc,
-            lte: now,
+        }),
+        this.prisma.appointment.count({
+          where: {
+            clinicId: currentUser.clinicId,
+            appointmentAt: {
+              gte: todayStartUtc,
+              lt: sevenDaysAheadUtc,
+            },
+            status: {
+              in: [AppointmentStatus.pending, AppointmentStatus.confirmed],
+            },
           },
-        },
-        _sum: { grandTotal: true },
-        _count: { _all: true },
-      }),
-      this.prisma.invoice.aggregate({
-        where: {
-          clinicId: currentUser.clinicId,
-          paymentStatus: PaymentStatus.paid,
-          issuedAt: {
-            gte: thirtyDaysAgoUtc,
-            lte: now,
+        }),
+        this.prisma.reminder.count({
+          where: {
+            clinicId: currentUser.clinicId,
+            status: ReminderStatus.scheduled,
           },
-        },
-        _sum: { grandTotal: true },
-        _count: { _all: true },
-      }),
-      this.prisma.appointment.findMany({
-        where: {
-          clinicId: currentUser.clinicId,
-          appointmentAt: {
-            gte: todayStartUtc,
-            lt: sevenDaysAheadUtc,
+        }),
+        this.prisma.reminder.count({
+          where: {
+            clinicId: currentUser.clinicId,
+            status: ReminderStatus.sent,
           },
-        },
-        orderBy: { appointmentAt: 'asc' },
-        take: 20,
-        select: {
-          appointmentAt: true,
-          status: true,
-          paymentStatus: true,
-          customer: {
-            select: { name: true },
+        }),
+        this.prisma.reminder.count({
+          where: {
+            clinicId: currentUser.clinicId,
+            status: ReminderStatus.failed,
           },
-          pet: {
-            select: { name: true },
+        }),
+        this.prisma.reminder.count({
+          where: {
+            clinicId: currentUser.clinicId,
+            status: ReminderStatus.cancelled,
           },
-          service: {
-            select: { name: true },
+        }),
+        this.prisma.appointment.groupBy({
+          by: ['status'],
+          where: {
+            clinicId: currentUser.clinicId,
+            appointmentAt: {
+              gte: todayStartUtc,
+              lt: tomorrowStartUtc,
+            },
           },
-        },
-      }),
-    ]);
+          _count: { _all: true },
+        }),
+        this.prisma.invoice.aggregate({
+          where: {
+            clinicId: currentUser.clinicId,
+            paymentStatus: PaymentStatus.paid,
+            issuedAt: {
+              gte: todayStartUtc,
+              lt: tomorrowStartUtc,
+            },
+          },
+          _sum: { grandTotal: true },
+          _count: { _all: true },
+        }),
+        this.prisma.invoice.aggregate({
+          where: {
+            clinicId: currentUser.clinicId,
+            paymentStatus: PaymentStatus.paid,
+            issuedAt: {
+              gte: sevenDaysAgoUtc,
+              lte: now,
+            },
+          },
+          _sum: { grandTotal: true },
+          _count: { _all: true },
+        }),
+        this.prisma.invoice.aggregate({
+          where: {
+            clinicId: currentUser.clinicId,
+            paymentStatus: PaymentStatus.paid,
+            issuedAt: {
+              gte: thirtyDaysAgoUtc,
+              lte: now,
+            },
+          },
+          _sum: { grandTotal: true },
+          _count: { _all: true },
+        }),
+        this.prisma.appointment.findMany({
+          where: {
+            clinicId: currentUser.clinicId,
+            appointmentAt: {
+              gte: todayStartUtc,
+              lt: sevenDaysAheadUtc,
+            },
+          },
+          orderBy: { appointmentAt: 'asc' },
+          take: 5,
+          select: {
+            appointmentAt: true,
+            status: true,
+            paymentStatus: true,
+            customerId: true,
+            petId: true,
+            serviceId: true,
+          },
+        }),
+        this.prisma.appointment.findMany({
+          where: {
+            clinicId: currentUser.clinicId,
+            status: AppointmentStatus.confirmed,
+          },
+          orderBy: { appointmentAt: 'asc' },
+          take: 5,
+          select: {
+            appointmentAt: true,
+            status: true,
+            paymentStatus: true,
+            customerId: true,
+            petId: true,
+            serviceId: true,
+          },
+        }),
+        this.prisma.invoice.findMany({
+          where: {
+            clinicId: currentUser.clinicId,
+            paymentStatus: PaymentStatus.paid,
+            issuedAt: {
+              gte: todayStartUtc,
+              lt: tomorrowStartUtc,
+            },
+          },
+          orderBy: { issuedAt: 'desc' },
+          take: 5,
+          select: {
+            invoiceNo: true,
+            issuedAt: true,
+            grandTotal: true,
+            customerId: true,
+            appointmentId: true,
+            items: {
+              take: 3,
+              select: {
+                name: true,
+                itemType: true,
+                qty: true,
+                total: true,
+              },
+            },
+          },
+        }),
+        this.prisma.customer.findMany({
+          where: { clinicId: currentUser.clinicId },
+          orderBy: { totalSpent: 'desc' },
+          take: 5,
+          select: {
+            name: true,
+            totalSpent: true,
+            totalVisits: true,
+            lastVisitAt: true,
+          },
+        }),
+        this.prisma.product.findMany({
+          where: {
+            clinicId: currentUser.clinicId,
+            isActive: true,
+            stock: { lte: 10 },
+          },
+          orderBy: [{ stock: 'asc' }, { name: 'asc' }],
+          take: 10,
+          select: {
+            name: true,
+            category: true,
+            stock: true,
+            price: true,
+          },
+        }),
+      ]);
 
-    const todayStatusMap: Record<AppointmentStatus, number> = {
-      pending: 0,
-      confirmed: 0,
-      completed: 0,
-      cancelled: 0,
-    };
-    for (const item of todayAppointmentsByStatus) {
-      todayStatusMap[item.status] = item._count._all;
-    }
-    const appointmentsTodayTotal =
-      todayStatusMap.pending +
-      todayStatusMap.confirmed +
-      todayStatusMap.completed +
-      todayStatusMap.cancelled;
+      const invoiceAppointmentIds = Array.from(
+        new Set(
+          todayPaidInvoicesRaw
+            .map((item) => item.appointmentId)
+            .filter((id): id is string => typeof id === 'string' && id.length > 0),
+        ),
+      );
+      const invoiceAppointments =
+        invoiceAppointmentIds.length > 0
+          ? await this.prisma.appointment.findMany({
+              where: {
+                clinicId: currentUser.clinicId,
+                id: { in: invoiceAppointmentIds },
+              },
+              select: {
+                id: true,
+                appointmentAt: true,
+                status: true,
+                paymentStatus: true,
+                petId: true,
+                serviceId: true,
+              },
+            })
+          : [];
+      const invoiceAppointmentById = new Map(
+        invoiceAppointments.map((item) => [item.id, item]),
+      );
 
-    const lowStockProducts = products
-      .filter((item) => item.stock <= 5)
-      .slice(0, 20)
-      .map((item) => ({
-        name: this.sanitizePromptText(item.name, 80),
-        stock: item.stock,
-        price: this.toPromptNumber(item.price),
+      const customerIds = Array.from(
+        new Set([
+          ...agendaNextAppointmentsRaw.map((item) => item.customerId),
+          ...openConfirmedAppointmentsRaw.map((item) => item.customerId),
+          ...todayPaidInvoicesRaw.map((item) => item.customerId),
+        ]),
+      );
+      const petIds = Array.from(
+        new Set([
+          ...agendaNextAppointmentsRaw.map((item) => item.petId),
+          ...openConfirmedAppointmentsRaw.map((item) => item.petId),
+          ...invoiceAppointments.map((item) => item.petId),
+        ]),
+      );
+      const serviceIds = Array.from(
+        new Set([
+          ...agendaNextAppointmentsRaw.map((item) => item.serviceId),
+          ...openConfirmedAppointmentsRaw.map((item) => item.serviceId),
+          ...invoiceAppointments.map((item) => item.serviceId),
+        ]),
+      );
+
+      const [customerLookup, petLookup, serviceLookup] = await Promise.all([
+        customerIds.length > 0
+          ? this.prisma.customer.findMany({
+              where: {
+                clinicId: currentUser.clinicId,
+                id: { in: customerIds },
+              },
+              select: { id: true, name: true },
+            })
+          : [],
+        petIds.length > 0
+          ? this.prisma.pet.findMany({
+              where: {
+                clinicId: currentUser.clinicId,
+                id: { in: petIds },
+              },
+              select: { id: true, name: true },
+            })
+          : [],
+        serviceIds.length > 0
+          ? this.prisma.service.findMany({
+              where: {
+                clinicId: currentUser.clinicId,
+                id: { in: serviceIds },
+              },
+              select: { id: true, name: true },
+            })
+          : [],
+      ]);
+
+      const customerNameById = new Map(
+        customerLookup.map((item) => [item.id, this.sanitizePromptText(item.name, 80)]),
+      );
+      const petNameById = new Map(
+        petLookup.map((item) => [item.id, this.sanitizePromptText(item.name, 80)]),
+      );
+      const serviceNameById = new Map(
+        serviceLookup.map((item) => [item.id, this.sanitizePromptText(item.name, 80)]),
+      );
+
+      const todayStatusMap: Record<AppointmentStatus, number> = {
+        pending: 0,
+        confirmed: 0,
+        completed: 0,
+        cancelled: 0,
+      };
+      for (const item of todayAppointmentsByStatus) {
+        todayStatusMap[item.status] = item._count._all;
+      }
+      const appointmentsTodayTotal =
+        todayStatusMap.pending +
+        todayStatusMap.confirmed +
+        todayStatusMap.completed +
+        todayStatusMap.cancelled;
+
+      const totalReminders =
+        reminderScheduled + reminderSent + reminderFailed + reminderCancelled;
+
+      const lowStockProducts = lowStockProductsRaw
+        .map((item) => ({
+          name: this.sanitizePromptText(item.name, 80),
+          category: this.sanitizePromptText(item.category, 40),
+          stock: item.stock,
+          price: this.toPromptNumber(item.price),
+        }));
+
+      const topSpenders = topSpendersRaw.map((item) => ({
+        customerName: this.sanitizePromptText(item.name, 80),
+        totalSpent: this.toPromptNumber(item.totalSpent),
+        totalVisits: item.totalVisits,
+        lastVisitAt: item.lastVisitAt?.toISOString() ?? null,
       }));
 
-    return JSON.stringify({
-      scope: 'manager',
-      actor: {
-        name: this.sanitizePromptText(currentUser.name, 80),
-        role: currentUser.role,
-        permission: 'manager_operational_readonly',
-      },
-      clinic: this.mapClinic(clinic),
-      runtime: {
-        timezone,
-        now: now.toISOString(),
-      },
-      summary: {
-        customers: totalCustomers,
-        pets: totalPets,
-        appointments: {
-          pending: pendingAppointments,
-          confirmed: confirmedAppointments,
-          completed: completedAppointments,
-          cancelled: cancelledAppointments,
-          upcoming7Days,
-          today: {
-            total: appointmentsTodayTotal,
-            pending: todayStatusMap.pending,
-            confirmed: todayStatusMap.confirmed,
-            completed: todayStatusMap.completed,
-            cancelled: todayStatusMap.cancelled,
-          },
-        },
-        revenue: {
-          paidToday: this.toPromptNumber(paidRevenueToday._sum.grandTotal),
-          paidTodayInvoices: paidRevenueToday._count._all,
-          paid7Days: this.toPromptNumber(paidRevenue7._sum.grandTotal),
-          paid7DaysInvoices: paidRevenue7._count._all,
-          paid30Days: this.toPromptNumber(paidRevenue30._sum.grandTotal),
-          paid30DaysInvoices: paidRevenue30._count._all,
-        },
-        reminders: {
-          scheduled: reminderScheduled,
-          sent: reminderSent,
-          failed: reminderFailed,
-          cancelled: reminderCancelled,
-        },
-      },
-      agendaNextAppointments: agendaNextAppointments.map((item) => ({
+      const agendaNextAppointments = agendaNextAppointmentsRaw.map((item) => ({
         time: item.appointmentAt.toISOString(),
-        customerName: this.sanitizePromptText(item.customer.name, 80),
-        petName: this.sanitizePromptText(item.pet.name, 80),
-        serviceName: this.sanitizePromptText(item.service.name, 80),
+        customerName: customerNameById.get(item.customerId) ?? 'Khách hàng không xác định',
+        petName: petNameById.get(item.petId) ?? 'Thú cưng không xác định',
+        serviceName: serviceNameById.get(item.serviceId) ?? 'Dịch vụ không xác định',
         status: item.status,
         paymentStatus: item.paymentStatus,
-      })),
-      lowStockProducts,
-      catalog: {
-        services: this.mapServicesForPrompt(services),
-        products: this.mapProductsForPrompt(products),
-      },
-    });
+      }));
+
+      const openConfirmedAppointments = openConfirmedAppointmentsRaw.map((item) => ({
+        time: item.appointmentAt.toISOString(),
+        customerName: customerNameById.get(item.customerId) ?? 'Khách hàng không xác định',
+        petName: petNameById.get(item.petId) ?? 'Thú cưng không xác định',
+        serviceName: serviceNameById.get(item.serviceId) ?? 'Dịch vụ không xác định',
+        status: item.status,
+        paymentStatus: item.paymentStatus,
+      }));
+
+      const todayPaidInvoices = todayPaidInvoicesRaw.map((invoice) => {
+        const linkedAppointment = invoice.appointmentId
+          ? invoiceAppointmentById.get(invoice.appointmentId)
+          : undefined;
+        return {
+          invoiceNo: this.sanitizePromptText(invoice.invoiceNo, 40),
+          issuedAt: invoice.issuedAt.toISOString(),
+          grandTotal: this.toPromptNumber(invoice.grandTotal),
+          customerName:
+            customerNameById.get(invoice.customerId) ?? 'Khách hàng không xác định',
+          petName: linkedAppointment
+            ? petNameById.get(linkedAppointment.petId) ?? 'Thú cưng không xác định'
+            : 'Không gắn lịch hẹn',
+          serviceName: linkedAppointment
+            ? serviceNameById.get(linkedAppointment.serviceId) ?? 'Dịch vụ không xác định'
+            : 'Không gắn lịch hẹn',
+          appointmentStatus: linkedAppointment?.status ?? null,
+          items: invoice.items.map((item) => ({
+            name: this.sanitizePromptText(item.name, 80),
+            itemType: item.itemType,
+            qty: item.qty,
+            total: this.toPromptNumber(item.total),
+          })),
+        };
+      });
+
+      return JSON.stringify({
+        scope: 'manager',
+        actor: {
+          name: this.sanitizePromptText(currentUser.name, 80),
+          role: currentUser.role,
+          permission: 'manager_operational_readonly',
+          capabilities: [
+            'read_dashboard',
+            'read_bookings',
+            'read_customers',
+            'read_pets',
+            'read_catalog',
+            'read_reminders',
+            'read_revenue_ledger',
+          ],
+        },
+        clinic: this.mapClinic(clinic),
+        runtime: {
+          timezone,
+          now: now.toISOString(),
+        },
+        summary: {
+          customers: totalCustomers,
+          pets: totalPets,
+          appointments: {
+            pending: pendingAppointments,
+            confirmed: confirmedAppointments,
+            completed: completedAppointments,
+            cancelled: cancelledAppointments,
+            upcoming7Days,
+            today: {
+              total: appointmentsTodayTotal,
+              pending: todayStatusMap.pending,
+              confirmed: todayStatusMap.confirmed,
+              completed: todayStatusMap.completed,
+              cancelled: todayStatusMap.cancelled,
+            },
+          },
+          revenue: {
+            paidToday: this.toPromptNumber(paidRevenueToday._sum.grandTotal),
+            paidTodayInvoices: paidRevenueToday._count._all,
+            paid7Days: this.toPromptNumber(paidRevenue7._sum.grandTotal),
+            paid7DaysInvoices: paidRevenue7._count._all,
+            paid30Days: this.toPromptNumber(paidRevenue30._sum.grandTotal),
+            paid30DaysInvoices: paidRevenue30._count._all,
+          },
+          reminders: {
+            total: totalReminders,
+            scheduled: reminderScheduled,
+            sent: reminderSent,
+            failed: reminderFailed,
+            cancelled: reminderCancelled,
+          },
+          lowStockCount: lowStockProducts.length,
+        },
+        agendaNextAppointments,
+        openConfirmedAppointments,
+        todayPaidInvoices,
+        topSpenders,
+        lowStockProducts,
+        catalog: {
+          services: this.mapServicesForPrompt(services, { includeDescription: false }),
+          products: this.mapProductsForPrompt(products, { includeDescription: false }),
+        },
+      });
+    } catch (error) {
+      this.logger.error(
+        `Manager context query failed for user=${currentUser.userId}: ${this.describeGeminiError(error)}`,
+      );
+      return JSON.stringify({
+        scope: 'manager',
+        actor: {
+          name: this.sanitizePromptText(currentUser.name, 80),
+          role: currentUser.role,
+          permission: 'manager_operational_readonly',
+        },
+        note: 'Không thể tải đầy đủ dữ liệu vận hành ở thời điểm hiện tại. Ưu tiên trả lời theo số liệu tổng hợp tối thiểu.',
+      });
+    }
   }
 
   private resolveTimezone(timezone: string | null): string {
@@ -872,6 +1276,46 @@ export class AiService {
     };
   }
 
+  private createRequestId(): string {
+    const now = Date.now().toString(36);
+    const random = Math.random().toString(36).slice(2, 8);
+    return `chat_${now}_${random}`;
+  }
+
+  private classifyMedicalRecordEntry(
+    diagnosis: string,
+    treatment: string,
+  ): 'service-log' | 'clinical-record' {
+    const haystack = `${diagnosis} ${treatment}`.toLowerCase();
+    if (haystack.includes('hoàn tất dịch vụ') || haystack.includes('dịch vụ sử dụng')) {
+      return 'service-log';
+    }
+    return 'clinical-record';
+  }
+
+  private enforceContextBudget(context: string, maxChars: number): string {
+    if (!Number.isFinite(maxChars) || maxChars <= 0) {
+      return context;
+    }
+
+    if (context.length <= maxChars) {
+      return context;
+    }
+
+    const compact = this.compactContextPayload(context);
+    if (compact.length <= maxChars) {
+      return compact;
+    }
+
+    const collapsed = compact.replace(/\s+/g, ' ').trim();
+    if (collapsed.length <= maxChars) {
+      return collapsed;
+    }
+
+    const tail = ' ...(context rút gọn)';
+    return `${collapsed.slice(0, Math.max(maxChars - tail.length, 1))}${tail}`;
+  }
+
   private compactContextPayload(context: string): string {
     try {
       const parsed = this.asRecord(JSON.parse(context));
@@ -882,7 +1326,7 @@ export class AiService {
       const catalog = this.asRecord(parsed.catalog);
       if (catalog) {
         const services = this.asRecordArray(catalog.services)
-          .slice(0, 24)
+          .slice(0, 12)
           .map((item) => ({
             name: this.readPromptString(item.name, 80),
             durationMin: this.toPromptNumber(item.durationMin),
@@ -890,7 +1334,7 @@ export class AiService {
           }));
 
         const products = this.asRecordArray(catalog.products)
-          .slice(0, 30)
+          .slice(0, 12)
           .map((item) => ({
             name: this.readPromptString(item.name, 80),
             category: this.readPromptString(item.category, 40),
@@ -903,7 +1347,7 @@ export class AiService {
       }
 
       const pets = this.asRecordArray(parsed.pets)
-        .slice(0, 12)
+        .slice(0, 6)
         .map((item) => ({
           name: this.readPromptString(item.name, 80),
           species: this.readPromptString(item.species, 40),
@@ -914,18 +1358,33 @@ export class AiService {
       }
 
       const medical = this.asRecordArray(parsed.recentMedicalRecords)
-        .slice(0, 6)
-        .map((item) => ({
-          petName: this.readPromptString(item.petName, 80),
-          diagnosis: this.readPromptString(item.diagnosis, 120),
-          recordedAt: this.readPromptString(item.recordedAt, 40),
-        }));
+        .slice(0, 3)
+        .map((item) => {
+          const type = this.readPromptString(item.type, 20);
+          if (type === 'service-log') {
+            return {
+              type: 'service-log',
+              petName: this.readPromptString(item.petName, 80),
+              service: this.readPromptString(item.service, 120),
+              detail: this.readPromptString(item.detail, 140),
+              recordedAt: this.readPromptString(item.recordedAt, 40),
+            };
+          }
+          return {
+            type: 'clinical-record',
+            petName: this.readPromptString(item.petName, 80),
+            diagnosis: this.readPromptString(item.diagnosis, 120),
+            treatment: this.readPromptString(item.treatment, 120),
+            notes: this.readPromptString(item.notes, 120),
+            recordedAt: this.readPromptString(item.recordedAt, 40),
+          };
+        });
       if (medical.length > 0) {
         parsed.recentMedicalRecords = medical;
       }
 
       const agenda = this.asRecordArray(parsed.agendaNextAppointments)
-        .slice(0, 12)
+        .slice(0, 5)
         .map((item) => ({
           time: this.readPromptString(item.time, 40),
           customerName: this.readPromptString(item.customerName, 80),
@@ -938,8 +1397,57 @@ export class AiService {
         parsed.agendaNextAppointments = agenda;
       }
 
+      const openConfirmed = this.asRecordArray(parsed.openConfirmedAppointments)
+        .slice(0, 5)
+        .map((item) => ({
+          time: this.readPromptString(item.time, 40),
+          customerName: this.readPromptString(item.customerName, 80),
+          petName: this.readPromptString(item.petName, 80),
+          serviceName: this.readPromptString(item.serviceName, 80),
+          status: this.readPromptString(item.status, 20),
+          paymentStatus: this.readPromptString(item.paymentStatus, 20),
+        }));
+      if (openConfirmed.length > 0) {
+        parsed.openConfirmedAppointments = openConfirmed;
+      }
+
+      const paidInvoices = this.asRecordArray(parsed.todayPaidInvoices)
+        .slice(0, 5)
+        .map((item) => {
+          const compactItems = this.asRecordArray(item.items)
+            .slice(0, 2)
+            .map((line) => ({
+              name: this.readPromptString(line.name, 60),
+              qty: this.toPromptNumber(line.qty),
+              total: this.toPromptNumber(line.total),
+            }));
+          return {
+            invoiceNo: this.readPromptString(item.invoiceNo, 40),
+            issuedAt: this.readPromptString(item.issuedAt, 40),
+            grandTotal: this.toPromptNumber(item.grandTotal),
+            customerName: this.readPromptString(item.customerName, 80),
+            petName: this.readPromptString(item.petName, 80),
+            serviceName: this.readPromptString(item.serviceName, 80),
+            items: compactItems,
+          };
+        });
+      if (paidInvoices.length > 0) {
+        parsed.todayPaidInvoices = paidInvoices;
+      }
+
+      const spenders = this.asRecordArray(parsed.topSpenders)
+        .slice(0, 5)
+        .map((item) => ({
+          customerName: this.readPromptString(item.customerName, 80),
+          totalSpent: this.toPromptNumber(item.totalSpent),
+          totalVisits: this.toPromptNumber(item.totalVisits),
+        }));
+      if (spenders.length > 0) {
+        parsed.topSpenders = spenders;
+      }
+
       const lowStock = this.asRecordArray(parsed.lowStockProducts)
-        .slice(0, 10)
+        .slice(0, 8)
         .map((item) => ({
           name: this.readPromptString(item.name, 80),
           stock: this.toPromptNumber(item.stock),
@@ -1008,12 +1516,16 @@ export class AiService {
       durationMin: number;
       price: unknown;
     }>,
+    options?: { includeDescription?: boolean },
   ) {
+    const includeDescription = options?.includeDescription ?? true;
     return services.map((item) => ({
       name: this.sanitizePromptText(item.name, 80),
       durationMin: item.durationMin,
       price: this.toPromptNumber(item.price),
-      description: this.sanitizePromptText(item.description, 120),
+      ...(includeDescription
+        ? { description: this.sanitizePromptText(item.description, 120) }
+        : {}),
     }));
   }
 
@@ -1025,13 +1537,17 @@ export class AiService {
       price: unknown;
       stock: number;
     }>,
+    options?: { includeDescription?: boolean },
   ) {
+    const includeDescription = options?.includeDescription ?? true;
     return products.map((item) => ({
       name: this.sanitizePromptText(item.name, 80),
       category: this.sanitizePromptText(item.category, 40),
       price: this.toPromptNumber(item.price),
       stock: item.stock,
-      description: this.sanitizePromptText(item.description, 120),
+      ...(includeDescription
+        ? { description: this.sanitizePromptText(item.description, 120) }
+        : {}),
     }));
   }
 
