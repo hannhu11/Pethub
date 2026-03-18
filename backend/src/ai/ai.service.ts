@@ -25,6 +25,8 @@ const DEFAULT_CHAT_MODEL = 'gemini-2.5-flash';
 const DEFAULT_HISTORY_TURNS = 6;
 const CHAT_PROVIDER_TIMEOUT_MS = 55_000;
 const DEFAULT_CLINIC_TIMEZONE = 'Asia/Ho_Chi_Minh';
+const DEFAULT_CONTEXT_BUDGET_CHARS = 14_000;
+const RETRY_CONTEXT_BUDGET_CHARS = 8_000;
 const UI_PLAYBOOK = [
   'UI_PLAYBOOK (PetHub - chỉ hướng dẫn theo các luồng thật):',
   '',
@@ -105,6 +107,7 @@ export class AiService {
   async chat(dto: ChatRequestDto, currentUser: AuthUser | null): Promise<ChatResponse> {
     const scope: ChatScope = currentUser?.role === Role.manager ? 'manager' : 'customer';
     const model = this.getChatModel();
+    const requestId = this.createRequestId();
 
     if (!currentUser) {
       return this.buildFallbackResponse(scope, model, 'unauthorized');
@@ -130,6 +133,18 @@ export class AiService {
       );
       context = this.buildEmergencyContext(currentUser, scope);
     }
+    context = this.enforceContextBudget(context, DEFAULT_CONTEXT_BUDGET_CHARS);
+    this.logger.log(
+      JSON.stringify({
+        event: 'ai_chat_request',
+        requestId,
+        scope,
+        model,
+        contextSize: context.length,
+        historySize: history.length,
+        userMessageSize: userMessage.length,
+      }),
+    );
     const systemPrompt = this.buildSystemPrompt(context);
 
     try {
@@ -154,13 +169,26 @@ export class AiService {
     } catch (error) {
       if (this.shouldRetryGeminiChat(error)) {
         const retryReason = this.describeGeminiError(error);
-        this.logger.warn(`Retrying Gemini chat once due to: ${retryReason}`);
+        this.logger.warn(
+          JSON.stringify({
+            event: 'ai_chat_retry',
+            requestId,
+            scope,
+            reason: retryReason,
+            contextSize: context.length,
+            historySize: history.length,
+          }),
+        );
 
         try {
+          const retryContext = this.enforceContextBudget(
+            this.compactContextPayload(context),
+            RETRY_CONTEXT_BUDGET_CHARS,
+          );
           const retryText = await this.callGeminiChat({
             model,
             key,
-            systemPrompt: this.buildSystemPrompt(this.compactContextPayload(context)),
+            systemPrompt: this.buildSystemPrompt(retryContext),
             history: this.compactHistory(history),
             userMessage,
           });
@@ -174,12 +202,25 @@ export class AiService {
             };
           }
         } catch (retryError) {
-          this.logger.warn(
-            `Gemini retry failed: ${this.describeGeminiError(retryError)}`,
+          this.logger.error(
+            JSON.stringify({
+              event: 'ai_chat_retry_failed',
+              requestId,
+              scope,
+              reason: this.describeGeminiError(retryError),
+            }),
           );
         }
       }
 
+      this.logger.error(
+        JSON.stringify({
+          event: 'ai_chat_fallback_provider_error',
+          requestId,
+          scope,
+          reason: this.describeGeminiError(error),
+        }),
+      );
       return this.buildFallbackResponse(scope, model, 'provider-error');
     }
   }
@@ -225,6 +266,9 @@ export class AiService {
     }
 
     const status = error.response?.status;
+    if (status === 408 || status === 413) {
+      return true;
+    }
     if (status === 400) {
       const payload = JSON.stringify(error.response?.data ?? '').toLowerCase();
       if (
@@ -366,6 +410,7 @@ export class AiService {
       '- Luôn trình bày rõ ràng bằng Markdown: có thể dùng **in đậm** từ khóa và danh sách gạch đầu dòng khi cần.',
       '- Duy trì tiếng Việt có dấu, câu văn tự nhiên.',
       '- Không ngắt dở câu. Nếu nội dung dài, chia thành các mục ngắn và kết thúc đầy đủ ý.',
+      '- LUẬT VỀ TỪ VỰNG Y KHOA: Nếu bản ghi có loại "service-log" hoặc nội dung chứa "Hoàn tất dịch vụ"/"Dịch vụ sử dụng", TUYỆT ĐỐI KHÔNG dùng nhãn "Chẩn đoán"/"Điều trị". Bắt buộc trình bày: "Dịch vụ: ...", "Chi tiết: ...".',
       '- Khi người dùng hỏi "tôi là ai" hoặc "quyền của tôi", chỉ trả lời theo trường actor trong CONTEXT.',
       '',
       'UI_PLAYBOOK:',
@@ -405,7 +450,7 @@ export class AiService {
             isActive: true,
           },
           orderBy: { name: 'asc' },
-          take: 60,
+          take: 20,
           select: {
             name: true,
             description: true,
@@ -419,7 +464,7 @@ export class AiService {
             isActive: true,
           },
           orderBy: { name: 'asc' },
-          take: 80,
+          take: 20,
           select: {
             name: true,
             category: true,
@@ -451,8 +496,8 @@ export class AiService {
           note: 'Không tìm thấy hồ sơ khách hàng gắn với tài khoản hiện tại.',
           clinic: this.mapClinic(clinic),
           catalog: {
-            services: this.mapServicesForPrompt(services),
-            products: this.mapProductsForPrompt(products),
+            services: this.mapServicesForPrompt(services, { includeDescription: false }),
+            products: this.mapProductsForPrompt(products, { includeDescription: false }),
           },
         });
       }
@@ -463,7 +508,7 @@ export class AiService {
           customerId: customer.id,
         },
         orderBy: { name: 'asc' },
-        take: 25,
+        take: 6,
         select: {
           id: true,
           name: true,
@@ -484,7 +529,7 @@ export class AiService {
             customerId: customer.id,
           },
           orderBy: { appointmentAt: 'desc' },
-          take: 20,
+          take: 6,
           select: {
             appointmentAt: true,
             status: true,
@@ -498,7 +543,7 @@ export class AiService {
             customerId: customer.id,
           },
           orderBy: { createdAt: 'desc' },
-          take: 20,
+          take: 6,
           select: {
             channel: true,
             status: true,
@@ -513,7 +558,7 @@ export class AiService {
             customerId: customer.id,
           },
           orderBy: { recordedAt: 'desc' },
-          take: 20,
+          take: 3,
           select: {
             diagnosis: true,
             treatment: true,
@@ -545,6 +590,35 @@ export class AiService {
         appointmentServices.map((service) => [service.id, this.sanitizePromptText(service.name, 80)]),
       );
 
+      const recentMedicalRecords = medicalRecords.map((item) => {
+        const diagnosis = this.sanitizePromptText(item.diagnosis, 180);
+        const treatment = this.sanitizePromptText(item.treatment, 180);
+        const notes = this.sanitizePromptText(item.notes, 180);
+        const type = this.classifyMedicalRecordEntry(diagnosis, treatment);
+        const petName = petNameById.get(item.petId) ?? 'Thú cưng không xác định';
+
+        if (type === 'service-log') {
+          return {
+            type,
+            petName,
+            service: diagnosis || 'Hoàn tất dịch vụ',
+            detail: treatment || notes || 'Không có ghi chú bổ sung.',
+            recordedAt: item.recordedAt.toISOString(),
+            nextVisitAt: item.nextVisitAt?.toISOString() ?? null,
+          };
+        }
+
+        return {
+          type,
+          petName,
+          diagnosis,
+          treatment,
+          notes,
+          recordedAt: item.recordedAt.toISOString(),
+          nextVisitAt: item.nextVisitAt?.toISOString() ?? null,
+        };
+      });
+
       return JSON.stringify({
         scope: 'customer',
         actor: {
@@ -575,17 +649,10 @@ export class AiService {
           scheduledAt: item.scheduledAt?.toISOString() ?? null,
           sentAt: item.sentAt?.toISOString() ?? null,
         })),
-        recentMedicalRecords: medicalRecords.map((item) => ({
-          petName: petNameById.get(item.petId) ?? 'Thú cưng không xác định',
-          diagnosis: this.sanitizePromptText(item.diagnosis, 180),
-          treatment: this.sanitizePromptText(item.treatment, 180),
-          notes: this.sanitizePromptText(item.notes, 180),
-          recordedAt: item.recordedAt.toISOString(),
-          nextVisitAt: item.nextVisitAt?.toISOString() ?? null,
-        })),
+        recentMedicalRecords,
         catalog: {
-          services: this.mapServicesForPrompt(services),
-          products: this.mapProductsForPrompt(products),
+          services: this.mapServicesForPrompt(services, { includeDescription: false }),
+          products: this.mapProductsForPrompt(products, { includeDescription: false }),
         },
       });
     } catch (error) {
@@ -623,7 +690,7 @@ export class AiService {
             isActive: true,
           },
           orderBy: { name: 'asc' },
-          take: 80,
+          take: 20,
           select: {
             id: true,
             name: true,
@@ -638,7 +705,7 @@ export class AiService {
             isActive: true,
           },
           orderBy: { name: 'asc' },
-          take: 120,
+          take: 20,
           select: {
             id: true,
             name: true,
@@ -682,6 +749,8 @@ export class AiService {
         agendaNextAppointmentsRaw,
         openConfirmedAppointmentsRaw,
         todayPaidInvoicesRaw,
+        topSpendersRaw,
+        lowStockProductsRaw,
       ] = await Promise.all([
         this.prisma.customer.count({ where: { clinicId: currentUser.clinicId } }),
         this.prisma.pet.count({ where: { clinicId: currentUser.clinicId } }),
@@ -801,7 +870,7 @@ export class AiService {
             },
           },
           orderBy: { appointmentAt: 'asc' },
-          take: 24,
+          take: 5,
           select: {
             appointmentAt: true,
             status: true,
@@ -817,7 +886,7 @@ export class AiService {
             status: AppointmentStatus.confirmed,
           },
           orderBy: { appointmentAt: 'asc' },
-          take: 40,
+          take: 5,
           select: {
             appointmentAt: true,
             status: true,
@@ -837,7 +906,7 @@ export class AiService {
             },
           },
           orderBy: { issuedAt: 'desc' },
-          take: 20,
+          take: 5,
           select: {
             invoiceNo: true,
             issuedAt: true,
@@ -845,7 +914,7 @@ export class AiService {
             customerId: true,
             appointmentId: true,
             items: {
-              take: 6,
+              take: 3,
               select: {
                 name: true,
                 itemType: true,
@@ -853,6 +922,32 @@ export class AiService {
                 total: true,
               },
             },
+          },
+        }),
+        this.prisma.customer.findMany({
+          where: { clinicId: currentUser.clinicId },
+          orderBy: { totalSpent: 'desc' },
+          take: 5,
+          select: {
+            name: true,
+            totalSpent: true,
+            totalVisits: true,
+            lastVisitAt: true,
+          },
+        }),
+        this.prisma.product.findMany({
+          where: {
+            clinicId: currentUser.clinicId,
+            isActive: true,
+            stock: { lte: 10 },
+          },
+          orderBy: [{ stock: 'asc' }, { name: 'asc' }],
+          take: 10,
+          select: {
+            name: true,
+            category: true,
+            stock: true,
+            price: true,
           },
         }),
       ]);
@@ -965,15 +1060,20 @@ export class AiService {
       const totalReminders =
         reminderScheduled + reminderSent + reminderFailed + reminderCancelled;
 
-      const lowStockProducts = products
-        .filter((item) => item.stock <= 10)
-        .slice(0, 24)
+      const lowStockProducts = lowStockProductsRaw
         .map((item) => ({
           name: this.sanitizePromptText(item.name, 80),
           category: this.sanitizePromptText(item.category, 40),
           stock: item.stock,
           price: this.toPromptNumber(item.price),
         }));
+
+      const topSpenders = topSpendersRaw.map((item) => ({
+        customerName: this.sanitizePromptText(item.name, 80),
+        totalSpent: this.toPromptNumber(item.totalSpent),
+        totalVisits: item.totalVisits,
+        lastVisitAt: item.lastVisitAt?.toISOString() ?? null,
+      }));
 
       const agendaNextAppointments = agendaNextAppointmentsRaw.map((item) => ({
         time: item.appointmentAt.toISOString(),
@@ -1077,10 +1177,11 @@ export class AiService {
         agendaNextAppointments,
         openConfirmedAppointments,
         todayPaidInvoices,
+        topSpenders,
         lowStockProducts,
         catalog: {
-          services: this.mapServicesForPrompt(services),
-          products: this.mapProductsForPrompt(products),
+          services: this.mapServicesForPrompt(services, { includeDescription: false }),
+          products: this.mapProductsForPrompt(products, { includeDescription: false }),
         },
       });
     } catch (error) {
@@ -1175,6 +1276,46 @@ export class AiService {
     };
   }
 
+  private createRequestId(): string {
+    const now = Date.now().toString(36);
+    const random = Math.random().toString(36).slice(2, 8);
+    return `chat_${now}_${random}`;
+  }
+
+  private classifyMedicalRecordEntry(
+    diagnosis: string,
+    treatment: string,
+  ): 'service-log' | 'clinical-record' {
+    const haystack = `${diagnosis} ${treatment}`.toLowerCase();
+    if (haystack.includes('hoàn tất dịch vụ') || haystack.includes('dịch vụ sử dụng')) {
+      return 'service-log';
+    }
+    return 'clinical-record';
+  }
+
+  private enforceContextBudget(context: string, maxChars: number): string {
+    if (!Number.isFinite(maxChars) || maxChars <= 0) {
+      return context;
+    }
+
+    if (context.length <= maxChars) {
+      return context;
+    }
+
+    const compact = this.compactContextPayload(context);
+    if (compact.length <= maxChars) {
+      return compact;
+    }
+
+    const collapsed = compact.replace(/\s+/g, ' ').trim();
+    if (collapsed.length <= maxChars) {
+      return collapsed;
+    }
+
+    const tail = ' ...(context rút gọn)';
+    return `${collapsed.slice(0, Math.max(maxChars - tail.length, 1))}${tail}`;
+  }
+
   private compactContextPayload(context: string): string {
     try {
       const parsed = this.asRecord(JSON.parse(context));
@@ -1185,7 +1326,7 @@ export class AiService {
       const catalog = this.asRecord(parsed.catalog);
       if (catalog) {
         const services = this.asRecordArray(catalog.services)
-          .slice(0, 24)
+          .slice(0, 12)
           .map((item) => ({
             name: this.readPromptString(item.name, 80),
             durationMin: this.toPromptNumber(item.durationMin),
@@ -1193,7 +1334,7 @@ export class AiService {
           }));
 
         const products = this.asRecordArray(catalog.products)
-          .slice(0, 30)
+          .slice(0, 12)
           .map((item) => ({
             name: this.readPromptString(item.name, 80),
             category: this.readPromptString(item.category, 40),
@@ -1206,7 +1347,7 @@ export class AiService {
       }
 
       const pets = this.asRecordArray(parsed.pets)
-        .slice(0, 12)
+        .slice(0, 6)
         .map((item) => ({
           name: this.readPromptString(item.name, 80),
           species: this.readPromptString(item.species, 40),
@@ -1217,18 +1358,33 @@ export class AiService {
       }
 
       const medical = this.asRecordArray(parsed.recentMedicalRecords)
-        .slice(0, 6)
-        .map((item) => ({
-          petName: this.readPromptString(item.petName, 80),
-          diagnosis: this.readPromptString(item.diagnosis, 120),
-          recordedAt: this.readPromptString(item.recordedAt, 40),
-        }));
+        .slice(0, 3)
+        .map((item) => {
+          const type = this.readPromptString(item.type, 20);
+          if (type === 'service-log') {
+            return {
+              type: 'service-log',
+              petName: this.readPromptString(item.petName, 80),
+              service: this.readPromptString(item.service, 120),
+              detail: this.readPromptString(item.detail, 140),
+              recordedAt: this.readPromptString(item.recordedAt, 40),
+            };
+          }
+          return {
+            type: 'clinical-record',
+            petName: this.readPromptString(item.petName, 80),
+            diagnosis: this.readPromptString(item.diagnosis, 120),
+            treatment: this.readPromptString(item.treatment, 120),
+            notes: this.readPromptString(item.notes, 120),
+            recordedAt: this.readPromptString(item.recordedAt, 40),
+          };
+        });
       if (medical.length > 0) {
         parsed.recentMedicalRecords = medical;
       }
 
       const agenda = this.asRecordArray(parsed.agendaNextAppointments)
-        .slice(0, 12)
+        .slice(0, 5)
         .map((item) => ({
           time: this.readPromptString(item.time, 40),
           customerName: this.readPromptString(item.customerName, 80),
@@ -1242,7 +1398,7 @@ export class AiService {
       }
 
       const openConfirmed = this.asRecordArray(parsed.openConfirmedAppointments)
-        .slice(0, 12)
+        .slice(0, 5)
         .map((item) => ({
           time: this.readPromptString(item.time, 40),
           customerName: this.readPromptString(item.customerName, 80),
@@ -1256,21 +1412,42 @@ export class AiService {
       }
 
       const paidInvoices = this.asRecordArray(parsed.todayPaidInvoices)
-        .slice(0, 8)
-        .map((item) => ({
-          invoiceNo: this.readPromptString(item.invoiceNo, 40),
-          issuedAt: this.readPromptString(item.issuedAt, 40),
-          grandTotal: this.toPromptNumber(item.grandTotal),
-          customerName: this.readPromptString(item.customerName, 80),
-          petName: this.readPromptString(item.petName, 80),
-          serviceName: this.readPromptString(item.serviceName, 80),
-        }));
+        .slice(0, 5)
+        .map((item) => {
+          const compactItems = this.asRecordArray(item.items)
+            .slice(0, 2)
+            .map((line) => ({
+              name: this.readPromptString(line.name, 60),
+              qty: this.toPromptNumber(line.qty),
+              total: this.toPromptNumber(line.total),
+            }));
+          return {
+            invoiceNo: this.readPromptString(item.invoiceNo, 40),
+            issuedAt: this.readPromptString(item.issuedAt, 40),
+            grandTotal: this.toPromptNumber(item.grandTotal),
+            customerName: this.readPromptString(item.customerName, 80),
+            petName: this.readPromptString(item.petName, 80),
+            serviceName: this.readPromptString(item.serviceName, 80),
+            items: compactItems,
+          };
+        });
       if (paidInvoices.length > 0) {
         parsed.todayPaidInvoices = paidInvoices;
       }
 
+      const spenders = this.asRecordArray(parsed.topSpenders)
+        .slice(0, 5)
+        .map((item) => ({
+          customerName: this.readPromptString(item.customerName, 80),
+          totalSpent: this.toPromptNumber(item.totalSpent),
+          totalVisits: this.toPromptNumber(item.totalVisits),
+        }));
+      if (spenders.length > 0) {
+        parsed.topSpenders = spenders;
+      }
+
       const lowStock = this.asRecordArray(parsed.lowStockProducts)
-        .slice(0, 10)
+        .slice(0, 8)
         .map((item) => ({
           name: this.readPromptString(item.name, 80),
           stock: this.toPromptNumber(item.stock),
@@ -1339,12 +1516,16 @@ export class AiService {
       durationMin: number;
       price: unknown;
     }>,
+    options?: { includeDescription?: boolean },
   ) {
+    const includeDescription = options?.includeDescription ?? true;
     return services.map((item) => ({
       name: this.sanitizePromptText(item.name, 80),
       durationMin: item.durationMin,
       price: this.toPromptNumber(item.price),
-      description: this.sanitizePromptText(item.description, 120),
+      ...(includeDescription
+        ? { description: this.sanitizePromptText(item.description, 120) }
+        : {}),
     }));
   }
 
@@ -1356,13 +1537,17 @@ export class AiService {
       price: unknown;
       stock: number;
     }>,
+    options?: { includeDescription?: boolean },
   ) {
+    const includeDescription = options?.includeDescription ?? true;
     return products.map((item) => ({
       name: this.sanitizePromptText(item.name, 80),
       category: this.sanitizePromptText(item.category, 40),
       price: this.toPromptNumber(item.price),
       stock: item.stock,
-      description: this.sanitizePromptText(item.description, 120),
+      ...(includeDescription
+        ? { description: this.sanitizePromptText(item.description, 120) }
+        : {}),
     }));
   }
 
