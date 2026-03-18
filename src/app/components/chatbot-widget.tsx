@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { SendHorizontal, Sparkles, X } from 'lucide-react';
+import { SendHorizontal, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useAuthSession } from '../auth-session';
@@ -174,9 +174,6 @@ export function ChatbotWidget() {
               <span className='absolute inset-0 rounded-full bg-gradient-to-br from-[#6b8f5e]/65 via-[#79b66e]/45 to-[#35a2a6]/60 blur-[1px] animate-pulse' />
               <span className='absolute -inset-1 rounded-full border-2 border-[#99d08e]/55 animate-pulse' />
               <AssistantAvatar size='lg' />
-              <span className='absolute right-0.5 top-0.5 rounded-full border border-white/70 bg-[#0f766e] p-1.5 shadow-md'>
-                <Sparkles className='w-3 h-3 text-[#f0fdf4]' />
-              </span>
             </>
           ) : (
             <X className='w-6 h-6 text-white' />
@@ -188,12 +185,7 @@ export function ChatbotWidget() {
         <section className='fixed z-[69] right-2 bottom-20 w-[min(420px,calc(100vw-1rem))] h-[min(620px,78vh)] print:hidden'>
           <div className='h-full rounded-[28px] border border-[#2d2a26]/35 bg-[#f7f8f4]/95 backdrop-blur-lg shadow-[0_26px_62px_rgba(15,23,42,0.33)] flex flex-col overflow-hidden'>
             <header className='px-4 py-3 border-b border-[#2d2a26]/15 bg-[linear-gradient(125deg,#6b8f5e_0%,#6aa182_60%,#2f7f8a_100%)] text-white flex items-center gap-2'>
-              <div className='relative'>
-                <AssistantAvatar size='md' />
-                <span className='absolute -right-0.5 -bottom-0.5 rounded-full border border-white/75 bg-[#0f766e] p-1'>
-                  <Sparkles className='w-3 h-3 text-[#ecfdf5]' />
-                </span>
-              </div>
+              <AssistantAvatar size='md' />
               <div className='min-w-0'>
                 <p className='text-sm truncate' style={{ fontWeight: 700 }}>
                   PetHub AI Assistant
@@ -223,14 +215,26 @@ export function ChatbotWidget() {
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
-                          p: ({ children }) => <p className='my-1 leading-relaxed'>{children}</p>,
+                          p: ({ children }) => (
+                            <p className='my-1 leading-relaxed whitespace-pre-wrap break-words'>
+                              {children}
+                            </p>
+                          ),
                           ul: ({ children }) => (
-                            <ul className='my-1 pl-5 list-disc space-y-1'>{children}</ul>
+                            <ul className='my-1 pl-5 list-disc space-y-1 whitespace-pre-wrap break-words'>
+                              {children}
+                            </ul>
                           ),
                           ol: ({ children }) => (
-                            <ol className='my-1 pl-5 list-decimal space-y-1'>{children}</ol>
+                            <ol className='my-1 pl-5 list-decimal space-y-1 whitespace-pre-wrap break-words'>
+                              {children}
+                            </ol>
                           ),
-                          li: ({ children }) => <li className='leading-relaxed'>{children}</li>,
+                          li: ({ children }) => (
+                            <li className='leading-relaxed whitespace-pre-wrap break-words'>
+                              {children}
+                            </li>
+                          ),
                           strong: ({ children }) => <strong className='font-semibold'>{children}</strong>,
                           code: ({ children }) => (
                             <code className='px-1 py-0.5 rounded bg-[#2d2a26]/10 text-[0.92em]'>
