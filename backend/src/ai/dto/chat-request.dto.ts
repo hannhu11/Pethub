@@ -8,7 +8,7 @@ export class ChatHistoryItemDto {
 
   @IsString()
   @MinLength(1)
-  @MaxLength(600)
+  @MaxLength(1200)
   content!: string;
 }
 
@@ -20,7 +20,7 @@ export class ChatRequestDto {
 
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(20)
+  @ArrayMaxSize(12)
   @ValidateNested({ each: true })
   @Type(() => ChatHistoryItemDto)
   history?: ChatHistoryItemDto[];

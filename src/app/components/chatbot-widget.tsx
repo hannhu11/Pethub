@@ -13,11 +13,32 @@ type ChatMessage = {
   content: string;
 };
 
-const MAX_HISTORY_MESSAGES = 12;
+const MAX_HISTORY_MESSAGES = 8;
+const MAX_HISTORY_CONTENT = 400;
 const ASSISTANT_SLOGAN_BY_ROLE = {
   customer: 'Hiểu thú cưng của bạn, hỗ trợ đúng nhu cầu',
   manager: 'Nắm số liệu tức thời, điều hành chuẩn xác',
 } as const;
+
+function normalizeChatContent(content: string): string {
+  return content
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((line) => line.trimEnd())
+    .join('\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function compactHistoryContent(content: string, max = MAX_HISTORY_CONTENT): string {
+  const normalized = normalizeChatContent(content);
+  if (normalized.length <= max) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, Math.max(max - 3, 1)).trimEnd()}...`;
+}
 
 function createMessage(role: 'user' | 'assistant', content: string): ChatMessage {
   return {
@@ -122,7 +143,7 @@ export function ChatbotWidget() {
   }
 
   const sendMessage = async () => {
-    const message = input.trim();
+    const message = normalizeChatContent(input);
     if (!message || sending) {
       return;
     }
@@ -133,7 +154,7 @@ export function ChatbotWidget() {
       .slice(-MAX_HISTORY_MESSAGES)
       .map((item) => ({
         role: item.role,
-        content: item.content,
+        content: compactHistoryContent(item.content),
       }));
 
     setMessages((previous) => [...previous, userMessage]);
@@ -146,7 +167,8 @@ export function ChatbotWidget() {
         history,
       });
       const assistantText =
-        response.text?.trim() || 'Mình chưa nhận được nội dung phù hợp. Bạn vui lòng thử lại.';
+        normalizeChatContent(response.text?.trim() || '') ||
+        'Mình chưa nhận được nội dung phù hợp. Bạn vui lòng thử lại.';
       setMessages((previous) => [...previous, createMessage('assistant', assistantText)]);
     } catch (error) {
       const reason = extractApiError(error);
@@ -212,22 +234,22 @@ export function ChatbotWidget() {
                         remarkPlugins={[remarkGfm]}
                         components={{
                           p: ({ children }) => (
-                            <p className='my-1 leading-relaxed whitespace-pre-wrap break-words'>
+                            <p className='mb-2 last:mb-0 leading-relaxed break-words'>
                               {children}
                             </p>
                           ),
                           ul: ({ children }) => (
-                            <ul className='my-1 pl-5 list-disc space-y-1 whitespace-pre-wrap break-words'>
+                            <ul className='my-2 ml-4 list-disc break-words'>
                               {children}
                             </ul>
                           ),
                           ol: ({ children }) => (
-                            <ol className='my-1 pl-5 list-decimal space-y-1 whitespace-pre-wrap break-words'>
+                            <ol className='my-2 ml-4 list-decimal break-words'>
                               {children}
                             </ol>
                           ),
                           li: ({ children }) => (
-                            <li className='leading-relaxed whitespace-pre-wrap break-words'>
+                            <li className='mb-1 leading-relaxed break-words'>
                               {children}
                             </li>
                           ),
@@ -239,10 +261,12 @@ export function ChatbotWidget() {
                           ),
                         }}
                       >
-                        {item.content}
+                        {normalizeChatContent(item.content)}
                       </ReactMarkdown>
                     ) : (
-                      <p className='leading-relaxed whitespace-pre-wrap break-words'>{item.content}</p>
+                      <p className='leading-relaxed break-words whitespace-normal'>
+                        {normalizeChatContent(item.content)}
+                      </p>
                     )}
                   </div>
                 </div>
