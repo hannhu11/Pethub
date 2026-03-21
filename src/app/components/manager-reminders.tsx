@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import {
@@ -61,11 +61,11 @@ const getStatusIcon = (status: ReminderStatus) => {
 
 const getTypeColor = (templateName: string | null) => {
   const normalized = (templateName || '').toLowerCase();
-  if (normalized.includes('vacc')) return 'bg-blue-50 text-blue-700 border-blue-200';
+  if (normalized.includes('vacc')) return 'bg-[#f6eee7] text-[#d56756] border-[#d56756]/30';
   if (normalized.includes('tái khám') || normalized.includes('checkup')) return 'bg-[#d56756]/10 text-[#d56756] border-[#d56756]/30';
   if (normalized.includes('groom')) return 'bg-[#c75b4c]/10 text-[#c75b4c] border-[#c75b4c]/30';
-  if (normalized.includes('thuốc') || normalized.includes('med')) return 'bg-violet-50 text-violet-700 border-violet-300';
-  return 'bg-gray-50 text-gray-700 border-gray-200';
+  if (normalized.includes('thuốc') || normalized.includes('med')) return 'bg-[#f4ece4] text-[#8f6b5e] border-[#592518]/20';
+  return 'bg-[#f6eee7] text-[#592518] border-[#592518]/20';
 };
 
 function toDateLabel(value: string | null) {
@@ -267,7 +267,7 @@ export function ManagerRemindersPage() {
     <div className='space-y-6'>
       <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4'>
         <div>
-          <h1 className='text-2xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <h1 className='text-2xl text-[#592518]' style={{ fontWeight: 700 }}>
             Smart Reminders & Automations
           </h1>
           <p className='text-sm text-[#8b6a61]'>Tự động nhắc lịch hẹn đa kênh và theo dõi trạng thái gửi theo thời gian thực.</p>
@@ -315,7 +315,7 @@ export function ManagerRemindersPage() {
               <span className='text-xs text-[#8b6a61]'>{kpi.sub}</span>
             </div>
             <p className='text-xs text-[#8b6a61] mb-1'>{kpi.label}</p>
-            <p className='text-xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <p className='text-xl text-[#592518]' style={{ fontWeight: 700 }}>
               {kpi.value}
             </p>
           </motion.div>
@@ -432,7 +432,7 @@ export function ManagerRemindersPage() {
                           <button
                             onClick={() => void handleResend(reminder, false)}
                             disabled={actionWorking}
-                            className='px-2.5 py-1 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors text-xs disabled:opacity-60'
+                            className='px-2.5 py-1 rounded-lg bg-[#f6eee7] text-[#d56756] hover:bg-[#efe3d7] transition-colors text-xs disabled:opacity-60'
                           >
                             Lên lịch lại
                           </button>
@@ -462,7 +462,7 @@ export function ManagerRemindersPage() {
         <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4' onClick={() => setShowForm(false)}>
           <div className='bg-[#faf8f5] border border-[#592518] rounded-2xl w-full max-w-md' onClick={(event) => event.stopPropagation()}>
             <div className='flex items-center justify-between p-5 border-b border-[#592518]/20'>
-              <h2 className='text-lg' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
+              <h2 className='text-lg' style={{ fontWeight: 600 }}>
                 Tạo nhắc nhở mới
               </h2>
               <button onClick={() => setShowForm(false)} className='p-1 hover:bg-[#f4ece4] rounded-lg'>
@@ -587,3 +587,4 @@ export function ManagerRemindersPage() {
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -257,7 +257,7 @@ export function ManagerUpgradePremiumPage() {
             <ShieldCheck className='w-3.5 h-3.5' />
             Premium Plan
           </div>
-          <h1 className='text-3xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <h1 className='text-3xl text-[#592518]' style={{ fontWeight: 700 }}>
             Nâng cấp lên Premium
           </h1>
           <p className='text-sm text-[#8b6a61] mt-2'>
@@ -275,7 +275,7 @@ export function ManagerUpgradePremiumPage() {
         </section>
 
         <section className='bg-white border border-[#592518] rounded-2xl p-6'>
-          <h2 className='text-xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <h2 className='text-xl text-[#592518]' style={{ fontWeight: 700 }}>
             Thanh toán nâng cấp Premium
           </h2>
           <p className='text-xs text-[#8b6a61] mt-1'>Chu kỳ thanh toán: Hàng tháng • Giá đã gồm VAT</p>
@@ -283,7 +283,7 @@ export function ManagerUpgradePremiumPage() {
           <div className='mt-4 p-4 rounded-xl border border-[#592518]/20 bg-[#f6eee7]'>
             <div className='flex items-center justify-between'>
               <span className='text-sm text-[#8b6a61]'>Gói Premium</span>
-              <span className='text-lg text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+              <span className='text-lg text-[#592518]' style={{ fontWeight: 700 }}>
                 {formatVnd(amount)}đ
               </span>
             </div>
@@ -291,7 +291,7 @@ export function ManagerUpgradePremiumPage() {
               <span className='text-sm text-[#592518]' style={{ fontWeight: 600 }}>
                 Tổng thanh toán
               </span>
-              <span className='text-2xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+              <span className='text-2xl text-[#592518]' style={{ fontWeight: 700 }}>
                 {formatVnd(amount)}đ
               </span>
             </div>
@@ -425,3 +425,4 @@ export function ManagerUpgradePremiumPage() {
     </div>
   );
 }
+

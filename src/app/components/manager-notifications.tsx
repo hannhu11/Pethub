@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Bell, CheckCheck, Circle, Filter } from 'lucide-react';
 import { extractApiError } from '../lib/api-client';
@@ -148,7 +148,7 @@ export function ManagerNotificationsPage() {
     <div className='space-y-6'>
       <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3'>
         <div>
-          <h1 className='text-2xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <h1 className='text-2xl text-[#592518]' style={{ fontWeight: 700 }}>
             Trung tâm thông báo
           </h1>
           <p className='text-sm text-[#8b6a61] mt-1'>Cập nhật theo thời gian thực để bạn theo dõi mọi hoạt động quan trọng ngay tức thì.</p>
@@ -230,3 +230,4 @@ export function ManagerNotificationsPage() {
     </div>
   );
 }
+

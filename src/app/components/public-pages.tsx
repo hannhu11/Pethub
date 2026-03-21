@@ -1,4 +1,4 @@
-import { Link } from 'react-router';
+﻿import { Link } from 'react-router';
 import { Check, Sparkles, ShieldCheck, HeartHandshake, BookOpenText, Phone, FileText, Shield, LifeBuoy } from 'lucide-react';
 import { BackButton } from './back-button';
 
@@ -7,7 +7,7 @@ export function PricingPage() {
     <div className='py-16 md:py-20'>
       <div className='max-w-5xl mx-auto px-4 sm:px-6 lg:px-8'>
         <div className='text-center mb-12'>
-          <h1 className='text-4xl text-[#592518] mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <h1 className='text-4xl text-[#592518] mb-4' style={{ fontWeight: 700 }}>
             Bảng giá PetHub
           </h1>
           <p className='text-[#8b6a61] max-w-2xl mx-auto'>
@@ -17,8 +17,8 @@ export function PricingPage() {
 
         <div className='grid md:grid-cols-2 gap-6 max-w-4xl mx-auto'>
           <article className='bg-white border border-[#592518] rounded-2xl p-8'>
-            <h2 className='text-xl text-[#592518] mb-2' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Basic</h2>
-            <p className='text-3xl text-[#592518] mb-6' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <h2 className='text-xl text-[#592518] mb-2' style={{ fontWeight: 700 }}>Basic</h2>
+            <p className='text-3xl text-[#592518] mb-6' style={{ fontWeight: 700 }}>
               0đ <span className='text-sm text-[#8b6a61]' style={{ fontWeight: 400 }}>/ tháng</span>
             </p>
             <ul className='space-y-3 text-sm text-[#592518]'>
@@ -42,8 +42,8 @@ export function PricingPage() {
               <Sparkles className='w-3.5 h-3.5' />
               Gói khuyên dùng
             </div>
-            <h2 className='text-xl mb-2' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Premium</h2>
-            <p className='text-3xl mb-6' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <h2 className='text-xl mb-2' style={{ fontWeight: 700 }}>Premium</h2>
+            <p className='text-3xl mb-6' style={{ fontWeight: 700 }}>
               249.000đ <span className='text-sm opacity-80' style={{ fontWeight: 400 }}>/ tháng</span>
             </p>
             <ul className='space-y-3 text-sm'>
@@ -73,7 +73,7 @@ export function AboutPage() {
     <div className='py-16 md:py-20'>
       <div className='max-w-5xl mx-auto px-4 sm:px-6 lg:px-8'>
         <div className='max-w-3xl'>
-          <h1 className='text-4xl text-[#592518] mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <h1 className='text-4xl text-[#592518] mb-4' style={{ fontWeight: 700 }}>
             Về chúng tôi
           </h1>
           <p className='text-[#8b6a61] leading-7'>
@@ -85,17 +85,17 @@ export function AboutPage() {
         <div className='grid md:grid-cols-3 gap-5 mt-10'>
           <div className='bg-white border border-[#592518] rounded-2xl p-5'>
             <ShieldCheck className='w-6 h-6 text-[#d56756] mb-3' />
-            <h2 className='text-lg mb-2' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Vận hành chuẩn hóa</h2>
+            <h2 className='text-lg mb-2' style={{ fontWeight: 700 }}>Vận hành chuẩn hóa</h2>
             <p className='text-sm text-[#8b6a61]'>Từ tiếp nhận khách, đặt lịch, chăm sóc đến thanh toán đều theo một luồng rõ ràng và dễ kiểm soát.</p>
           </div>
           <div className='bg-white border border-[#592518] rounded-2xl p-5'>
             <HeartHandshake className='w-6 h-6 text-[#c75b4c] mb-3' />
-            <h2 className='text-lg mb-2' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Giữ chân khách hàng</h2>
+            <h2 className='text-lg mb-2' style={{ fontWeight: 700 }}>Giữ chân khách hàng</h2>
             <p className='text-sm text-[#8b6a61]'>Nhắc lịch thông minh, dữ liệu khách hàng tập trung và trải nghiệm liền mạch giúp khách quay lại đều đặn hơn.</p>
           </div>
           <div className='bg-white border border-[#592518] rounded-2xl p-5'>
             <Sparkles className='w-6 h-6 text-[#d56756] mb-3' />
-            <h2 className='text-lg mb-2' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Sẵn sàng mở rộng</h2>
+            <h2 className='text-lg mb-2' style={{ fontWeight: 700 }}>Sẵn sàng mở rộng</h2>
             <p className='text-sm text-[#8b6a61]'>Phù hợp cho cả cửa hàng đơn lẻ lẫn mô hình nhiều chi nhánh, giữ chuẩn dịch vụ đồng nhất khi tăng trưởng.</p>
           </div>
         </div>
@@ -123,7 +123,7 @@ export function BlogPage() {
   return (
     <div className='py-16 md:py-20'>
       <div className='max-w-5xl mx-auto px-4 sm:px-6 lg:px-8'>
-        <h1 className='text-4xl text-[#592518] mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+        <h1 className='text-4xl text-[#592518] mb-4' style={{ fontWeight: 700 }}>
           Blog
         </h1>
         <p className='text-[#8b6a61] mb-8'>Góc chia sẻ thực chiến cho chủ pet clinic và pet store muốn vận hành tinh gọn và tăng trưởng bền vững.</p>
@@ -134,7 +134,7 @@ export function BlogPage() {
                 <BookOpenText className='w-4 h-4' />
                 <span className='text-xs'>PetHub Insight</span>
               </div>
-              <h2 className='text-xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+              <h2 className='text-xl text-[#592518]' style={{ fontWeight: 700 }}>
                 {post.title}
               </h2>
               <p className='text-sm text-[#8b6a61] mt-2'>{post.desc}</p>
@@ -150,14 +150,14 @@ export function ContactPage() {
   return (
     <div className='py-16 md:py-20'>
       <div className='max-w-6xl mx-auto px-4 sm:px-6 lg:px-8'>
-        <h1 className='text-4xl text-[#592518] mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+        <h1 className='text-4xl text-[#592518] mb-4' style={{ fontWeight: 700 }}>
           Liên hệ
         </h1>
         <p className='text-[#8b6a61] mb-8'>Đội ngũ PetHub luôn sẵn sàng hỗ trợ vận hành cho bạn.</p>
 
         <div className='grid lg:grid-cols-2 gap-6'>
           <div className='bg-white border border-[#592518] rounded-2xl p-6'>
-            <h2 className='text-2xl text-[#592518] mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Gửi yêu cầu tư vấn</h2>
+            <h2 className='text-2xl text-[#592518] mb-4' style={{ fontWeight: 700 }}>Gửi yêu cầu tư vấn</h2>
             <div className='space-y-3'>
               <input placeholder='Họ và tên' className='w-full p-3 border border-[#592518]/30 rounded-xl bg-[#faf8f5]' />
               <input placeholder='Số điện thoại' className='w-full p-3 border border-[#592518]/30 rounded-xl bg-[#faf8f5]' />
@@ -170,7 +170,7 @@ export function ContactPage() {
           </div>
 
           <div className='bg-white border border-[#592518] rounded-2xl p-6'>
-            <h2 className='text-2xl text-[#592518] mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Thông tin hỗ trợ</h2>
+            <h2 className='text-2xl text-[#592518] mb-4' style={{ fontWeight: 700 }}>Thông tin hỗ trợ</h2>
             <div className='space-y-4 text-[#592518]'>
               <div className='flex gap-3 items-start'>
                 <Phone className='w-5 h-5 text-[#c75b4c] mt-0.5' />
@@ -224,7 +224,7 @@ export function HelpPage() {
         <div className='mb-5'>
           <BackButton fallbackPath='/' />
         </div>
-        <h1 className='text-4xl text-[#592518] mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+        <h1 className='text-4xl text-[#592518] mb-4' style={{ fontWeight: 700 }}>
           Trung tâm trợ giúp
         </h1>
         <p className='text-[#8b6a61] mb-8'>Tìm nhanh câu trả lời cho các thao tác quan trọng.</p>
@@ -264,7 +264,7 @@ function LegalPageShell({
             {icon}
             <span className='text-sm'>Cập nhật: 11/03/2026</span>
           </div>
-          <h1 className='text-4xl text-[#592518] mb-2' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>{title}</h1>
+          <h1 className='text-4xl text-[#592518] mb-2' style={{ fontWeight: 700 }}>{title}</h1>
           <p className='text-[#8b6a61] mb-6'>{subtitle}</p>
           <div className='space-y-5 text-[#592518] text-sm leading-7'>{children}</div>
         </article>
@@ -302,3 +302,4 @@ export function PrivacyPage() {
     </LegalPageShell>
   );
 }
+

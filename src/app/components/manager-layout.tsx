@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useRef, useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router';
 import {
   PawPrint,
@@ -585,7 +585,7 @@ export function ManagerLayout() {
               </PopoverTrigger>
             <PopoverContent align='end' className='w-[22rem] p-0 border-[#592518] bg-white'>
               <div className='p-3 border-b border-[#592518]/10 flex items-center justify-between'>
-                <h3 className='text-sm' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                <h3 className='text-sm' style={{ fontWeight: 700 }}>
                   Thông báo
                 </h3>
                 <span className='text-[10px] text-[#d56756] px-2 py-0.5 rounded-full bg-[#d56756]/10' style={{ fontWeight: 600 }}>
@@ -718,3 +718,4 @@ export function ManagerLayout() {
     </div>
   );
 }
+

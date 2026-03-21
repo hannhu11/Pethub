@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation, useNavigate } from 'react-router';
+﻿import { Outlet, Link, useLocation, useNavigate } from 'react-router';
 import { useState } from 'react';
 import {
   PawPrint,
@@ -43,7 +43,7 @@ function SiteFooter() {
             </div>
 
             <div>
-              <h4 className='text-sm mb-4 text-[#c75b4c]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Công ty</h4>
+              <h4 className='text-sm mb-4 text-[#c75b4c]' style={{ fontWeight: 700 }}>Công ty</h4>
               <div className='space-y-2 text-sm text-gray-400'>
                 <Link to='/about' className='flex items-center gap-2 hover:text-white transition-colors'>
                   <Info className='w-4 h-4' /> Về chúng tôi
@@ -58,7 +58,7 @@ function SiteFooter() {
             </div>
 
             <div>
-              <h4 className='text-sm mb-4 text-[#c75b4c]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Hỗ trợ</h4>
+              <h4 className='text-sm mb-4 text-[#c75b4c]' style={{ fontWeight: 700 }}>Hỗ trợ</h4>
               <div className='space-y-2 text-sm text-gray-400'>
                 <Link to='/help' className='flex items-center gap-2 hover:text-white transition-colors'>
                   <LifeBuoy className='w-4 h-4' /> Trung tâm trợ giúp
@@ -73,7 +73,7 @@ function SiteFooter() {
             </div>
 
             <div>
-              <h4 className='text-sm mb-4 text-[#c75b4c]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Kết nối</h4>
+              <h4 className='text-sm mb-4 text-[#c75b4c]' style={{ fontWeight: 700 }}>Kết nối</h4>
               <div className='space-y-2 text-sm text-gray-400'>
                 <p>Hotline: 1900-PETHUB</p>
                 <p>Email: support@pethub.vn</p>
@@ -322,3 +322,4 @@ export function CustomerLayout() {
     </div>
   );
 }
+

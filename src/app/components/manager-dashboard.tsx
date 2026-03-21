@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { AlertTriangle, DollarSign, FileText, Stethoscope, Users } from 'lucide-react';
 import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -112,7 +112,7 @@ export function ManagerDashboardPage() {
   const kpiCards: KpiCard[] = [
     {
       icon: Users,
-      label: 'Tổng LTV khách hàng',
+      label: 'Tổng doanh thu khách hàng',
       value: formatCurrency(totalLtv),
       hint: `${ltvSummary?.totalCustomers ?? 0} khách hàng`,
       color: '#d56756',
@@ -144,9 +144,9 @@ export function ManagerDashboardPage() {
     <div className='space-y-6'>
       <div className='flex items-center justify-between gap-3'>
         <div>
-          <h1 className='text-2xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
-            Tổng quan
-          </h1>
+            <h1 className='text-2xl text-[#592518]' style={{ fontWeight: 700 }}>
+              Tổng quan
+            </h1>
           <p className='text-sm text-[#8b6a61]'>
             Trung tâm điều hành toàn diện. Phân tích doanh thu theo thời gian và tối ưu giá trị trọn đời khách hàng.
           </p>
@@ -170,7 +170,7 @@ export function ManagerDashboardPage() {
               </div>
             </div>
             <p className='text-xs text-[#8b6a61] mb-1'>{card.label}</p>
-            <p className='text-xl text-[#592518] break-words' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <p className='text-xl text-[#592518] break-words' style={{ fontWeight: 700 }}>
               {loading ? 'Đang tải...' : card.value}
             </p>
             <p className='text-xs text-[#8b6a61] mt-2'>{card.hint}</p>
@@ -180,9 +180,9 @@ export function ManagerDashboardPage() {
 
       <div className='grid grid-cols-1 xl:grid-cols-3 gap-6'>
         <div className='xl:col-span-2 bg-white border border-[#592518] rounded-2xl p-5'>
-          <h3 className='text-base mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
-            Doanh thu theo tháng
-          </h3>
+            <h3 className='text-base mb-4' style={{ fontWeight: 700 }}>
+              Doanh thu theo tháng
+            </h3>
           <div className='h-64'>
             {monthlyRevenue.length === 0 ? (
               <div className='h-full rounded-xl border border-dashed border-[#592518]/25 flex items-center justify-center text-sm text-[#8b6a61]'>
@@ -205,9 +205,9 @@ export function ManagerDashboardPage() {
         </div>
 
         <div className='bg-white border border-[#592518] rounded-2xl p-5'>
-          <h3 className='text-base mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
-            Doanh thu theo dịch vụ
-          </h3>
+            <h3 className='text-base mb-4' style={{ fontWeight: 700 }}>
+              Doanh thu theo dịch vụ
+            </h3>
           <div className='h-64'>
             {serviceRevenueChartData.length === 0 ? (
               <div className='h-full rounded-xl border border-dashed border-[#592518]/25 flex items-center justify-center text-sm text-[#8b6a61]'>
@@ -244,8 +244,8 @@ export function ManagerDashboardPage() {
 
       <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
         <div className='lg:col-span-2 bg-white border border-[#592518] rounded-2xl p-5'>
-          <h3 className='text-sm mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
-            Khách hàng LTV cao nhất
+            <h3 className='text-sm mb-4' style={{ fontWeight: 600 }}>
+            Khách hàng có doanh thu cao nhất
           </h3>
           <div className='space-y-2'>
             {(ltvSummary?.items ?? []).slice(0, 8).map((item) => (
@@ -273,24 +273,24 @@ export function ManagerDashboardPage() {
         </div>
 
         <div className='bg-white border border-[#592518] rounded-2xl p-5 space-y-3'>
-          <h3 className='text-sm' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
-            Đối soát số liệu
+            <h3 className='text-sm' style={{ fontWeight: 600 }}>
+              Đối soát số liệu
           </h3>
           <div className='rounded-xl border border-[#592518]/15 p-3'>
-            <p className='text-xs text-[#8b6a61]'>LTV từ summary</p>
-            <p className='text-lg text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <p className='text-xs text-[#8b6a61]'>Doanh thu từ tổng hợp</p>
+            <p className='text-lg text-[#592518]' style={{ fontWeight: 700 }}>
               {formatCurrency(totalLtv)}
             </p>
           </div>
           <div className='rounded-xl border border-[#592518]/15 p-3'>
             <p className='text-xs text-[#8b6a61]'>Tổng cộng từ danh sách khách hàng</p>
-            <p className='text-lg text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <p className='text-lg text-[#592518]' style={{ fontWeight: 700 }}>
               {formatCurrency(sumFromItems)}
             </p>
           </div>
           <div className='rounded-xl border border-[#592518]/15 p-3'>
             <p className='text-xs text-[#8b6a61]'>Số hóa đơn paid (30 ngày)</p>
-            <p className='text-lg text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <p className='text-lg text-[#592518]' style={{ fontWeight: 700 }}>
               <FileText className='w-4 h-4 inline-block mr-1' />
               {overview?.totals.paidInvoices ?? 0}
             </p>
@@ -300,3 +300,4 @@ export function ManagerDashboardPage() {
     </div>
   );
 }
+

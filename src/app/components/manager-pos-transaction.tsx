@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, ArrowLeft, CircleCheck, ExternalLink, Loader2, QrCode, Receipt } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useNavigate, useParams } from 'react-router';
@@ -299,7 +299,7 @@ export function ManagerPosTransactionStatusPage() {
     <div className='space-y-4'>
       <div className='flex flex-wrap items-center justify-between gap-3'>
         <div>
-          <h1 className='text-2xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <h1 className='text-2xl text-[#592518]' style={{ fontWeight: 700 }}>
             Trạng thái giao dịch POS
           </h1>
           <p className='text-sm text-[#8b6a61] mt-1'>Theo dõi realtime thanh toán chuyển khoản và tự động chuyển sang hóa đơn khi đã thu tiền.</p>
@@ -428,3 +428,4 @@ export function ManagerPosTransactionStatusPage() {
     </div>
   );
 }
+

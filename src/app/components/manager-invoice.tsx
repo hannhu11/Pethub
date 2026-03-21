@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { ArrowLeft, Download, Printer } from 'lucide-react';
 import { extractApiError } from '../lib/api-client';
@@ -152,7 +152,7 @@ export function ManagerInvoicePage() {
           Quay lại POS
         </button>
         <div className='bg-white border border-[#592518] rounded-2xl p-8 text-center'>
-          <h1 className='text-2xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <h1 className='text-2xl text-[#592518]' style={{ fontWeight: 700 }}>
             Không tìm thấy hóa đơn
           </h1>
           <p className='text-sm text-[#8b6a61] mt-2'>{error || 'Hóa đơn không tồn tại hoặc không thuộc clinic hiện tại.'}</p>
@@ -206,7 +206,7 @@ export function ManagerInvoicePage() {
             <p className='text-sm text-[#8b6a61]'>Hotline: {clinic?.phone || 'N/A'}</p>
           </div>
           <div className='text-right'>
-            <p className='text-lg text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <p className='text-lg text-[#592518]' style={{ fontWeight: 700 }}>
               HÓA ĐƠN THANH TOÁN
             </p>
             <p className='text-sm text-[#8b6a61] mt-1'>Mã: {invoice.invoiceNo}</p>
@@ -274,7 +274,7 @@ export function ManagerInvoicePage() {
           </div>
           <div className='border-t border-[#592518]/20 pt-2 flex justify-between text-lg'>
             <span style={{ fontWeight: 600 }}>Tổng cộng</span>
-            <span className='text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <span className='text-[#592518]' style={{ fontWeight: 700 }}>
               {formatCurrency(invoice.grandTotal)}
             </span>
           </div>
@@ -287,3 +287,4 @@ export function ManagerInvoicePage() {
     </div>
   );
 }
+

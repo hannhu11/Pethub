@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+﻿import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { motion } from 'motion/react';
 import { Package, Plus, ShoppingBag, Stethoscope, Trash2, X } from 'lucide-react';
 import { extractApiError } from '../lib/api-client';
@@ -455,7 +455,7 @@ export function ManagerCatalogPage() {
     <div className='space-y-6'>
       <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4'>
         <div>
-          <h1 className='text-2xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <h1 className='text-2xl text-[#592518]' style={{ fontWeight: 700 }}>
             Sản phẩm & Dịch vụ
           </h1>
           <p className='text-sm text-[#8b6a61] mt-1'>
@@ -686,7 +686,7 @@ export function ManagerCatalogPage() {
 
       {tab === 'categories' ? (
         <section className='bg-white border border-[#592518] rounded-2xl p-5 space-y-3'>
-          <h2 className='text-lg text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <h2 className='text-lg text-[#592518]' style={{ fontWeight: 700 }}>
             Danh mục hiện có
           </h2>
           <p className='text-sm text-[#8b6a61]'>
@@ -755,7 +755,7 @@ export function ManagerCatalogPage() {
             onClick={(event) => event.stopPropagation()}
           >
             <div className='flex items-center justify-between'>
-              <h2 className='text-lg text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+              <h2 className='text-lg text-[#592518]' style={{ fontWeight: 700 }}>
                 Lưu dịch vụ
               </h2>
               <button onClick={() => setServiceDialogOpen(false)} disabled={saving}>
@@ -891,7 +891,7 @@ export function ManagerCatalogPage() {
             onClick={(event) => event.stopPropagation()}
           >
             <div className='flex items-center justify-between'>
-              <h2 className='text-lg text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+              <h2 className='text-lg text-[#592518]' style={{ fontWeight: 700 }}>
                 Lưu sản phẩm
               </h2>
               <button onClick={() => setProductDialogOpen(false)} disabled={saving}>
@@ -1025,3 +1025,4 @@ export function ManagerCatalogPage() {
     </div>
   );
 }
+

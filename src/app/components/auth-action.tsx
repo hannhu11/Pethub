@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import {
   AlertCircle,
@@ -50,7 +50,7 @@ function AuthActionShell({ children }: { children: React.ReactNode }) {
           <div className='absolute bottom-10 left-10 right-10 rounded-2xl border border-[#faf8f5]/45 bg-black/28 p-7 backdrop-blur-[1px]'>
             <p
               className='text-[36px] leading-tight text-[#faf8f5]'
-              style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}
+              style={{ fontWeight: 700 }}
             >
               Bảo mật tài khoản chuyên nghiệp, liền mạch với trải nghiệm PetHub.
             </p>
@@ -177,7 +177,7 @@ export function AuthActionPage() {
         <div className='inline-flex h-11 w-11 items-center justify-center rounded-full border border-red-300 bg-red-50'>
           <AlertCircle className='h-5 w-5 text-red-600' />
         </div>
-        <CardTitle className='text-3xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+        <CardTitle className='text-3xl text-[#592518]' style={{ fontWeight: 700 }}>
           Liên kết không hợp lệ
         </CardTitle>
         <CardDescription className='text-[#8b6a61]'>
@@ -213,7 +213,7 @@ export function AuthActionPage() {
             <MailCheck className='h-5 w-5 text-[#d56756]' />
           )}
         </div>
-        <CardTitle className='text-3xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+        <CardTitle className='text-3xl text-[#592518]' style={{ fontWeight: 700 }}>
           Xác minh Email
         </CardTitle>
         <CardDescription className='text-[#8b6a61]'>
@@ -260,7 +260,7 @@ export function AuthActionPage() {
         <div className='inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#592518]/20 bg-[#d56756]/10'>
           <ShieldCheck className='h-5 w-5 text-[#d56756]' />
         </div>
-        <CardTitle className='text-3xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+        <CardTitle className='text-3xl text-[#592518]' style={{ fontWeight: 700 }}>
           Đặt lại mật khẩu
         </CardTitle>
         <CardDescription className='text-[#8b6a61]'>
@@ -376,3 +376,4 @@ export function AuthActionPage() {
     </AuthActionShell>
   );
 }
+

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { CalendarDays, Search } from 'lucide-react';
@@ -153,7 +153,7 @@ export function ManagerBookingsPage() {
   return (
     <div className='space-y-6'>
       <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4'>
-        <h1 className='text-2xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+        <h1 className='text-2xl text-[#592518]' style={{ fontWeight: 700 }}>
           Quản lý lịch hẹn
         </h1>
         <div className='relative'>
@@ -211,7 +211,7 @@ export function ManagerBookingsPage() {
                     transition={{ delay: index * 0.03 }}
                     className='border-b border-[#592518]/10 hover:bg-[#faf8f5]'
                   >
-                    <td className='py-3 px-3' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
+                    <td className='py-3 px-3' style={{ fontWeight: 600 }}>
                       {toTimeLabel(booking.appointmentAt)}
                     </td>
                     <td className='py-3 px-3 text-[#8b6a61]'>{toDateLabel(booking.appointmentAt)}</td>
@@ -315,3 +315,4 @@ export function ManagerBookingsPage() {
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { CalendarDays, ChevronDown, Clock3, PawPrint, PlusCircle, Stethoscope } from 'lucide-react';
 import { useSearchParams } from 'react-router';
 import type { ApiAppointment, ApiPet, ApiService, BookingDraft, CancelDialogState } from '../types';
@@ -239,7 +239,7 @@ export function CustomerAppointmentsPage() {
   return (
     <div className='py-12'>
       <div className='max-w-6xl mx-auto px-4'>
-        <h1 className='text-3xl text-[#592518] mb-6' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+        <h1 className='text-3xl text-[#592518] mb-6' style={{ fontWeight: 700 }}>
           Lịch hẹn của tôi
         </h1>
 
@@ -251,7 +251,7 @@ export function CustomerAppointmentsPage() {
         <section className='bg-white border border-[#592518] rounded-2xl p-5 md:p-6 mb-8'>
           <div className='flex items-center gap-2 mb-4'>
             <PlusCircle className='w-5 h-5 text-[#d56756]' />
-            <h2 className='text-xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <h2 className='text-xl text-[#592518]' style={{ fontWeight: 700 }}>
               Đặt lịch mới
             </h2>
           </div>
@@ -395,7 +395,7 @@ export function CustomerAppointmentsPage() {
 
         <section className='bg-white border border-[#592518] rounded-2xl p-5 md:p-6'>
           <div className='flex flex-wrap items-center justify-between gap-4 mb-4'>
-            <h2 className='text-xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <h2 className='text-xl text-[#592518]' style={{ fontWeight: 700 }}>
               Danh sách lịch hẹn
             </h2>
             <div className='flex items-center gap-2'>
@@ -478,7 +478,7 @@ export function CustomerAppointmentsPage() {
       <AlertDialog open={cancelDialog.open} onOpenChange={(open) => !open && setCancelDialog({ open: false, appointmentId: null })}>
         <AlertDialogContent className='border-[#592518] bg-[#faf8f5]'>
           <AlertDialogHeader>
-            <AlertDialogTitle style={{ fontFamily: "'Playfair Display', serif" }}>Xác nhận hủy lịch hẹn?</AlertDialogTitle>
+              <AlertDialogTitle>Xác nhận hủy lịch hẹn?</AlertDialogTitle>
             <AlertDialogDescription>
               Hành động này không thể hoàn tác. Lịch hẹn của bạn sẽ bị hủy khỏi hệ thống.
             </AlertDialogDescription>
@@ -509,3 +509,4 @@ export function CustomerAppointmentsPage() {
     </div>
   );
 }
+

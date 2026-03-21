@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { CalendarDays, PawPrint, ChevronRight } from 'lucide-react';
 import { useAuthSession } from '../auth-session';
@@ -71,7 +71,7 @@ export function CustomerOverviewPage() {
     <div className='py-12'>
       <div className='max-w-6xl mx-auto px-4'>
         <div className='bg-white border border-[#592518] rounded-2xl p-6 md:p-8 mb-6'>
-          <h1 className='text-3xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <h1 className='text-3xl text-[#592518]' style={{ fontWeight: 700 }}>
             Chào mừng trở lại, {session.user?.name || 'Khách hàng'}
           </h1>
           <p className='text-[#8b6a61] mt-2'>
@@ -83,7 +83,7 @@ export function CustomerOverviewPage() {
 
         <div className='grid lg:grid-cols-3 gap-6'>
           <section className='lg:col-span-2 bg-white border border-[#592518] rounded-2xl p-6'>
-            <h2 className='text-xl text-[#592518] mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <h2 className='text-xl text-[#592518] mb-4' style={{ fontWeight: 700 }}>
               Lịch hẹn gần nhất
             </h2>
 
@@ -91,7 +91,7 @@ export function CustomerOverviewPage() {
               <p className='text-sm text-[#8b6a61]'>Đang tải lịch hẹn...</p>
             ) : nextAppointment ? (
               <div className='border border-[#592518]/20 rounded-xl p-4 bg-[#f4ece4]'>
-                <p className='text-lg text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                <p className='text-lg text-[#592518]' style={{ fontWeight: 700 }}>
                   {nextAppointment.service?.name || 'Dịch vụ'}
                 </p>
                 <p className='text-sm text-[#8b6a61] mt-1'>
@@ -124,7 +124,7 @@ export function CustomerOverviewPage() {
 
           <section className='bg-white border border-[#592518] rounded-2xl p-6'>
             <div className='flex items-center justify-between mb-4'>
-              <h2 className='text-xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+              <h2 className='text-xl text-[#592518]' style={{ fontWeight: 700 }}>
                 Thú cưng của tôi
               </h2>
               <PawPrint className='w-5 h-5 text-[#d56756]' />
@@ -173,3 +173,4 @@ export function CustomerOverviewPage() {
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { Calendar, ChevronRight, Download, Eye, FileText, Mail, PawPrint, Phone, User } from 'lucide-react';
 import { useAuthSession } from '../auth-session';
@@ -158,7 +158,7 @@ export function ProfilePage() {
   return (
     <div className='py-12'>
       <div className='max-w-2xl mx-auto px-4'>
-        <h1 className='text-2xl text-[#592518] mb-8' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+        <h1 className='text-2xl text-[#592518] mb-8' style={{ fontWeight: 700 }}>
           Hồ sơ cá nhân
         </h1>
 
@@ -337,7 +337,7 @@ export function PetListPage() {
     <div className='py-12'>
       <div className='max-w-5xl mx-auto px-4'>
         <div className='mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3'>
-          <h1 className='text-2xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <h1 className='text-2xl text-[#592518]' style={{ fontWeight: 700 }}>
             Thú cưng của tôi
           </h1>
           <p className='text-xs text-[#8b6a61] rounded-xl border border-[#592518]/20 bg-white px-3 py-2'>
@@ -358,7 +358,7 @@ export function PetListPage() {
                   <ImageWithFallback src={pet.imageUrl || ''} alt={pet.name} className='w-full h-full object-cover' />
                 </div>
                 <div className='flex-1'>
-                  <h3 className='text-lg text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
+                  <h3 className='text-lg text-[#592518]' style={{ fontWeight: 600 }}>
                     {pet.name}
                   </h3>
                   <div className='space-y-1 text-xs text-[#8b6a61] mt-1'>
@@ -395,7 +395,7 @@ export function PetListPage() {
         {selectedPet ? (
           <div className='fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4' onClick={closeDetail}>
             <div className='w-full max-w-xl bg-[#faf8f5] border border-[#592518] rounded-2xl p-5 max-h-[80vh] overflow-y-auto' onClick={(event) => event.stopPropagation()}>
-              <h2 className='text-lg text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+              <h2 className='text-lg text-[#592518]' style={{ fontWeight: 700 }}>
                 {selectedPet.name}
               </h2>
               <p className='text-sm text-[#8b6a61] mb-3'>{selectedPet.species} • {selectedPet.breed || 'Chưa cập nhật giống'}</p>
@@ -482,7 +482,7 @@ export function DigitalCardPage() {
           <BackButton fallbackPath='/customer/my-pets' />
         </div>
 
-        <h1 className='text-2xl text-[#592518] mb-6 text-center' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+        <h1 className='text-2xl text-[#592518] mb-6 text-center' style={{ fontWeight: 700 }}>
           PETHUB DIGITAL PET CARD
         </h1>
 
@@ -524,3 +524,4 @@ export function DigitalCardPage() {
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ExternalLink, FileText } from 'lucide-react';
 import { Link } from 'react-router';
 import { extractApiError } from '../lib/api-client';
@@ -43,7 +43,7 @@ function resolvePaymentMethodMeta(method: ApiInvoiceLedgerItem['paymentMethod'])
   if (method === 'card') {
     return {
       label: 'Thẻ',
-      className: 'bg-blue-50 border-blue-300 text-blue-700',
+      className: 'bg-[#f6eee7] border-[#d56756]/30 text-[#d56756]',
     };
   }
   if (method === 'payos' || method === 'transfer') {
@@ -190,7 +190,7 @@ export function ManagerRevenueLedgerPage() {
   return (
     <div className='space-y-5'>
       <div>
-        <h1 className='text-2xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+        <h1 className='text-2xl text-[#592518]' style={{ fontWeight: 700 }}>
           Đối soát doanh thu
         </h1>
         <p className='text-sm text-[#8b6a61] mt-1'>
@@ -297,7 +297,7 @@ export function ManagerRevenueLedgerPage() {
       >
         <DialogContent className='max-w-[calc(100%-2rem)] sm:max-w-5xl border-[#592518] bg-[#faf8f5] p-5 max-h-[92vh] overflow-auto'>
           <DialogHeader>
-            <DialogTitle style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <DialogTitle style={{ fontWeight: 700 }}>
               Chi tiết hóa đơn đối soát
             </DialogTitle>
             <DialogDescription>
@@ -319,7 +319,7 @@ export function ManagerRevenueLedgerPage() {
               <div className='bg-white border border-[#592518] rounded-2xl p-5'>
                 <div className='flex items-start justify-between gap-3'>
                   <div>
-                    <p className='text-lg text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                    <p className='text-lg text-[#592518]' style={{ fontWeight: 700 }}>
                       Hóa đơn {detailsInvoice.invoiceNo}
                     </p>
                     <p className='text-sm text-[#8b6a61] mt-1'>
@@ -399,3 +399,4 @@ export function ManagerRevenueLedgerPage() {
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import {
   Mail,
@@ -49,7 +49,7 @@ function AuthShell({
           <img src={image} alt='PetHub visual' className='absolute inset-0 w-full h-full object-cover' />
           <div className='absolute inset-0 bg-gradient-to-br from-[#592518]/35 via-[#d56756]/18 to-[#c75b4c]/20' />
           <div className='absolute bottom-10 left-10 right-10 rounded-2xl border border-[#faf8f5]/45 bg-black/28 p-7 backdrop-blur-[1px]'>
-            <p className='text-[36px] leading-tight text-[#faf8f5]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <p className='text-[36px] leading-tight text-[#faf8f5]' style={{ fontWeight: 700 }}>
               {quote}
             </p>
             <p className='text-sm mt-4 text-[#faf8f5]/90'>PetHub Premium Veterinary SaaS</p>
@@ -67,7 +67,7 @@ function AuthShell({
               <div className='mb-5'>
                 <BrandLockup imageClassName='h-12 sm:h-14' />
               </div>
-              <h1 className='text-4xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>{title}</h1>
+              <h1 className='text-4xl text-[#592518]' style={{ fontWeight: 700 }}>{title}</h1>
               <p className='text-[#8b6a61] mt-2'>{subtitle}</p>
             </div>
 
@@ -347,7 +347,7 @@ export function LoginPage() {
               <ShieldCheck className='w-3.5 h-3.5 text-[#d56756]' />
               Bảo mật tài khoản
             </div>
-            <DialogTitle style={{ fontFamily: "'Playfair Display', serif" }}>Khôi phục mật khẩu</DialogTitle>
+        <DialogTitle>Khôi phục mật khẩu</DialogTitle>
             <DialogDescription>Nhập email để nhận liên kết đặt lại mật khẩu an toàn trong 15 phút.</DialogDescription>
           </DialogHeader>
 
@@ -635,3 +635,4 @@ export function RegisterPage() {
     </AuthShell>
   );
 }
+

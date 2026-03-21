@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { Clock, ChevronRight } from 'lucide-react';
@@ -79,7 +79,7 @@ export function ServicesPage() {
     <div className='py-12'>
       <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
         <div className='text-center mb-12'>
-          <h1 className='text-3xl md:text-4xl text-[#592518] mb-3' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <h1 className='text-3xl md:text-4xl text-[#592518] mb-3' style={{ fontWeight: 700 }}>
             Dịch vụ chăm sóc thú cưng
           </h1>
           <p className='text-[#8b6a61] max-w-lg mx-auto'>
@@ -137,7 +137,7 @@ export function ServicesPage() {
                       <Icon className='w-5 h-5' style={{ color: iconOption.color }} />
                     </div>
                     <div>
-                      <h3 className='text-[#592518] mb-1' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                      <h3 className='text-[#592518] mb-1' style={{ fontWeight: 700 }}>
                         {service.name}
                       </h3>
                       <p className='text-sm text-[#8b6a61]'>{service.description || 'Dịch vụ chăm sóc thú cưng theo chuẩn phòng khám.'}</p>
@@ -145,7 +145,7 @@ export function ServicesPage() {
                   </div>
 
                   <div className='flex items-center justify-between pt-3 border-t border-[#592518]/10'>
-                    <span className='text-lg text-[#d56756]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                    <span className='text-lg text-[#d56756]' style={{ fontWeight: 700 }}>
                       {formatCurrency(service.price)}
                     </span>
                     <button
@@ -166,3 +166,4 @@ export function ServicesPage() {
     </div>
   );
 }
+

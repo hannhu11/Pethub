@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { ArrowLeft, CheckCircle2, Mail, MessageSquare, Send } from 'lucide-react';
 import type { ApiCustomer, ApiPet } from '../types';
@@ -163,7 +163,7 @@ export function ManagerReminderTemplatesPage() {
           Quay lại
         </button>
         <div>
-          <h1 className='text-2xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <h1 className='text-2xl text-[#592518]' style={{ fontWeight: 700 }}>
             Tạo nhắc nhở từ mẫu
           </h1>
           <p className='text-sm text-[#8b6a61] mt-1'>
@@ -322,3 +322,4 @@ export function ManagerReminderTemplatesPage() {
     </div>
   );
 }
+

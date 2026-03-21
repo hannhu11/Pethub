@@ -350,7 +350,7 @@ export function ManagerSettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl text-[#592518]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+        <h1 className="text-2xl text-[#592518]" style={{ fontWeight: 700 }}>
           {'Cài đặt'}
         </h1>
         <p className="text-sm text-[#8b6a61] mt-1">{'Quản lý thông tin tài khoản và phòng khám'}</p>
@@ -383,7 +383,7 @@ export function ManagerSettingsPage() {
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
               className="bg-white border border-[#592518] rounded-2xl">
               <div className="p-5 border-b border-[#592518]/10">
-                <h2 className="text-lg text-[#592518]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
+                <h2 className="text-lg text-[#592518]" style={{ fontWeight: 600 }}>
                   {'Hồ sơ cá nhân'}
                 </h2>
                 <p className="text-xs text-[#8b6a61] mt-1">{'Thông tin tài khoản quản trị của bạn (yêu cầu xác thực mật khẩu khi lưu)'}</p>
@@ -436,7 +436,7 @@ export function ManagerSettingsPage() {
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
               className="bg-white border border-[#592518] rounded-2xl">
               <div className="p-5 border-b border-[#592518]/10">
-                <h2 className="text-lg text-[#592518]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
+                <h2 className="text-lg text-[#592518]" style={{ fontWeight: 600 }}>
                   {'Thông tin phòng khám'}
                 </h2>
                 <p className="text-xs text-[#8b6a61] mt-1">{'Thông tin hiển thị trên hóa đơn và trang công khai (yêu cầu xác thực mật khẩu khi lưu)'}</p>
@@ -486,7 +486,7 @@ export function ManagerSettingsPage() {
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
               className="bg-white border border-[#592518] rounded-2xl">
               <div className="p-5 border-b border-[#592518]/10">
-                <h2 className="text-lg text-[#592518]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
+                <h2 className="text-lg text-[#592518]" style={{ fontWeight: 600 }}>
                   {'Đổi mật khẩu'}
                 </h2>
                 <p className="text-xs text-[#8b6a61] mt-1">{'Chuẩn bảo mật quốc tế: tối thiểu 8 ký tự và xác nhận khớp mật khẩu mới'}</p>
@@ -542,7 +542,7 @@ export function ManagerSettingsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-[#8b6a61]">{'Gói hiện tại'}</p>
-                    <p className="text-lg text-[#592518] mt-1" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                    <p className="text-lg text-[#592518] mt-1" style={{ fontWeight: 700 }}>
                       {subscription.plan === 'premium' ? 'Premium' : 'Basic (Miễn phí)'}
                     </p>
                   </div>
@@ -584,7 +584,7 @@ export function ManagerSettingsPage() {
                     <h3 className="text-sm" style={{ fontWeight: 600 }}>Basic</h3>
                   </div>
                   <div className="mb-4">
-                    <span className="text-3xl text-[#592518]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                    <span className="text-3xl text-[#592518]" style={{ fontWeight: 700 }}>
                       {'Miễn phí'}
                     </span>
                   </div>
@@ -615,7 +615,7 @@ export function ManagerSettingsPage() {
                     <h3 className="text-sm text-[#d56756]" style={{ fontWeight: 600 }}>Premium</h3>
                   </div>
                   <div className="mb-1">
-                    <span className="text-3xl text-[#592518]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                    <span className="text-3xl text-[#592518]" style={{ fontWeight: 700 }}>
                       249.000
                     </span>
                     <span className="text-sm text-[#8b6a61] ml-1">VND/tháng</span>
@@ -658,7 +658,7 @@ export function ManagerSettingsPage() {
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
               className="bg-white border border-[#592518] rounded-2xl">
               <div className="p-5 border-b border-[#592518]/10">
-                <h2 className="text-lg text-[#592518]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
+                <h2 className="text-lg text-[#592518]" style={{ fontWeight: 600 }}>
                   {'Cài đặt thông báo'}
                 </h2>
                 <p className="text-xs text-[#8b6a61] mt-1">{'Quản lý cách nhận thông báo từ hệ thống'}</p>
@@ -768,7 +768,7 @@ export function ManagerSettingsPage() {
       <Dialog open={confirmState.open} onOpenChange={(open) => (open ? undefined : closeSensitiveConfirm())}>
         <DialogContent className='max-w-md border-[#592518] bg-[#faf8f5]'>
           <DialogHeader>
-            <DialogTitle style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Xác thực thay đổi nhạy cảm</DialogTitle>
+            <DialogTitle style={{ fontWeight: 700 }}>Xác thực thay đổi nhạy cảm</DialogTitle>
             <DialogDescription>
               Vui lòng nhập mật khẩu để xác nhận lưu thay đổi {confirmState.target === 'clinic' ? 'thông tin phòng khám' : 'hồ sơ cá nhân'}.
             </DialogDescription>
@@ -812,3 +812,4 @@ export function ManagerSettingsPage() {
     </div>
   );
 }
+

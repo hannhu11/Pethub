@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Banknote, ChevronDown, CreditCard, QrCode, Receipt, Search, ShoppingBag, Stethoscope, Trash2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useNavigate, useSearchParams } from 'react-router';
@@ -389,7 +389,7 @@ export function ManagerPOSPage() {
   return (
     <div className='space-y-4'>
       <div>
-        <h1 className='text-2xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+        <h1 className='text-2xl text-[#592518]' style={{ fontWeight: 700 }}>
           Thanh toán POS
         </h1>
         <p className='text-sm text-[#8b6a61]'>
@@ -608,7 +608,7 @@ export function ManagerPOSPage() {
 
       {checkoutResult ? (
         <div className='bg-white border border-[#592518] rounded-2xl p-5'>
-          <h2 className='text-lg text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <h2 className='text-lg text-[#592518]' style={{ fontWeight: 700 }}>
             Trạng thái giao dịch
           </h2>
           <div className='mt-3 grid md:grid-cols-2 gap-4'>
@@ -661,3 +661,4 @@ export function ManagerPOSPage() {
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-import { Link } from 'react-router';
+﻿import { Link } from 'react-router';
 import { motion } from 'motion/react';
 import {
   PawPrint, Stethoscope, Scissors, Droplets, Shield,
@@ -18,7 +18,7 @@ const features = [
 
 const services = [
   { icon: Stethoscope, name: 'Khám tổng quát', color: '#d56756' },
-  { icon: Droplets, name: 'Tắm & Spa', color: '#4a90d9' },
+  { icon: Droplets, name: 'Tắm & Spa', color: '#8f6b5e' },
   { icon: Scissors, name: 'Cắt tỉa lông', color: '#c75b4c' },
   { icon: Shield, name: 'Tiêm phòng', color: '#d4940a' },
 ];
@@ -45,7 +45,7 @@ export function HomePage() {
                 <PawPrint className="w-4 h-4" />
                 Nền tảng vận hành hiện đại cho pet clinic & pet store
               </div>
-              <h1 className="text-4xl md:text-5xl mb-6 text-[#592518]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, lineHeight: 1.2 }}>
+              <h1 className="text-4xl md:text-5xl mb-6 text-[#592518]" style={{ fontWeight: 700, lineHeight: 1.2 }}>
                 Tăng trưởng phòng khám thú y
                 <span className="text-[#d56756]"> chuyên nghiệp</span> &
                 <span className="text-[#c75b4c]"> bền vững</span>
@@ -78,7 +78,7 @@ export function HomePage() {
                   { num: '95M$', label: 'Quy mô TT' },
                 ].map(s => (
                   <div key={s.label}>
-                    <p className="text-2xl text-[#d56756]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>{s.num}</p>
+                    <p className="text-2xl text-[#d56756]" style={{ fontWeight: 700 }}>{s.num}</p>
                     <p className="text-xs text-[#8b6a61]">{s.label}</p>
                   </div>
                 ))}
@@ -127,7 +127,7 @@ export function HomePage() {
       <section id="services-section" className="bg-[#f4ece4] py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl text-[#592518] mb-3" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <h2 className="text-3xl text-[#592518] mb-3" style={{ fontWeight: 700 }}>
               Dịch vụ của chúng tôi
             </h2>
             <p className="text-[#8b6a61] max-w-lg mx-auto">
@@ -166,7 +166,7 @@ export function HomePage() {
       <section id="about-section" className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <h2 className="text-3xl text-[#592518] mb-3" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <h2 className="text-3xl text-[#592518] mb-3" style={{ fontWeight: 700 }}>
               Tại sao chọn PetHub?
             </h2>
             <p className="text-[#8b6a61] max-w-lg mx-auto">
@@ -188,7 +188,7 @@ export function HomePage() {
                     <f.icon className="w-6 h-6 text-[#d56756]" />
                   </div>
                   <div>
-                    <h3 className="text-lg text-[#592518] mb-2" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>{f.title}</h3>
+                    <h3 className="text-lg text-[#592518] mb-2" style={{ fontWeight: 600 }}>{f.title}</h3>
                     <p className="text-sm text-[#8b6a61]">{f.desc}</p>
                   </div>
                 </div>
@@ -202,7 +202,7 @@ export function HomePage() {
       <section id="pricing-section" className="bg-[#f4ece4] py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <h2 className="text-3xl text-[#592518] mb-3" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <h2 className="text-3xl text-[#592518] mb-3" style={{ fontWeight: 700 }}>
               Bảng giá minh bạch
             </h2>
             <p className="text-[#8b6a61]">Bắt đầu miễn phí, nâng cấp khi sẵn sàng.</p>
@@ -210,8 +210,8 @@ export function HomePage() {
           <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
             {/* Free */}
             <div className="bg-white border border-[#592518] rounded-2xl p-8">
-              <h3 className="text-lg mb-1" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>Cơ bản</h3>
-              <p className="text-3xl text-[#592518] mb-4" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+              <h3 className="text-lg mb-1" style={{ fontWeight: 600 }}>Cơ bản</h3>
+              <p className="text-3xl text-[#592518] mb-4" style={{ fontWeight: 700 }}>
                 0 <span className="text-sm text-[#8b6a61]" style={{ fontWeight: 400 }}>VND/tháng</span>
               </p>
               <div className="space-y-3 mb-6">
@@ -231,8 +231,8 @@ export function HomePage() {
               <div className="absolute -top-3 right-6 px-3 py-1 bg-[#c75b4c] text-white text-xs rounded-full border border-[#592518]">
                 Phổ biến nhất
               </div>
-              <h3 className="text-lg mb-1" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>Premium</h3>
-              <p className="text-3xl mb-4" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+              <h3 className="text-lg mb-1" style={{ fontWeight: 600 }}>Premium</h3>
+              <p className="text-3xl mb-4" style={{ fontWeight: 700 }}>
                 249.000 <span className="text-sm opacity-80" style={{ fontWeight: 400 }}>VND/tháng</span>
               </p>
               <div className="space-y-3 mb-6">
@@ -255,7 +255,7 @@ export function HomePage() {
       <section id="testimonials-section" className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <h2 className="text-3xl text-[#592518] mb-3" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <h2 className="text-3xl text-[#592518] mb-3" style={{ fontWeight: 700 }}>
               Khách hàng nói gì?
             </h2>
           </div>
@@ -292,7 +292,7 @@ export function HomePage() {
             <div className="absolute top-4 right-4 opacity-10">
               <PawPrint className="w-32 h-32 text-white" />
             </div>
-            <h2 className="text-3xl text-white mb-4" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <h2 className="text-3xl text-white mb-4" style={{ fontWeight: 700 }}>
               Sẵn sàng nâng cấp phòng khám?
             </h2>
             <p className="text-white/80 mb-8 max-w-lg mx-auto">
@@ -312,3 +312,4 @@ export function HomePage() {
     </div>
   );
 }
+
