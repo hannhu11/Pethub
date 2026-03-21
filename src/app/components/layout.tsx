@@ -35,16 +35,16 @@ function SiteFooter() {
           <div className='grid grid-cols-1 md:grid-cols-4 gap-8'>
             <div>
               <div className='mb-4'>
-                <BrandLockup imageClassName='h-9 md:h-10' />
+                <BrandLockup imageClassName='h-9 md:h-10 brightness-0 invert' />
               </div>
-              <p className='text-sm text-gray-400'>
+              <p className='text-sm text-white/90'>
                 Giải pháp quản lý Pet Shop & phòng khám thú y toàn diện, hiện đại và nhân văn.
               </p>
             </div>
 
             <div>
-              <h4 className='text-sm mb-4 text-[#c75b4c]' style={{ fontWeight: 700 }}>Công ty</h4>
-              <div className='space-y-2 text-sm text-gray-400'>
+              <h4 className='text-sm mb-4 text-white' style={{ fontWeight: 700 }}>Công ty</h4>
+              <div className='space-y-2 text-sm text-white/90'>
                 <Link to='/about' className='flex items-center gap-2 hover:text-white transition-colors'>
                   <Info className='w-4 h-4' /> Về chúng tôi
                 </Link>
@@ -58,8 +58,8 @@ function SiteFooter() {
             </div>
 
             <div>
-              <h4 className='text-sm mb-4 text-[#c75b4c]' style={{ fontWeight: 700 }}>Hỗ trợ</h4>
-              <div className='space-y-2 text-sm text-gray-400'>
+              <h4 className='text-sm mb-4 text-white' style={{ fontWeight: 700 }}>Hỗ trợ</h4>
+              <div className='space-y-2 text-sm text-white/90'>
                 <Link to='/help' className='flex items-center gap-2 hover:text-white transition-colors'>
                   <LifeBuoy className='w-4 h-4' /> Trung tâm trợ giúp
                 </Link>
@@ -73,15 +73,15 @@ function SiteFooter() {
             </div>
 
             <div>
-              <h4 className='text-sm mb-4 text-[#c75b4c]' style={{ fontWeight: 700 }}>Kết nối</h4>
-              <div className='space-y-2 text-sm text-gray-400'>
+              <h4 className='text-sm mb-4 text-white' style={{ fontWeight: 700 }}>Kết nối</h4>
+              <div className='space-y-2 text-sm text-white/90'>
                 <p>Hotline: 1900-PETHUB</p>
                 <p>Email: support@pethub.vn</p>
                 <p>TP. Hồ Chí Minh, Việt Nam</p>
               </div>
             </div>
           </div>
-          <div className='mt-8 pt-8 border-t border-gray-700 text-center text-sm text-gray-500'>
+          <div className='mt-8 pt-8 border-t border-white/15 text-center text-sm text-white/80'>
             &copy; 2026 PetHub. Thiết kế với tình yêu dành cho thú cưng.
           </div>
         </div>

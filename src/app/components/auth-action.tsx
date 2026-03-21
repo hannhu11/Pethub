@@ -54,7 +54,7 @@ function AuthActionShell({ children }: { children: React.ReactNode }) {
             >
               Bảo mật tài khoản chuyên nghiệp, liền mạch với trải nghiệm PetHub.
             </p>
-            <p className='mt-4 text-sm text-[#faf8f5]/90'>PetHub Premium Veterinary SaaS</p>
+            <p className='mt-4 text-sm text-[#faf8f5]/90'>PetHub SaaS cho Pet Shop & Phòng khám thú y</p>
           </div>
         </aside>
 

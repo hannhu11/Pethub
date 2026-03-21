@@ -1,4 +1,5 @@
 import type { ClinicSettings } from '../types';
+import type { SubscriptionPlanCode } from '../constants/pricing';
 
 const UPDATE_EVENT = 'pethub-manager-settings-updated';
 
@@ -10,7 +11,7 @@ export interface ManagerProfileSettings {
 }
 
 export interface ManagerSubscriptionSettings {
-  plan: 'basic' | 'premium';
+  plan: SubscriptionPlanCode;
   amount: number;
   currency: 'VND';
   billingCycle: 'monthly';
@@ -42,8 +43,8 @@ const defaultSettings: ManagerSettingsState = {
     invoiceNote: '',
   },
   subscription: {
-    plan: 'basic',
-    amount: 249000,
+    plan: 'inactive',
+    amount: 0,
     currency: 'VND',
     billingCycle: 'monthly',
     paymentMethod: null,

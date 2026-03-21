@@ -22,6 +22,17 @@ type CreatePayosLinkInput = {
   invoiceId?: string;
   returnUrl?: string;
   cancelUrl?: string;
+  metadata?: Prisma.JsonObject;
+};
+
+type SubscriptionCheckoutPlan = 'starter' | 'professional';
+
+type SubscriptionPlanConfig = {
+  checkoutPlan: SubscriptionCheckoutPlan;
+  planCode: string;
+  planName: string;
+  amount: number;
+  description: string;
 };
 
 type NormalizedWebhookPayload = {
@@ -46,6 +57,23 @@ export class PaymentsService {
     private readonly prisma: PrismaService,
     private readonly realtimeService: RealtimeService,
   ) {}
+
+  private readonly subscriptionPlanConfigs: Record<SubscriptionCheckoutPlan, SubscriptionPlanConfig> = {
+    starter: {
+      checkoutPlan: 'starter',
+      planCode: 'starter-monthly',
+      planName: 'Starter',
+      amount: 299000,
+      description: 'Dang ky Starter PETHUB',
+    },
+    professional: {
+      checkoutPlan: 'professional',
+      planCode: 'professional-monthly',
+      planName: 'Professional',
+      amount: 599000,
+      description: 'Dang ky Professional PETHUB',
+    },
+  };
 
   @Cron('*/20 * * * * *')
   async backgroundSyncPendingPayosTransactions() {
@@ -95,14 +123,19 @@ export class PaymentsService {
       throw new ForbiddenException('Only manager can create payOS payment links');
     }
 
+    const planConfig = this.getSubscriptionPlanConfig(dto.plan);
     return this.createPayosLinkForInvoice({
       clinicId: currentUser.clinicId,
-      amount: dto.amount,
-      description: dto.description,
-      orderCode: dto.orderCode,
-      invoiceId: dto.invoiceId,
+      amount: planConfig.amount,
+      description: planConfig.description,
       returnUrl: dto.returnUrl,
       cancelUrl: dto.cancelUrl,
+      metadata: {
+        subscriptionPlan: planConfig.checkoutPlan,
+        subscriptionPlanCode: planConfig.planCode,
+        subscriptionPlanName: planConfig.planName,
+        subscriptionCycle: 'monthly',
+      },
     });
   }
 
@@ -191,14 +224,14 @@ export class PaymentsService {
         paymentMethod: PaymentMethod.payos,
         amount,
         status: PaymentStatus.unpaid,
-        metadata: this.buildPayosMetadata(input.description, payosResponse.raw),
+        metadata: this.buildPayosMetadata(input.description, payosResponse.raw, input.metadata),
       },
       update: {
         clinicId: input.clinicId,
         invoiceId: input.invoiceId,
         amount,
         status: PaymentStatus.unpaid,
-        metadata: this.buildPayosMetadata(input.description, payosResponse.raw),
+        metadata: this.buildPayosMetadata(input.description, payosResponse.raw, input.metadata),
       },
     });
 
@@ -337,7 +370,8 @@ export class PaymentsService {
           paidAt: now,
         });
       } else if (paid) {
-        await this.upsertPremiumSubscriptionTx(tx, txn.clinicId, payload.amount, now);
+        const planConfig = this.resolveSubscriptionPlanConfigFromMetadata(txn.metadata, payload.amount);
+        await this.upsertSubscriptionPlanTx(tx, txn.clinicId, planConfig, now);
       }
 
       return updatedTxn;
@@ -538,8 +572,9 @@ export class PaymentsService {
           txn.providerRef,
         );
       } else {
+        const planConfig = this.resolveSubscriptionPlanConfigFromMetadata(txn.metadata, Number(txn.amount ?? 0));
         await this.prisma.$transaction(async (tx) => {
-          await this.upsertPremiumSubscriptionTx(tx, txn.clinicId, Number(txn.amount ?? 0), paidAt);
+          await this.upsertSubscriptionPlanTx(tx, txn.clinicId, planConfig, paidAt);
         });
       }
       return;
@@ -599,12 +634,8 @@ export class PaymentsService {
             paidAt: currentTxn.paidAt ?? now,
           });
         } else {
-          await this.upsertPremiumSubscriptionTx(
-            tx,
-            txn.clinicId,
-            Number(currentTxn.amount ?? payosAmount),
-            currentTxn.paidAt ?? now,
-          );
+          const planConfig = this.resolveSubscriptionPlanConfigFromMetadata(currentTxn.metadata, Number(currentTxn.amount ?? payosAmount));
+          await this.upsertSubscriptionPlanTx(tx, txn.clinicId, planConfig, currentTxn.paidAt ?? now);
         }
         return currentTxn;
       }
@@ -628,7 +659,8 @@ export class PaymentsService {
           paidAt: now,
         });
       } else {
-        await this.upsertPremiumSubscriptionTx(tx, txn.clinicId, payosAmount, now);
+        const planConfig = this.resolveSubscriptionPlanConfigFromMetadata(updatedTxn.metadata, payosAmount);
+        await this.upsertSubscriptionPlanTx(tx, txn.clinicId, planConfig, now);
       }
 
       return updatedTxn;
@@ -861,8 +893,13 @@ export class PaymentsService {
     return createHmac('sha256', checksumKey).update(payload).digest('hex');
   }
 
-  private buildPayosMetadata(description: string, raw: Record<string, unknown>): Prisma.JsonObject {
+  private buildPayosMetadata(
+    description: string,
+    raw: Record<string, unknown>,
+    extra?: Prisma.JsonObject,
+  ): Prisma.JsonObject {
     return {
+      ...(extra ?? {}),
       description,
       payos: this.toJsonObject(raw),
     };
@@ -1010,6 +1047,34 @@ export class PaymentsService {
     }
 
     return false;
+  }
+
+  private getSubscriptionPlanConfig(plan: SubscriptionCheckoutPlan): SubscriptionPlanConfig {
+    return this.subscriptionPlanConfigs[plan];
+  }
+
+  private resolveSubscriptionPlanConfigFromMetadata(
+    metadata: Prisma.JsonValue | null | undefined,
+    fallbackAmount?: number,
+  ): SubscriptionPlanConfig {
+    const source =
+      metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+        ? (metadata as Record<string, unknown>)
+        : {};
+    const rawPlan =
+      typeof source.subscriptionPlan === 'string'
+        ? source.subscriptionPlan
+        : typeof source.subscriptionPlanCode === 'string' && source.subscriptionPlanCode.includes('starter')
+          ? 'starter'
+          : 'professional';
+
+    const planConfig = this.getSubscriptionPlanConfig(rawPlan === 'starter' ? 'starter' : 'professional');
+    return {
+      ...planConfig,
+      amount: Number.isFinite(Number(fallbackAmount)) && Number(fallbackAmount) > 0
+        ? Math.round(Number(fallbackAmount))
+        : planConfig.amount,
+    };
   }
 
   private buildSignatureCandidates(data: Record<string, unknown>): Record<string, unknown>[] {
@@ -1301,28 +1366,27 @@ export class PaymentsService {
     return (process.env.PAYOS_BACKGROUND_SYNC_ENABLED ?? 'true').toLowerCase() === 'true';
   }
 
-  private async upsertPremiumSubscriptionTx(
+  private async upsertSubscriptionPlanTx(
     tx: Prisma.TransactionClient,
     clinicId: string,
-    amount: number,
+    planConfig: SubscriptionPlanConfig,
     startedAt: Date,
   ) {
-    const normalizedAmount = Math.max(0, Math.round(Number(amount) || 0));
     await tx.subscription.upsert({
       where: { clinicId },
       create: {
         clinicId,
-        planCode: 'premium-monthly',
-        planName: 'Premium',
-        amount: normalizedAmount,
+        planCode: planConfig.planCode,
+        planName: planConfig.planName,
+        amount: planConfig.amount,
         isActive: true,
         startedAt,
         expiresAt: new Date(startedAt.getTime() + 30 * 24 * 60 * 60 * 1000),
       },
       update: {
-        planCode: 'premium-monthly',
-        planName: 'Premium',
-        amount: normalizedAmount,
+        planCode: planConfig.planCode,
+        planName: planConfig.planName,
+        amount: planConfig.amount,
         isActive: true,
         startedAt,
         expiresAt: new Date(startedAt.getTime() + 30 * 24 * 60 * 60 * 1000),

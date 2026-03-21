@@ -52,7 +52,7 @@ function AuthShell({
             <p className='text-[36px] leading-tight text-[#faf8f5]' style={{ fontWeight: 700 }}>
               {quote}
             </p>
-            <p className='text-sm mt-4 text-[#faf8f5]/90'>PetHub Premium Veterinary SaaS</p>
+            <p className='text-sm mt-4 text-[#faf8f5]/90'>PetHub SaaS cho Pet Shop & Phòng khám thú y</p>
           </div>
         </aside>
 
