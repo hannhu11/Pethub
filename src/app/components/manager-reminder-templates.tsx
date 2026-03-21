@@ -1,6 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ArrowLeft, CheckCircle2, Mail, MessageSquare, Send } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Mail, Send } from 'lucide-react';
 import type { ApiCustomer, ApiPet } from '../types';
 import { extractApiError } from '../lib/api-client';
 import { createReminderFromTemplate, listCustomers, listPets } from '../lib/pethub-api';
@@ -9,7 +9,7 @@ type LocalReminderTemplate = {
   id: string;
   name: string;
   type: string;
-  channelDefaults: Array<'email' | 'sms'>;
+  channelDefaults: Array<'email'>;
   messageTemplate: string;
 };
 
@@ -18,7 +18,7 @@ const reminderTemplates: LocalReminderTemplate[] = [
     id: 'tpl-vaccine',
     name: 'Nhắc tiêm phòng',
     type: 'vaccine',
-    channelDefaults: ['email', 'sms'],
+    channelDefaults: ['email'],
     messageTemplate:
       'Kính gửi [Customer Name], bé [Pet Name] đã đến lịch tiêm phòng. Vui lòng đặt lịch tại PetHub để được hỗ trợ kịp thời.',
   },
@@ -34,7 +34,7 @@ const reminderTemplates: LocalReminderTemplate[] = [
     id: 'tpl-grooming',
     name: 'Theo dõi grooming',
     type: 'grooming',
-    channelDefaults: ['sms'],
+    channelDefaults: ['email'],
     messageTemplate:
       'PetHub xin nhắc [Customer Name]: bé [Pet Name] đã đến kỳ grooming để giữ lông và da khỏe mạnh.',
   },
@@ -57,7 +57,7 @@ export function ManagerReminderTemplatesPage() {
   const [templateId, setTemplateId] = useState(reminderTemplates[0]?.id ?? '');
   const [customerId, setCustomerId] = useState('');
   const [petId, setPetId] = useState('');
-  const [channel, setChannel] = useState<'email' | 'sms'>('email');
+  const [channel, setChannel] = useState<'email'>('email');
   const [scheduledDate, setScheduledDate] = useState(todayISO());
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
@@ -137,7 +137,7 @@ export function ManagerReminderTemplatesPage() {
         overrideMessage: message.trim(),
       });
       if (sendNow && result.reminder.status !== 'sent') {
-        setError(result.reminder.failedReason || 'Gửi nhắc nhở thất bại. Vui lòng kiểm tra cấu hình email/SMS.');
+        setError(result.reminder.failedReason || 'Gửi nhắc nhở thất bại. Vui lòng kiểm tra cấu hình email.');
         return;
       }
       setSavedMessage(sendNow ? 'Đã gửi nhắc nhở.' : 'Đã lên lịch nhắc nhở.');
@@ -191,7 +191,7 @@ export function ManagerReminderTemplatesPage() {
               <p className='text-sm text-[#592518]' style={{ fontWeight: 600 }}>
                 {item.name}
               </p>
-              <p className='text-xs text-[#8b6a61] mt-1'>Kênh gợi ý: {item.channelDefaults.join(' + ')}</p>
+              <p className='text-xs text-[#8b6a61] mt-1'>Kênh gợi ý: Gmail</p>
             </button>
           ))}
         </div>
@@ -233,7 +233,7 @@ export function ManagerReminderTemplatesPage() {
           <div className='grid sm:grid-cols-2 gap-3'>
             <div>
               <label className='text-xs text-[#8b6a61] mb-1 block'>Kênh gửi</label>
-              <div className='grid grid-cols-2 gap-2'>
+              <div className='grid grid-cols-1 gap-2'>
                 <button
                   type='button'
                   onClick={() => setChannel('email')}
@@ -245,18 +245,6 @@ export function ManagerReminderTemplatesPage() {
                 >
                   <Mail className='w-4 h-4' />
                   Gmail
-                </button>
-                <button
-                  type='button'
-                  onClick={() => setChannel('sms')}
-                  className={`inline-flex items-center justify-center gap-1 px-3 py-2 rounded-xl border text-sm ${
-                    channel === 'sms'
-                      ? 'border-[#d56756] bg-[#d56756]/10 text-[#d56756]'
-                      : 'border-[#592518]/20 text-[#592518]'
-                  }`}
-                >
-                  <MessageSquare className='w-4 h-4' />
-                  SMS
                 </button>
               </div>
             </div>

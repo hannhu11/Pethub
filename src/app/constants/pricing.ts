@@ -41,7 +41,7 @@ export const pricingPlanDefinitions: PricingPlanDefinition[] = [
     features: [
       'Khách hàng & thú cưng không giới hạn',
       'Digital Pet Card Premium (Branding riêng)',
-      'Lịch hẹn nâng cao + SMS/Zalo tự động',
+      'Lịch hẹn nâng cao + Zalo/Email tự động',
       'POS đa dạng + In hóa đơn',
       'Báo cáo & phân tích chi tiết',
       'Quản lý tồn kho sản phẩm',

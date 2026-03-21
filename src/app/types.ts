@@ -80,7 +80,7 @@ export interface ReminderTemplate {
   id: string;
   name: string;
   type: 'vaccine' | 'checkup' | 'grooming' | 'medication';
-  channelDefaults: Array<'email' | 'sms'>;
+  channelDefaults: Array<'email'>;
   messageTemplate: string;
 }
 

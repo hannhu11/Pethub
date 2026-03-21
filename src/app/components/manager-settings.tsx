@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router';
 import { motion } from 'motion/react';
 import {
   User, Building2, CreditCard, BellRing, Save, Check,
-  Crown, PawPrint, BarChart3, Mail, Smartphone, LockKeyhole
+  Crown, PawPrint, BarChart3, Mail, LockKeyhole
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import {
@@ -93,7 +93,7 @@ export function ManagerSettingsPage() {
     emailBooking: true,
     emailReminder: true,
     smsBooking: false,
-    smsReminder: true,
+    smsReminder: false,
     dailyReport: true,
     weeklyReport: false,
   });
@@ -691,37 +691,6 @@ export function ManagerSettingsPage() {
                     {[
                       { key: 'emailBooking' as const, label: 'Thông báo lịch hẹn mới', desc: 'Nhận email khi có lịch hẹn mới từ khách hàng' },
                       { key: 'emailReminder' as const, label: 'Nhắc nhở lịch hẹn', desc: 'Email nhắc nhở trước giờ hẹn 1 tiếng' },
-                    ].map(item => (
-                      <div key={item.key} className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm">{item.label}</p>
-                          <p className="text-xs text-[#8b6a61]">{item.desc}</p>
-                        </div>
-                        <button
-                          onClick={() => void toggleNotif(item.key)}
-                          disabled={notifLoading || notifSaving}
-                          className={`w-10 h-6 rounded-full transition-all relative ${
-                            notifications[item.key] ? 'bg-[#d56756]' : 'bg-[#efe3d7]'
-                          } disabled:opacity-60`}
-                        >
-                          <div className={`w-4 h-4 rounded-full bg-white border border-[#592518]/20 absolute top-1 transition-all ${
-                            notifications[item.key] ? 'left-5' : 'left-1'
-                          }`} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="p-5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Smartphone className="w-4 h-4 text-[#c75b4c]" />
-                    <h3 className="text-sm" style={{ fontWeight: 600 }}>SMS</h3>
-                  </div>
-                  <div className="space-y-3">
-                    {[
-                      { key: 'smsBooking' as const, label: 'SMS lịch hẹn mới', desc: 'Nhận SMS khi có lịch hẹn mới' },
-                      { key: 'smsReminder' as const, label: 'SMS nhắc nhở khách hàng', desc: 'Tự động gửi SMS nhắc nhở cho khách' },
                     ].map(item => (
                       <div key={item.key} className="flex items-center justify-between">
                         <div>
