@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import {
   AlertCircle,
@@ -9,7 +9,6 @@ import {
   LoaderCircle,
   Lock,
   MailCheck,
-  PawPrint,
   ShieldCheck,
 } from 'lucide-react';
 import { applyActionCode, confirmPasswordReset } from 'firebase/auth';
@@ -21,6 +20,7 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { BrandLockup } from './brand-lockup';
 
 type AuthActionMode = 'verifyEmail' | 'resetPassword';
 type VerifyState = 'idle' | 'loading' | 'success' | 'error';
@@ -42,19 +42,19 @@ function resolveMode(mode: string | null): AuthActionMode | null {
 
 function AuthActionShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className='min-h-screen bg-[#faf9f6]'>
+    <div className='min-h-screen bg-[#faf8f5]'>
       <div className='grid min-h-screen lg:grid-cols-2'>
-        <aside className='relative hidden border-r border-[#2d2a26] lg:block'>
+        <aside className='relative hidden border-r border-[#592518] lg:block'>
           <img src={loginVisual} alt='PetHub visual' className='absolute inset-0 h-full w-full object-cover' />
-          <div className='absolute inset-0 bg-gradient-to-br from-[#2d2a26]/35 via-[#6b8f5e]/18 to-[#c67d5b]/20' />
-          <div className='absolute bottom-10 left-10 right-10 rounded-2xl border border-[#fbf9f6]/45 bg-black/28 p-7 backdrop-blur-[1px]'>
+          <div className='absolute inset-0 bg-gradient-to-br from-[#592518]/35 via-[#d56756]/18 to-[#c75b4c]/20' />
+          <div className='absolute bottom-10 left-10 right-10 rounded-2xl border border-[#faf8f5]/45 bg-black/28 p-7 backdrop-blur-[1px]'>
             <p
-              className='text-[36px] leading-tight text-[#fbf9f6]'
-              style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}
+              className='text-[36px] leading-tight text-[#faf8f5]'
+              style={{ fontWeight: 700 }}
             >
               Bảo mật tài khoản chuyên nghiệp, liền mạch với trải nghiệm PetHub.
             </p>
-            <p className='mt-4 text-sm text-[#fbf9f6]/90'>PetHub Premium Veterinary SaaS</p>
+            <p className='mt-4 text-sm text-[#faf8f5]/90'>PetHub Premium Veterinary SaaS</p>
           </div>
         </aside>
 
@@ -62,20 +62,15 @@ function AuthActionShell({ children }: { children: React.ReactNode }) {
           <div className='mx-auto w-full max-w-md'>
             <Link
               to='/'
-              className='inline-flex items-center gap-2 text-sm text-[#7a756e] transition-colors hover:text-[#2d2a26]'
+              className='inline-flex items-center gap-2 text-sm text-[#8b6a61] transition-colors hover:text-[#592518]'
             >
               <ArrowLeft className='h-4 w-4' />
               Quay về trang chủ
             </Link>
 
             <div className='mb-6 mt-6'>
-              <div className='mb-5 flex items-center gap-2'>
-                <div className='flex h-11 w-11 items-center justify-center rounded-2xl border border-[#2d2a26] bg-[#6b8f5e]'>
-                  <PawPrint className='h-6 w-6 text-white' />
-                </div>
-                <span className='text-3xl' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
-                  Pet<span className='text-[#c67d5b]'>Hub</span>
-                </span>
+              <div className='mb-5'>
+                <BrandLockup imageClassName='h-12 sm:h-14' />
               </div>
               {children}
             </div>
@@ -178,14 +173,14 @@ export function AuthActionPage() {
 
   const renderInvalidState = () => (
     <>
-      <CardHeader className='space-y-2 border-b border-[#2d2a26]/10 pb-5'>
+      <CardHeader className='space-y-2 border-b border-[#592518]/10 pb-5'>
         <div className='inline-flex h-11 w-11 items-center justify-center rounded-full border border-red-300 bg-red-50'>
           <AlertCircle className='h-5 w-5 text-red-600' />
         </div>
-        <CardTitle className='text-3xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+        <CardTitle className='text-3xl text-[#592518]' style={{ fontWeight: 700 }}>
           Liên kết không hợp lệ
         </CardTitle>
-        <CardDescription className='text-[#7a756e]'>
+        <CardDescription className='text-[#8b6a61]'>
           Đường dẫn xác thực đã thiếu thông tin hoặc không còn hiệu lực.
         </CardDescription>
       </CardHeader>
@@ -198,7 +193,7 @@ export function AuthActionPage() {
         <Button
           type='button'
           onClick={() => navigate('/login', { replace: true })}
-          className='h-11 w-full rounded-xl border border-[#2d2a26] bg-[#6b8f5e] text-white hover:bg-[#628455]'
+          className='h-11 w-full rounded-xl border border-[#592518] bg-[#d56756] text-white hover:bg-[#628455]'
         >
           Quay lại Đăng nhập
         </Button>
@@ -208,33 +203,33 @@ export function AuthActionPage() {
 
   const renderVerifyState = () => (
     <>
-      <CardHeader className='space-y-2 border-b border-[#2d2a26]/10 pb-5'>
-        <div className='inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#2d2a26]/20 bg-[#6b8f5e]/10'>
+      <CardHeader className='space-y-2 border-b border-[#592518]/10 pb-5'>
+        <div className='inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#592518]/20 bg-[#d56756]/10'>
           {verifyState === 'loading' ? (
-            <LoaderCircle className='h-5 w-5 animate-spin text-[#6b8f5e]' />
+            <LoaderCircle className='h-5 w-5 animate-spin text-[#d56756]' />
           ) : verifyState === 'success' ? (
-            <CheckCircle2 className='h-5 w-5 text-[#6b8f5e]' />
+            <CheckCircle2 className='h-5 w-5 text-[#d56756]' />
           ) : (
-            <MailCheck className='h-5 w-5 text-[#6b8f5e]' />
+            <MailCheck className='h-5 w-5 text-[#d56756]' />
           )}
         </div>
-        <CardTitle className='text-3xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+        <CardTitle className='text-3xl text-[#592518]' style={{ fontWeight: 700 }}>
           Xác minh Email
         </CardTitle>
-        <CardDescription className='text-[#7a756e]'>
+        <CardDescription className='text-[#8b6a61]'>
           Hệ thống đang xử lý yêu cầu xác thực tài khoản của bạn.
         </CardDescription>
       </CardHeader>
       <CardContent className='space-y-4 pb-6'>
         {verifyState === 'loading' ? (
-          <Alert className='border border-[#2d2a26]/15 bg-[#f7f6f3]'>
-            <LoaderCircle className='h-4 w-4 animate-spin text-[#6b8f5e]' />
-            <AlertTitle className='text-[#2d2a26]'>Đang xác minh email...</AlertTitle>
+          <Alert className='border border-[#592518]/15 bg-[#f7f6f3]'>
+            <LoaderCircle className='h-4 w-4 animate-spin text-[#d56756]' />
+            <AlertTitle className='text-[#592518]'>Đang xác minh email...</AlertTitle>
             <AlertDescription>Vui lòng chờ trong giây lát.</AlertDescription>
           </Alert>
         ) : null}
         {verifyState === 'success' ? (
-          <Alert className='border border-[#6b8f5e]/40 bg-[#ecf7ec] text-[#2f6b2f]'>
+          <Alert className='border border-[#d56756]/40 bg-[#ecf7ec] text-[#2f6b2f]'>
             <CheckCircle2 className='h-4 w-4 text-[#2f6b2f]' />
             <AlertTitle>Email đã được xác thực thành công</AlertTitle>
             <AlertDescription>Bạn có thể đăng nhập và sử dụng đầy đủ tính năng của PetHub.</AlertDescription>
@@ -250,7 +245,7 @@ export function AuthActionPage() {
         <Button
           type='button'
           onClick={() => navigate('/login', { replace: true })}
-          className='h-11 w-full rounded-xl border border-[#2d2a26] bg-[#6b8f5e] text-white hover:bg-[#628455]'
+          className='h-11 w-full rounded-xl border border-[#592518] bg-[#d56756] text-white hover:bg-[#628455]'
           disabled={verifyState === 'loading'}
         >
           Tiếp tục Đăng nhập
@@ -261,20 +256,20 @@ export function AuthActionPage() {
 
   const renderResetState = () => (
     <>
-      <CardHeader className='space-y-2 border-b border-[#2d2a26]/10 pb-5'>
-        <div className='inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#2d2a26]/20 bg-[#6b8f5e]/10'>
-          <ShieldCheck className='h-5 w-5 text-[#6b8f5e]' />
+      <CardHeader className='space-y-2 border-b border-[#592518]/10 pb-5'>
+        <div className='inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#592518]/20 bg-[#d56756]/10'>
+          <ShieldCheck className='h-5 w-5 text-[#d56756]' />
         </div>
-        <CardTitle className='text-3xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+        <CardTitle className='text-3xl text-[#592518]' style={{ fontWeight: 700 }}>
           Đặt lại mật khẩu
         </CardTitle>
-        <CardDescription className='text-[#7a756e]'>
+        <CardDescription className='text-[#8b6a61]'>
           Nhập mật khẩu mới để hoàn tất khôi phục tài khoản của bạn.
         </CardDescription>
       </CardHeader>
       <CardContent className='space-y-4 pb-6'>
         {resetState === 'success' ? (
-          <Alert className='border border-[#6b8f5e]/40 bg-[#ecf7ec] text-[#2f6b2f]'>
+          <Alert className='border border-[#d56756]/40 bg-[#ecf7ec] text-[#2f6b2f]'>
             <CheckCircle2 className='h-4 w-4 text-[#2f6b2f]' />
             <AlertTitle>Cập nhật mật khẩu thành công</AlertTitle>
             <AlertDescription>Bạn sẽ được chuyển về trang đăng nhập trong giây lát.</AlertDescription>
@@ -282,11 +277,11 @@ export function AuthActionPage() {
         ) : (
           <form className='space-y-4' onSubmit={handleResetSubmit}>
             <div className='space-y-2'>
-              <Label htmlFor='new-password' className='text-sm text-[#2d2a26]' style={{ fontWeight: 700 }}>
+              <Label htmlFor='new-password' className='text-sm text-[#592518]' style={{ fontWeight: 700 }}>
                 Mật khẩu mới
               </Label>
               <div className='relative'>
-                <Lock className='pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#7a756e]' />
+                <Lock className='pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8b6a61]' />
                 <Input
                   id='new-password'
                   type={showPassword ? 'text' : 'password'}
@@ -295,12 +290,12 @@ export function AuthActionPage() {
                   placeholder='Tối thiểu 8 ký tự'
                   autoComplete='new-password'
                   required
-                  className='h-11 rounded-xl border-[#2d2a26] bg-transparent pl-10 pr-12 text-[#2d2a26] placeholder:text-[#99938a] focus-visible:ring-[#6b8f5e]'
+                  className='h-11 rounded-xl border-[#592518] bg-transparent pl-10 pr-12 text-[#592518] placeholder:text-[#99938a] focus-visible:ring-[#d56756]'
                 />
                 <button
                   type='button'
                   onClick={() => setShowPassword((value) => !value)}
-                  className='absolute right-3 top-1/2 -translate-y-1/2 text-[#7a756e]'
+                  className='absolute right-3 top-1/2 -translate-y-1/2 text-[#8b6a61]'
                   aria-label={showPassword ? 'Ẩn mật khẩu mới' : 'Hiện mật khẩu mới'}
                 >
                   {showPassword ? <EyeOff className='h-5 w-5' /> : <Eye className='h-5 w-5' />}
@@ -309,11 +304,11 @@ export function AuthActionPage() {
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='confirm-password' className='text-sm text-[#2d2a26]' style={{ fontWeight: 700 }}>
+              <Label htmlFor='confirm-password' className='text-sm text-[#592518]' style={{ fontWeight: 700 }}>
                 Xác nhận mật khẩu mới
               </Label>
               <div className='relative'>
-                <Lock className='pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#7a756e]' />
+                <Lock className='pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8b6a61]' />
                 <Input
                   id='confirm-password'
                   type={showConfirmPassword ? 'text' : 'password'}
@@ -322,12 +317,12 @@ export function AuthActionPage() {
                   placeholder='Nhập lại mật khẩu mới'
                   autoComplete='new-password'
                   required
-                  className='h-11 rounded-xl border-[#2d2a26] bg-transparent pl-10 pr-12 text-[#2d2a26] placeholder:text-[#99938a] focus-visible:ring-[#6b8f5e]'
+                  className='h-11 rounded-xl border-[#592518] bg-transparent pl-10 pr-12 text-[#592518] placeholder:text-[#99938a] focus-visible:ring-[#d56756]'
                 />
                 <button
                   type='button'
                   onClick={() => setShowConfirmPassword((value) => !value)}
-                  className='absolute right-3 top-1/2 -translate-y-1/2 text-[#7a756e]'
+                  className='absolute right-3 top-1/2 -translate-y-1/2 text-[#8b6a61]'
                   aria-label={showConfirmPassword ? 'Ẩn xác nhận mật khẩu mới' : 'Hiện xác nhận mật khẩu mới'}
                 >
                   {showConfirmPassword ? <EyeOff className='h-5 w-5' /> : <Eye className='h-5 w-5' />}
@@ -346,7 +341,7 @@ export function AuthActionPage() {
             <Button
               type='submit'
               disabled={resetSubmitting}
-              className='h-11 w-full rounded-xl border border-[#2d2a26] bg-[#6b8f5e] text-white hover:bg-[#628455]'
+              className='h-11 w-full rounded-xl border border-[#592518] bg-[#d56756] text-white hover:bg-[#628455]'
             >
               {resetSubmitting ? (
                 <span className='inline-flex items-center gap-2'>
@@ -360,7 +355,7 @@ export function AuthActionPage() {
             <Button
               type='button'
               variant='outline'
-              className='h-11 w-full rounded-xl border-[#2d2a26] text-[#2d2a26]'
+              className='h-11 w-full rounded-xl border-[#592518] text-[#592518]'
               onClick={() => navigate('/login', { replace: true })}
             >
               Quay lại Đăng nhập
@@ -373,7 +368,7 @@ export function AuthActionPage() {
 
   return (
     <AuthActionShell>
-      <Card className='overflow-hidden rounded-2xl border border-[#2d2a26] bg-white/95 shadow-[0_16px_45px_rgba(45,42,38,0.1)]'>
+      <Card className='overflow-hidden rounded-2xl border border-[#592518] bg-white/95 shadow-[0_16px_45px_rgba(45,42,38,0.1)]'>
         {!hasValidParams ? renderInvalidState() : null}
         {hasValidParams && mode === 'verifyEmail' ? renderVerifyState() : null}
         {hasValidParams && mode === 'resetPassword' ? renderResetState() : null}
@@ -381,3 +376,4 @@ export function AuthActionPage() {
     </AuthActionShell>
   );
 }
+

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+﻿import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { motion } from 'motion/react';
 import { Package, Plus, ShoppingBag, Stethoscope, Trash2, X } from 'lucide-react';
 import { extractApiError } from '../lib/api-client';
@@ -455,17 +455,17 @@ export function ManagerCatalogPage() {
     <div className='space-y-6'>
       <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4'>
         <div>
-          <h1 className='text-2xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <h1 className='text-2xl text-[#592518]' style={{ fontWeight: 700 }}>
             Sản phẩm & Dịch vụ
           </h1>
-          <p className='text-sm text-[#7a756e] mt-1'>
+          <p className='text-sm text-[#8b6a61] mt-1'>
             Hệ thống quản lý danh mục thông minh. Kiểm soát dịch vụ và sản phẩm đồng bộ, chính xác, linh hoạt.
           </p>
         </div>
         <button
           type='button'
           onClick={() => void loadCatalog(false)}
-          className='px-4 py-2.5 rounded-xl border border-[#2d2a26] bg-white hover:-translate-y-0.5 transition-all text-sm'
+          className='px-4 py-2.5 rounded-xl border border-[#592518] bg-white hover:-translate-y-0.5 transition-all text-sm'
         >
           Làm mới dữ liệu
         </button>
@@ -476,7 +476,7 @@ export function ManagerCatalogPage() {
         <div className='rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-700'>{message}</div>
       ) : null}
 
-      <div className='inline-flex items-center gap-1 border border-[#2d2a26]/20 bg-white rounded-2xl p-1'>
+      <div className='inline-flex items-center gap-1 border border-[#592518]/20 bg-white rounded-2xl p-1'>
         {[
           { id: 'services' as const, label: 'Dịch vụ', icon: Stethoscope },
           { id: 'products' as const, label: 'Sản phẩm', icon: ShoppingBag },
@@ -487,7 +487,7 @@ export function ManagerCatalogPage() {
             type='button'
             onClick={() => setTab(item.id)}
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm transition-all ${
-              tab === item.id ? 'bg-[#f0ede8] border border-[#2d2a26]/20' : 'hover:bg-[#faf9f6]'
+              tab === item.id ? 'bg-[#f4ece4] border border-[#592518]/20' : 'hover:bg-[#faf8f5]'
             }`}
             style={tab === item.id ? { fontWeight: 600 } : undefined}
           >
@@ -500,11 +500,11 @@ export function ManagerCatalogPage() {
       {tab === 'services' ? (
         <section className='space-y-4'>
           <div className='flex items-center justify-between gap-3'>
-            <p className='text-sm text-[#7a756e]'>{services.length} dịch vụ</p>
+            <p className='text-sm text-[#8b6a61]'>{services.length} dịch vụ</p>
             <button
               type='button'
               onClick={openCreateService}
-              className='inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#2d2a26] bg-[#6b8f5e] text-white text-sm'
+              className='inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#592518] bg-[#d56756] text-white text-sm'
             >
               <Plus className='w-4 h-4' />
               Thêm dịch vụ
@@ -524,10 +524,10 @@ export function ManagerCatalogPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.03 }}
-                  className='bg-white border border-[#2d2a26] rounded-2xl p-4 text-left hover:-translate-y-0.5 transition-all'
+                  className='bg-white border border-[#592518] rounded-2xl p-4 text-left hover:-translate-y-0.5 transition-all'
                 >
                   <div className='flex items-start gap-3'>
-                    <div className='w-16 h-16 rounded-xl border border-[#2d2a26]/15 overflow-hidden bg-[#f0ede8] shrink-0'>
+                    <div className='w-16 h-16 rounded-xl border border-[#592518]/15 overflow-hidden bg-[#f4ece4] shrink-0'>
                       {hasImage ? (
                         <ImageWithFallback
                           src={service.imageUrl || ''}
@@ -551,7 +551,7 @@ export function ManagerCatalogPage() {
                         >
                           <ServiceIcon className='w-4 h-4' style={{ color: iconOption.color }} />
                         </span>
-                        <p className='text-xs text-[#7a756e] uppercase tracking-[0.08em]'>{service.code}</p>
+                        <p className='text-xs text-[#8b6a61] uppercase tracking-[0.08em]'>{service.code}</p>
                         <button
                           type='button'
                           onClick={(event) => {
@@ -564,15 +564,15 @@ export function ManagerCatalogPage() {
                           <Trash2 className='w-4 h-4' />
                         </button>
                       </div>
-                      <p className='text-base text-[#2d2a26] mt-1 line-clamp-1' style={{ fontWeight: 700 }}>
+                      <p className='text-base text-[#592518] mt-1 line-clamp-1' style={{ fontWeight: 700 }}>
                         {service.name}
                       </p>
-                      <p className='text-sm text-[#7a756e] mt-1 line-clamp-2'>{service.description || 'Chưa có mô tả.'}</p>
+                      <p className='text-sm text-[#8b6a61] mt-1 line-clamp-2'>{service.description || 'Chưa có mô tả.'}</p>
                     </div>
                   </div>
                   <div className='mt-3 flex items-center justify-between'>
-                    <span className='text-xs text-[#7a756e]'>{service.durationMin} phút</span>
-                    <span className='text-base text-[#6b8f5e]' style={{ fontWeight: 700 }}>
+                    <span className='text-xs text-[#8b6a61]'>{service.durationMin} phút</span>
+                    <span className='text-base text-[#d56756]' style={{ fontWeight: 700 }}>
                       {formatCurrency(service.price)}
                     </span>
                   </div>
@@ -582,7 +582,7 @@ export function ManagerCatalogPage() {
           </div>
 
           {!loading && services.length === 0 ? (
-            <div className='rounded-2xl border border-[#2d2a26] bg-white p-6 text-sm text-[#7a756e]'>
+            <div className='rounded-2xl border border-[#592518] bg-white p-6 text-sm text-[#8b6a61]'>
               Chưa có dịch vụ nào. Hãy thêm dịch vụ đầu tiên để mở đặt lịch cho khách hàng.
             </div>
           ) : null}
@@ -592,11 +592,11 @@ export function ManagerCatalogPage() {
       {tab === 'products' ? (
         <section className='space-y-4'>
           <div className='flex items-center justify-between gap-3'>
-            <p className='text-sm text-[#7a756e]'>{products.length} sản phẩm</p>
+            <p className='text-sm text-[#8b6a61]'>{products.length} sản phẩm</p>
             <button
               type='button'
               onClick={openCreateProduct}
-              className='inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#2d2a26] bg-[#6b8f5e] text-white text-sm'
+              className='inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#592518] bg-[#d56756] text-white text-sm'
             >
               <Plus className='w-4 h-4' />
               Thêm sản phẩm
@@ -616,10 +616,10 @@ export function ManagerCatalogPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.03 }}
-                  className='bg-white border border-[#2d2a26] rounded-2xl p-4 text-left hover:-translate-y-0.5 transition-all'
+                  className='bg-white border border-[#592518] rounded-2xl p-4 text-left hover:-translate-y-0.5 transition-all'
                 >
                   <div className='flex items-start gap-3'>
-                    <div className='w-16 h-16 rounded-xl border border-[#2d2a26]/15 overflow-hidden bg-[#f0ede8] shrink-0'>
+                    <div className='w-16 h-16 rounded-xl border border-[#592518]/15 overflow-hidden bg-[#f4ece4] shrink-0'>
                       {hasImage ? (
                         <ImageWithFallback
                           src={product.imageUrl || ''}
@@ -643,7 +643,7 @@ export function ManagerCatalogPage() {
                         >
                           <ProductIcon className='w-4 h-4' style={{ color: iconOption.color }} />
                         </span>
-                        <p className='text-xs text-[#7a756e] uppercase tracking-[0.08em]'>{product.sku}</p>
+                        <p className='text-xs text-[#8b6a61] uppercase tracking-[0.08em]'>{product.sku}</p>
                         <button
                           type='button'
                           onClick={(event) => {
@@ -656,19 +656,19 @@ export function ManagerCatalogPage() {
                           <Trash2 className='w-4 h-4' />
                         </button>
                       </div>
-                      <p className='text-base text-[#2d2a26] mt-1 line-clamp-1' style={{ fontWeight: 700 }}>
+                      <p className='text-base text-[#592518] mt-1 line-clamp-1' style={{ fontWeight: 700 }}>
                         {product.name}
                       </p>
-                      <p className='text-sm text-[#7a756e] mt-1 line-clamp-2'>
+                      <p className='text-sm text-[#8b6a61] mt-1 line-clamp-2'>
                         {product.description || 'Chưa có mô tả.'}
                       </p>
                     </div>
                   </div>
-                  <div className='mt-3 flex items-center justify-between text-xs text-[#7a756e]'>
+                  <div className='mt-3 flex items-center justify-between text-xs text-[#8b6a61]'>
                     <span>{product.category || 'Chưa phân loại'}</span>
                     <span>Tồn kho: {product.stock}</span>
                   </div>
-                  <p className='text-base text-[#6b8f5e] mt-2' style={{ fontWeight: 700 }}>
+                  <p className='text-base text-[#d56756] mt-2' style={{ fontWeight: 700 }}>
                     {formatCurrency(product.price)}
                   </p>
                 </motion.button>
@@ -677,7 +677,7 @@ export function ManagerCatalogPage() {
           </div>
 
           {!loading && products.length === 0 ? (
-            <div className='rounded-2xl border border-[#2d2a26] bg-white p-6 text-sm text-[#7a756e]'>
+            <div className='rounded-2xl border border-[#592518] bg-white p-6 text-sm text-[#8b6a61]'>
               Chưa có sản phẩm nào trong catalog.
             </div>
           ) : null}
@@ -685,30 +685,30 @@ export function ManagerCatalogPage() {
       ) : null}
 
       {tab === 'categories' ? (
-        <section className='bg-white border border-[#2d2a26] rounded-2xl p-5 space-y-3'>
-          <h2 className='text-lg text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+        <section className='bg-white border border-[#592518] rounded-2xl p-5 space-y-3'>
+          <h2 className='text-lg text-[#592518]' style={{ fontWeight: 700 }}>
             Danh mục hiện có
           </h2>
-          <p className='text-sm text-[#7a756e]'>
+          <p className='text-sm text-[#8b6a61]'>
             Danh mục sản phẩm đang lấy trực tiếp từ các sản phẩm thật trong hệ thống.
           </p>
           <div className='flex flex-wrap gap-2'>
             {Array.from(new Set(products.map((item) => item.category?.trim()).filter(Boolean))).map((category) => (
               <span
                 key={category}
-                className='inline-flex items-center px-3 py-1 rounded-full border border-[#2d2a26]/20 bg-[#faf9f6] text-xs text-[#2d2a26]'
+                className='inline-flex items-center px-3 py-1 rounded-full border border-[#592518]/20 bg-[#faf8f5] text-xs text-[#592518]'
               >
                 {category}
               </span>
             ))}
             {products.every((item) => !item.category?.trim()) ? (
-              <span className='text-sm text-[#7a756e]'>Chưa có danh mục sản phẩm nào.</span>
+              <span className='text-sm text-[#8b6a61]'>Chưa có danh mục sản phẩm nào.</span>
             ) : null}
           </div>
         </section>
       ) : null}
 
-      {loading ? <p className='text-sm text-[#7a756e]'>Đang tải catalog...</p> : null}
+      {loading ? <p className='text-sm text-[#8b6a61]'>Đang tải catalog...</p> : null}
 
       <AlertDialog
         open={Boolean(deleteTarget)}
@@ -718,12 +718,12 @@ export function ManagerCatalogPage() {
           }
         }}
       >
-        <AlertDialogContent className='bg-[#faf9f6] border border-[#2d2a26]'>
+        <AlertDialogContent className='bg-[#faf8f5] border border-[#592518]'>
           <AlertDialogHeader>
             <AlertDialogTitle>Xác nhận xóa?</AlertDialogTitle>
             <AlertDialogDescription className='text-[#6c675f]'>
               Bạn có chắc chắn muốn xóa{' '}
-              <span className='font-semibold text-[#2d2a26]'>
+              <span className='font-semibold text-[#592518]'>
                 {deleteTarget?.type === 'service' ? 'dịch vụ' : 'sản phẩm'} "{deleteTarget?.name || ''}"
               </span>
               ? Hành động này sẽ gỡ mục này khỏi trang Khách hàng và POS. Dữ liệu hóa đơn cũ vẫn được giữ nguyên.
@@ -751,11 +751,11 @@ export function ManagerCatalogPage() {
           onClick={() => !saving && setServiceDialogOpen(false)}
         >
           <div
-            className='w-full max-w-xl bg-[#faf9f6] border border-[#2d2a26] rounded-2xl p-5 space-y-3'
+            className='w-full max-w-xl bg-[#faf8f5] border border-[#592518] rounded-2xl p-5 space-y-3'
             onClick={(event) => event.stopPropagation()}
           >
             <div className='flex items-center justify-between'>
-              <h2 className='text-lg text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+              <h2 className='text-lg text-[#592518]' style={{ fontWeight: 700 }}>
                 Lưu dịch vụ
               </h2>
               <button onClick={() => setServiceDialogOpen(false)} disabled={saving}>
@@ -767,13 +767,13 @@ export function ManagerCatalogPage() {
                 value={serviceForm.code}
                 onChange={(event) => setServiceForm((prev) => ({ ...prev, code: event.target.value }))}
                 placeholder='Mã dịch vụ (auto nếu bỏ trống)'
-                className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
+                className='p-3 border border-[#592518]/30 rounded-xl text-sm bg-white'
               />
               <input
                 value={serviceForm.name}
                 onChange={(event) => setServiceForm((prev) => ({ ...prev, name: event.target.value }))}
                 placeholder='Tên dịch vụ'
-                className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
+                className='p-3 border border-[#592518]/30 rounded-xl text-sm bg-white'
               />
               <input
                 type='number'
@@ -781,7 +781,7 @@ export function ManagerCatalogPage() {
                 value={serviceForm.durationMin}
                 onChange={(event) => setServiceForm((prev) => ({ ...prev, durationMin: event.target.value }))}
                 placeholder='Thời lượng (phút)'
-                className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
+                className='p-3 border border-[#592518]/30 rounded-xl text-sm bg-white'
               />
               <input
                 type='number'
@@ -789,51 +789,51 @@ export function ManagerCatalogPage() {
                 value={serviceForm.price}
                 onChange={(event) => setServiceForm((prev) => ({ ...prev, price: event.target.value }))}
                 placeholder='Giá tiền'
-                className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
+                className='p-3 border border-[#592518]/30 rounded-xl text-sm bg-white'
               />
             </div>
             <div className='grid sm:grid-cols-[136px_1fr] gap-3'>
               <div className='space-y-2'>
-                <p className='text-xs text-[#7a756e] uppercase tracking-[0.08em]'>Ảnh dịch vụ</p>
-                <div className='w-[136px] h-[96px] rounded-xl overflow-hidden border border-[#2d2a26]/20 bg-[#f0ede8]'>
+                <p className='text-xs text-[#8b6a61] uppercase tracking-[0.08em]'>Ảnh dịch vụ</p>
+                <div className='w-[136px] h-[96px] rounded-xl overflow-hidden border border-[#592518]/20 bg-[#f4ece4]'>
                   {serviceForm.imageUrl ? (
                     <ImageWithFallback src={serviceForm.imageUrl} alt='Service preview' className='w-full h-full object-cover' />
                   ) : (
-                    <div className='w-full h-full flex items-center justify-center text-[11px] text-[#7a756e] text-center px-3'>
+                    <div className='w-full h-full flex items-center justify-center text-[11px] text-[#8b6a61] text-center px-3'>
                       Chưa có ảnh
                     </div>
                   )}
                 </div>
               </div>
               <div className='space-y-2'>
-                <label className='text-xs text-[#7a756e] uppercase tracking-[0.08em]'>Tải ảnh từ máy</label>
+                <label className='text-xs text-[#8b6a61] uppercase tracking-[0.08em]'>Tải ảnh từ máy</label>
                 <input
                   type='file'
                   accept='image/*'
                   onChange={(event) => void handleServiceImageUpload(event)}
-                  className='block w-full text-sm text-[#2d2a26] file:mr-3 file:rounded-lg file:border file:border-[#2d2a26]/30 file:bg-white file:px-3 file:py-1.5 file:text-xs file:text-[#2d2a26]'
+                  className='block w-full text-sm text-[#592518] file:mr-3 file:rounded-lg file:border file:border-[#592518]/30 file:bg-white file:px-3 file:py-1.5 file:text-xs file:text-[#592518]'
                 />
                 <div className='flex items-center gap-2'>
                   <button
                     type='button'
                     onClick={() => setServiceForm((prev) => ({ ...prev, imageUrl: '' }))}
-                    className='px-3 py-1.5 rounded-lg border border-[#2d2a26]/25 text-xs text-[#2d2a26] bg-white'
+                    className='px-3 py-1.5 rounded-lg border border-[#592518]/25 text-xs text-[#592518] bg-white'
                   >
                     Xóa ảnh
                   </button>
-                  <span className='text-xs text-[#7a756e]'>Ảnh sẽ đồng bộ sang trang khách hàng.</span>
+                  <span className='text-xs text-[#8b6a61]'>Ảnh sẽ đồng bộ sang trang khách hàng.</span>
                 </div>
               </div>
             </div>
             <div className='space-y-2'>
-              <p className='text-xs text-[#7a756e] uppercase tracking-[0.08em]'>Icon dịch vụ</p>
+              <p className='text-xs text-[#8b6a61] uppercase tracking-[0.08em]'>Icon dịch vụ</p>
               <input
                 value={serviceIconSearch}
                 onChange={(event) => setServiceIconSearch(event.target.value)}
                 placeholder='Tìm icon: spa, grooming, vaccine...'
-                className='w-full p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
+                className='w-full p-3 border border-[#592518]/30 rounded-xl text-sm bg-white'
               />
-              <div className='max-h-40 overflow-auto rounded-xl border border-[#2d2a26]/15 bg-white p-2 grid grid-cols-2 sm:grid-cols-3 gap-2'>
+              <div className='max-h-40 overflow-auto rounded-xl border border-[#592518]/15 bg-white p-2 grid grid-cols-2 sm:grid-cols-3 gap-2'>
                 {serviceIconChoices.map((option) => {
                   const OptionIcon = option.icon;
                   const selected = serviceForm.iconName === option.key;
@@ -844,21 +844,21 @@ export function ManagerCatalogPage() {
                       onClick={() => setServiceForm((prev) => ({ ...prev, iconName: option.key }))}
                       className={`p-2 rounded-lg border text-left transition-colors ${
                         selected
-                          ? 'border-[#2d2a26] bg-[#f0ede8]'
-                          : 'border-[#2d2a26]/15 bg-white hover:bg-[#faf9f6]'
+                          ? 'border-[#592518] bg-[#f4ece4]'
+                          : 'border-[#592518]/15 bg-white hover:bg-[#faf8f5]'
                       }`}
                     >
                       <span className='inline-flex items-center gap-2'>
                         <span className='w-7 h-7 rounded-lg flex items-center justify-center' style={{ backgroundColor: option.bgColor }}>
                           <OptionIcon className='w-4 h-4' style={{ color: option.color }} />
                         </span>
-                        <span className='text-xs text-[#2d2a26]'>{option.label}</span>
+                        <span className='text-xs text-[#592518]'>{option.label}</span>
                       </span>
                     </button>
                   );
                 })}
                 {serviceIconChoices.length === 0 ? (
-                  <p className='text-xs text-[#7a756e] px-1 py-2 col-span-full'>Không tìm thấy icon phù hợp.</p>
+                  <p className='text-xs text-[#8b6a61] px-1 py-2 col-span-full'>Không tìm thấy icon phù hợp.</p>
                 ) : null}
               </div>
             </div>
@@ -867,13 +867,13 @@ export function ManagerCatalogPage() {
               onChange={(event) => setServiceForm((prev) => ({ ...prev, description: event.target.value }))}
               rows={3}
               placeholder='Mô tả dịch vụ'
-              className='w-full p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white resize-none'
+              className='w-full p-3 border border-[#592518]/30 rounded-xl text-sm bg-white resize-none'
             />
             <button
               type='button'
               onClick={() => void saveService()}
               disabled={saving}
-              className='w-full py-3 rounded-xl bg-[#6b8f5e] text-white text-sm border border-[#2d2a26] disabled:opacity-60'
+              className='w-full py-3 rounded-xl bg-[#d56756] text-white text-sm border border-[#592518] disabled:opacity-60'
             >
               {saving ? 'Đang lưu...' : 'Lưu dịch vụ'}
             </button>
@@ -887,11 +887,11 @@ export function ManagerCatalogPage() {
           onClick={() => !saving && setProductDialogOpen(false)}
         >
           <div
-            className='w-full max-w-xl bg-[#faf9f6] border border-[#2d2a26] rounded-2xl p-5 space-y-3'
+            className='w-full max-w-xl bg-[#faf8f5] border border-[#592518] rounded-2xl p-5 space-y-3'
             onClick={(event) => event.stopPropagation()}
           >
             <div className='flex items-center justify-between'>
-              <h2 className='text-lg text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+              <h2 className='text-lg text-[#592518]' style={{ fontWeight: 700 }}>
                 Lưu sản phẩm
               </h2>
               <button onClick={() => setProductDialogOpen(false)} disabled={saving}>
@@ -903,19 +903,19 @@ export function ManagerCatalogPage() {
                 value={productForm.sku}
                 onChange={(event) => setProductForm((prev) => ({ ...prev, sku: event.target.value }))}
                 placeholder='SKU (auto nếu bỏ trống)'
-                className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
+                className='p-3 border border-[#592518]/30 rounded-xl text-sm bg-white'
               />
               <input
                 value={productForm.name}
                 onChange={(event) => setProductForm((prev) => ({ ...prev, name: event.target.value }))}
                 placeholder='Tên sản phẩm'
-                className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
+                className='p-3 border border-[#592518]/30 rounded-xl text-sm bg-white'
               />
               <input
                 value={productForm.category}
                 onChange={(event) => setProductForm((prev) => ({ ...prev, category: event.target.value }))}
                 placeholder='Danh mục'
-                className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
+                className='p-3 border border-[#592518]/30 rounded-xl text-sm bg-white'
               />
               <input
                 type='number'
@@ -923,7 +923,7 @@ export function ManagerCatalogPage() {
                 value={productForm.stock}
                 onChange={(event) => setProductForm((prev) => ({ ...prev, stock: event.target.value }))}
                 placeholder='Tồn kho'
-                className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
+                className='p-3 border border-[#592518]/30 rounded-xl text-sm bg-white'
               />
               <input
                 type='number'
@@ -931,51 +931,51 @@ export function ManagerCatalogPage() {
                 value={productForm.price}
                 onChange={(event) => setProductForm((prev) => ({ ...prev, price: event.target.value }))}
                 placeholder='Giá bán'
-                className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white sm:col-span-2'
+                className='p-3 border border-[#592518]/30 rounded-xl text-sm bg-white sm:col-span-2'
               />
             </div>
             <div className='grid sm:grid-cols-[136px_1fr] gap-3'>
               <div className='space-y-2'>
-                <p className='text-xs text-[#7a756e] uppercase tracking-[0.08em]'>Ảnh sản phẩm</p>
-                <div className='w-[136px] h-[96px] rounded-xl overflow-hidden border border-[#2d2a26]/20 bg-[#f0ede8]'>
+                <p className='text-xs text-[#8b6a61] uppercase tracking-[0.08em]'>Ảnh sản phẩm</p>
+                <div className='w-[136px] h-[96px] rounded-xl overflow-hidden border border-[#592518]/20 bg-[#f4ece4]'>
                   {productForm.imageUrl ? (
                     <ImageWithFallback src={productForm.imageUrl} alt='Product preview' className='w-full h-full object-cover' />
                   ) : (
-                    <div className='w-full h-full flex items-center justify-center text-[11px] text-[#7a756e] text-center px-3'>
+                    <div className='w-full h-full flex items-center justify-center text-[11px] text-[#8b6a61] text-center px-3'>
                       Chưa có ảnh
                     </div>
                   )}
                 </div>
               </div>
               <div className='space-y-2'>
-                <label className='text-xs text-[#7a756e] uppercase tracking-[0.08em]'>Tải ảnh từ máy</label>
+                <label className='text-xs text-[#8b6a61] uppercase tracking-[0.08em]'>Tải ảnh từ máy</label>
                 <input
                   type='file'
                   accept='image/*'
                   onChange={(event) => void handleProductImageUpload(event)}
-                  className='block w-full text-sm text-[#2d2a26] file:mr-3 file:rounded-lg file:border file:border-[#2d2a26]/30 file:bg-white file:px-3 file:py-1.5 file:text-xs file:text-[#2d2a26]'
+                  className='block w-full text-sm text-[#592518] file:mr-3 file:rounded-lg file:border file:border-[#592518]/30 file:bg-white file:px-3 file:py-1.5 file:text-xs file:text-[#592518]'
                 />
                 <div className='flex items-center gap-2'>
                   <button
                     type='button'
                     onClick={() => setProductForm((prev) => ({ ...prev, imageUrl: '' }))}
-                    className='px-3 py-1.5 rounded-lg border border-[#2d2a26]/25 text-xs text-[#2d2a26] bg-white'
+                    className='px-3 py-1.5 rounded-lg border border-[#592518]/25 text-xs text-[#592518] bg-white'
                   >
                     Xóa ảnh
                   </button>
-                  <span className='text-xs text-[#7a756e]'>Ảnh dùng cho hiển thị catalog đồng bộ.</span>
+                  <span className='text-xs text-[#8b6a61]'>Ảnh dùng cho hiển thị catalog đồng bộ.</span>
                 </div>
               </div>
             </div>
             <div className='space-y-2'>
-              <p className='text-xs text-[#7a756e] uppercase tracking-[0.08em]'>Icon sản phẩm</p>
+              <p className='text-xs text-[#8b6a61] uppercase tracking-[0.08em]'>Icon sản phẩm</p>
               <input
                 value={productIconSearch}
                 onChange={(event) => setProductIconSearch(event.target.value)}
                 placeholder='Tìm icon: product, retail, pharmacy...'
-                className='w-full p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
+                className='w-full p-3 border border-[#592518]/30 rounded-xl text-sm bg-white'
               />
-              <div className='max-h-40 overflow-auto rounded-xl border border-[#2d2a26]/15 bg-white p-2 grid grid-cols-2 sm:grid-cols-3 gap-2'>
+              <div className='max-h-40 overflow-auto rounded-xl border border-[#592518]/15 bg-white p-2 grid grid-cols-2 sm:grid-cols-3 gap-2'>
                 {productIconChoices.map((option) => {
                   const OptionIcon = option.icon;
                   const selected = productForm.iconName === option.key;
@@ -986,21 +986,21 @@ export function ManagerCatalogPage() {
                       onClick={() => setProductForm((prev) => ({ ...prev, iconName: option.key }))}
                       className={`p-2 rounded-lg border text-left transition-colors ${
                         selected
-                          ? 'border-[#2d2a26] bg-[#f0ede8]'
-                          : 'border-[#2d2a26]/15 bg-white hover:bg-[#faf9f6]'
+                          ? 'border-[#592518] bg-[#f4ece4]'
+                          : 'border-[#592518]/15 bg-white hover:bg-[#faf8f5]'
                       }`}
                     >
                       <span className='inline-flex items-center gap-2'>
                         <span className='w-7 h-7 rounded-lg flex items-center justify-center' style={{ backgroundColor: option.bgColor }}>
                           <OptionIcon className='w-4 h-4' style={{ color: option.color }} />
                         </span>
-                        <span className='text-xs text-[#2d2a26]'>{option.label}</span>
+                        <span className='text-xs text-[#592518]'>{option.label}</span>
                       </span>
                     </button>
                   );
                 })}
                 {productIconChoices.length === 0 ? (
-                  <p className='text-xs text-[#7a756e] px-1 py-2 col-span-full'>Không tìm thấy icon phù hợp.</p>
+                  <p className='text-xs text-[#8b6a61] px-1 py-2 col-span-full'>Không tìm thấy icon phù hợp.</p>
                 ) : null}
               </div>
             </div>
@@ -1009,13 +1009,13 @@ export function ManagerCatalogPage() {
               onChange={(event) => setProductForm((prev) => ({ ...prev, description: event.target.value }))}
               rows={3}
               placeholder='Mô tả sản phẩm'
-              className='w-full p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white resize-none'
+              className='w-full p-3 border border-[#592518]/30 rounded-xl text-sm bg-white resize-none'
             />
             <button
               type='button'
               onClick={() => void saveProduct()}
               disabled={saving}
-              className='w-full py-3 rounded-xl bg-[#6b8f5e] text-white text-sm border border-[#2d2a26] disabled:opacity-60'
+              className='w-full py-3 rounded-xl bg-[#d56756] text-white text-sm border border-[#592518] disabled:opacity-60'
             >
               {saving ? 'Đang lưu...' : 'Lưu sản phẩm'}
             </button>
@@ -1025,3 +1025,4 @@ export function ManagerCatalogPage() {
     </div>
   );
 }
+

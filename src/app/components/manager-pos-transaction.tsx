@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, ArrowLeft, CircleCheck, ExternalLink, Loader2, QrCode, Receipt } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useNavigate, useParams } from 'react-router';
@@ -270,7 +270,7 @@ export function ManagerPosTransactionStatusPage() {
   }, [applySnapshot, invoiceId]);
 
   if (loading) {
-    return <div className='text-sm text-[#7a756e]'>Đang tải trạng thái giao dịch...</div>;
+    return <div className='text-sm text-[#8b6a61]'>Đang tải trạng thái giao dịch...</div>;
   }
 
   if (!payload?.invoice) {
@@ -279,12 +279,12 @@ export function ManagerPosTransactionStatusPage() {
         <button
           type='button'
           onClick={() => navigate('/manager/pos')}
-          className='inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-[#2d2a26] bg-white hover:-translate-y-0.5 transition-all text-sm'
+          className='inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-[#592518] bg-white hover:-translate-y-0.5 transition-all text-sm'
         >
           <ArrowLeft className='w-4 h-4' />
           Quay lại POS
         </button>
-        <div className='rounded-2xl border border-[#2d2a26] bg-white p-6 text-sm text-[#7a756e]'>
+        <div className='rounded-2xl border border-[#592518] bg-white p-6 text-sm text-[#8b6a61]'>
           Không tìm thấy giao dịch cần theo dõi.
         </div>
       </div>
@@ -299,15 +299,15 @@ export function ManagerPosTransactionStatusPage() {
     <div className='space-y-4'>
       <div className='flex flex-wrap items-center justify-between gap-3'>
         <div>
-          <h1 className='text-2xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <h1 className='text-2xl text-[#592518]' style={{ fontWeight: 700 }}>
             Trạng thái giao dịch POS
           </h1>
-          <p className='text-sm text-[#7a756e] mt-1'>Theo dõi realtime thanh toán chuyển khoản và tự động chuyển sang hóa đơn khi đã thu tiền.</p>
+          <p className='text-sm text-[#8b6a61] mt-1'>Theo dõi realtime thanh toán chuyển khoản và tự động chuyển sang hóa đơn khi đã thu tiền.</p>
         </div>
         <button
           type='button'
           onClick={() => navigate('/manager/pos')}
-          className='inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-[#2d2a26] bg-white hover:-translate-y-0.5 transition-all text-sm'
+          className='inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-[#592518] bg-white hover:-translate-y-0.5 transition-all text-sm'
         >
           <ArrowLeft className='w-4 h-4' />
           Quay lại POS
@@ -320,8 +320,8 @@ export function ManagerPosTransactionStatusPage() {
       ) : null}
 
       <div className='grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-5'>
-        <div className='rounded-2xl border border-[#2d2a26] bg-white p-5'>
-          <div className='flex items-center gap-2 text-[#2d2a26]'>
+        <div className='rounded-2xl border border-[#592518] bg-white p-5'>
+          <div className='flex items-center gap-2 text-[#592518]'>
             <Receipt className='w-4 h-4' />
             <p className='text-sm' style={{ fontWeight: 700 }}>
               THÔNG TIN HÓA ĐƠN
@@ -347,14 +347,14 @@ export function ManagerPosTransactionStatusPage() {
               </span>
             </p>
           </div>
-          <div className='mt-4 rounded-xl border border-[#2d2a26]/10 bg-[#f8f6f2] p-3'>
+          <div className='mt-4 rounded-xl border border-[#592518]/10 bg-[#f8f6f2] p-3'>
             {phase === 'confirmed' ? (
               <div className='flex items-center gap-2 text-sm text-emerald-700'>
                 <CircleCheck className='w-4 h-4' />
                 <span style={{ fontWeight: 600 }}>Giao dịch đã được xác nhận. Đang chuyển sang trang in hóa đơn...</span>
               </div>
             ) : (
-              <div className='flex items-center gap-2 text-sm text-[#7a756e]'>
+              <div className='flex items-center gap-2 text-sm text-[#8b6a61]'>
                 <Loader2 className='w-4 h-4 animate-spin' />
                 <span>Đang chờ thanh toán từ ngân hàng...</span>
               </div>
@@ -366,26 +366,26 @@ export function ManagerPosTransactionStatusPage() {
               </div>
             ) : null}
             {phase === 'waiting' && checking ? (
-              <p className='text-xs text-[#7a756e] mt-2'>Đang kiểm tra trạng thái thanh toán mỗi 3 giây...</p>
+              <p className='text-xs text-[#8b6a61] mt-2'>Đang kiểm tra trạng thái thanh toán mỗi 3 giây...</p>
             ) : null}
             {phase === 'confirmed' && confirmedBy ? (
-              <p className='text-xs text-[#7a756e] mt-2'>
+              <p className='text-xs text-[#8b6a61] mt-2'>
                 Nguồn xác nhận: {confirmedBy === 'realtime' ? 'Realtime signal' : 'Polling an toàn'}.
               </p>
             ) : null}
             {phase === 'waiting' && hasObservedUnpaid ? (
-              <p className='text-xs text-[#7a756e] mt-2'>Đã ghi nhận trạng thái chờ thanh toán, đang theo dõi xác nhận...</p>
+              <p className='text-xs text-[#8b6a61] mt-2'>Đã ghi nhận trạng thái chờ thanh toán, đang theo dõi xác nhận...</p>
             ) : null}
             {phase === 'waiting' && consecutivePaidAfterUnpaid > 0 ? (
-              <p className='text-xs text-[#7a756e] mt-1'>
+              <p className='text-xs text-[#8b6a61] mt-1'>
                 Đang xác thực an toàn: {consecutivePaidAfterUnpaid}/2 nhịp xác nhận đã thu tiền.
               </p>
             ) : null}
           </div>
         </div>
 
-        <div className='rounded-2xl border border-[#2d2a26] bg-white p-5'>
-          <div className='flex items-center gap-2 text-[#2d2a26]'>
+        <div className='rounded-2xl border border-[#592518] bg-white p-5'>
+          <div className='flex items-center gap-2 text-[#592518]'>
             <QrCode className='w-4 h-4' />
             <p className='text-sm' style={{ fontWeight: 700 }}>
               QR / LINK THANH TOÁN
@@ -397,14 +397,14 @@ export function ManagerPosTransactionStatusPage() {
                 <img
                   src={qrValue}
                   alt='QR thanh toán'
-                  className='w-52 h-52 object-contain border border-[#2d2a26]/10 rounded-lg p-2 bg-white'
+                  className='w-52 h-52 object-contain border border-[#592518]/10 rounded-lg p-2 bg-white'
                 />
               ) : qrValue ? (
-                <div className='w-56 h-56 border border-[#2d2a26]/10 rounded-lg p-2 bg-white flex items-center justify-center'>
+                <div className='w-56 h-56 border border-[#592518]/10 rounded-lg p-2 bg-white flex items-center justify-center'>
                   <QRCodeSVG value={qrValue} size={200} />
                 </div>
               ) : (
-                <div className='w-52 h-52 border border-dashed border-[#2d2a26]/20 rounded-lg flex items-center justify-center text-xs text-[#7a756e]'>
+                <div className='w-52 h-52 border border-dashed border-[#592518]/20 rounded-lg flex items-center justify-center text-xs text-[#8b6a61]'>
                     Chưa có mã QR thanh toán
                 </div>
               )}
@@ -412,14 +412,14 @@ export function ManagerPosTransactionStatusPage() {
                 href={paymentAction.checkoutUrl}
                 target='_blank'
                 rel='noreferrer'
-                className='inline-flex items-center gap-1 text-sm text-[#6b8f5e] underline'
+                className='inline-flex items-center gap-1 text-sm text-[#d56756] underline'
               >
                 <ExternalLink className='w-4 h-4' />
                 Mở liên kết thanh toán
               </a>
             </div>
           ) : (
-            <p className='text-sm text-[#7a756e] mt-4'>
+            <p className='text-sm text-[#8b6a61] mt-4'>
               Giao dịch này không dùng mã QR chuyển khoản. Nếu đã thanh toán tiền mặt/thẻ, hệ thống sẽ chuyển thẳng sang hóa đơn.
             </p>
           )}
@@ -428,3 +428,4 @@ export function ManagerPosTransactionStatusPage() {
     </div>
   );
 }
+

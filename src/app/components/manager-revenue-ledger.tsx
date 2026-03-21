@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ExternalLink, FileText } from 'lucide-react';
 import { Link } from 'react-router';
 import { extractApiError } from '../lib/api-client';
@@ -43,7 +43,7 @@ function resolvePaymentMethodMeta(method: ApiInvoiceLedgerItem['paymentMethod'])
   if (method === 'card') {
     return {
       label: 'Thẻ',
-      className: 'bg-blue-50 border-blue-300 text-blue-700',
+      className: 'bg-[#f6eee7] border-[#d56756]/30 text-[#d56756]',
     };
   }
   if (method === 'payos' || method === 'transfer') {
@@ -54,7 +54,7 @@ function resolvePaymentMethodMeta(method: ApiInvoiceLedgerItem['paymentMethod'])
   }
   return {
     label: method.toUpperCase(),
-    className: 'bg-[#f5f0eb] border-[#2d2a26]/20 text-[#2d2a26]',
+    className: 'bg-[#f6eee7] border-[#592518]/20 text-[#592518]',
   };
 }
 
@@ -73,7 +73,7 @@ function resolvePaymentStatusMeta(status: ApiInvoiceLedgerItem['paymentStatus'])
   }
   return {
     label: 'Chưa thanh toán',
-    className: 'bg-[#f5f0eb] border-[#2d2a26]/20 text-[#7a756e]',
+    className: 'bg-[#f6eee7] border-[#592518]/20 text-[#8b6a61]',
   };
 }
 
@@ -190,30 +190,30 @@ export function ManagerRevenueLedgerPage() {
   return (
     <div className='space-y-5'>
       <div>
-        <h1 className='text-2xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+        <h1 className='text-2xl text-[#592518]' style={{ fontWeight: 700 }}>
           Đối soát doanh thu
         </h1>
-        <p className='text-sm text-[#7a756e] mt-1'>
+        <p className='text-sm text-[#8b6a61] mt-1'>
           Sổ cái đối soát. Bảo chứng toàn vẹn dòng tiền, ngăn ngừa gian lận và chuẩn hóa dữ liệu báo cáo thuế.
         </p>
       </div>
 
       <div className='grid md:grid-cols-4 gap-3'>
-        <div className='bg-white border border-[#2d2a26]/20 rounded-xl p-4'>
-          <p className='text-xs text-[#7a756e]'>Tổng hóa đơn</p>
-          <p className='text-xl text-[#2d2a26] mt-1' style={{ fontWeight: 700 }}>{summary.totalInvoices}</p>
+        <div className='bg-white border border-[#592518]/20 rounded-xl p-4'>
+          <p className='text-xs text-[#8b6a61]'>Tổng hóa đơn</p>
+          <p className='text-xl text-[#592518] mt-1' style={{ fontWeight: 700 }}>{summary.totalInvoices}</p>
         </div>
-        <div className='bg-white border border-[#2d2a26]/20 rounded-xl p-4'>
-          <p className='text-xs text-[#7a756e]'>Đã thanh toán</p>
+        <div className='bg-white border border-[#592518]/20 rounded-xl p-4'>
+          <p className='text-xs text-[#8b6a61]'>Đã thanh toán</p>
           <p className='text-xl text-emerald-700 mt-1' style={{ fontWeight: 700 }}>{summary.paidInvoices}</p>
         </div>
-        <div className='bg-white border border-[#2d2a26]/20 rounded-xl p-4'>
-          <p className='text-xs text-[#7a756e]'>Chờ thanh toán</p>
-          <p className='text-xl text-[#7a756e] mt-1' style={{ fontWeight: 700 }}>{summary.pendingInvoices}</p>
+        <div className='bg-white border border-[#592518]/20 rounded-xl p-4'>
+          <p className='text-xs text-[#8b6a61]'>Chờ thanh toán</p>
+          <p className='text-xl text-[#8b6a61] mt-1' style={{ fontWeight: 700 }}>{summary.pendingInvoices}</p>
         </div>
-        <div className='bg-white border border-[#2d2a26]/20 rounded-xl p-4'>
-          <p className='text-xs text-[#7a756e]'>Tổng đối soát</p>
-          <p className='text-xl text-[#2d2a26] mt-1' style={{ fontWeight: 700 }}>{formatCurrency(summary.totalRevenue)}</p>
+        <div className='bg-white border border-[#592518]/20 rounded-xl p-4'>
+          <p className='text-xs text-[#8b6a61]'>Tổng đối soát</p>
+          <p className='text-xl text-[#592518] mt-1' style={{ fontWeight: 700 }}>{formatCurrency(summary.totalRevenue)}</p>
         </div>
       </div>
 
@@ -223,18 +223,18 @@ export function ManagerRevenueLedgerPage() {
         </div>
       ) : null}
 
-      <div className='bg-white border border-[#2d2a26] rounded-2xl overflow-hidden'>
+      <div className='bg-white border border-[#592518] rounded-2xl overflow-hidden'>
         {loading ? (
-          <div className='py-12 text-center text-sm text-[#7a756e]'>Đang tải sổ cái hóa đơn...</div>
+          <div className='py-12 text-center text-sm text-[#8b6a61]'>Đang tải sổ cái hóa đơn...</div>
         ) : items.length === 0 ? (
-          <div className='py-14 text-center text-[#7a756e]'>
+          <div className='py-14 text-center text-[#8b6a61]'>
             <FileText className='w-12 h-12 mx-auto mb-3 opacity-30' />
             <p>Chưa có hóa đơn để đối soát.</p>
           </div>
         ) : (
           <div className='overflow-x-auto'>
             <table className='w-full min-w-[980px] text-sm'>
-              <thead className='bg-[#f5f0eb] border-b border-[#2d2a26]'>
+              <thead className='bg-[#f6eee7] border-b border-[#592518]'>
                 <tr>
                   <th className='text-left px-4 py-3'>Mã HĐ</th>
                   <th className='text-left px-4 py-3'>Thời gian</th>
@@ -253,21 +253,21 @@ export function ManagerRevenueLedgerPage() {
                     <tr
                       key={item.id}
                       onClick={() => void openDetails(item.id)}
-                      className='border-b border-[#2d2a26]/10 hover:bg-[#faf9f6] cursor-pointer'
+                      className='border-b border-[#592518]/10 hover:bg-[#faf8f5] cursor-pointer'
                     >
-                      <td className='px-4 py-3 text-[#2d2a26]' style={{ fontWeight: 600 }}>{item.invoiceNo}</td>
-                      <td className='px-4 py-3 text-[#7a756e]'>{formatDateTime(item.issuedAt || item.createdAt)}</td>
+                      <td className='px-4 py-3 text-[#592518]' style={{ fontWeight: 600 }}>{item.invoiceNo}</td>
+                      <td className='px-4 py-3 text-[#8b6a61]'>{formatDateTime(item.issuedAt || item.createdAt)}</td>
                       <td className='px-4 py-3'>
-                        <p className='text-[#2d2a26]' style={{ fontWeight: 500 }}>{item.customer?.name ?? '—'}</p>
-                        <p className='text-xs text-[#7a756e]'>{item.customer?.phone ?? 'Không có SĐT'}</p>
+                        <p className='text-[#592518]' style={{ fontWeight: 500 }}>{item.customer?.name ?? '—'}</p>
+                        <p className='text-xs text-[#8b6a61]'>{item.customer?.phone ?? 'Không có SĐT'}</p>
                       </td>
-                      <td className='px-4 py-3 text-[#2d2a26]'>{item.pet?.name ?? 'Không có'}</td>
+                      <td className='px-4 py-3 text-[#592518]'>{item.pet?.name ?? 'Không có'}</td>
                       <td className='px-4 py-3'>
                         <span className={`inline-flex px-2.5 py-1 rounded-full border text-xs ${methodMeta.className}`} style={{ fontWeight: 600 }}>
                           {methodMeta.label}
                         </span>
                       </td>
-                      <td className='px-4 py-3 text-right text-[#2d2a26]' style={{ fontWeight: 700 }}>
+                      <td className='px-4 py-3 text-right text-[#592518]' style={{ fontWeight: 700 }}>
                         {formatCurrency(item.grandTotal)}
                       </td>
                       <td className='px-4 py-3'>
@@ -295,9 +295,9 @@ export function ManagerRevenueLedgerPage() {
           }
         }}
       >
-        <DialogContent className='max-w-[calc(100%-2rem)] sm:max-w-5xl border-[#2d2a26] bg-[#faf9f6] p-5 max-h-[92vh] overflow-auto'>
+        <DialogContent className='max-w-[calc(100%-2rem)] sm:max-w-5xl border-[#592518] bg-[#faf8f5] p-5 max-h-[92vh] overflow-auto'>
           <DialogHeader>
-            <DialogTitle style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <DialogTitle style={{ fontWeight: 700 }}>
               Chi tiết hóa đơn đối soát
             </DialogTitle>
             <DialogDescription>
@@ -306,7 +306,7 @@ export function ManagerRevenueLedgerPage() {
           </DialogHeader>
 
           {detailsLoading ? (
-            <div className='py-10 text-center text-sm text-[#7a756e]'>Đang tải chi tiết hóa đơn...</div>
+            <div className='py-10 text-center text-sm text-[#8b6a61]'>Đang tải chi tiết hóa đơn...</div>
           ) : detailsError ? (
             <div className='rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800'>
               <div className='flex items-start gap-2'>
@@ -316,19 +316,19 @@ export function ManagerRevenueLedgerPage() {
             </div>
           ) : detailsInvoice ? (
             <div className='space-y-4'>
-              <div className='bg-white border border-[#2d2a26] rounded-2xl p-5'>
+              <div className='bg-white border border-[#592518] rounded-2xl p-5'>
                 <div className='flex items-start justify-between gap-3'>
                   <div>
-                    <p className='text-lg text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                    <p className='text-lg text-[#592518]' style={{ fontWeight: 700 }}>
                       Hóa đơn {detailsInvoice.invoiceNo}
                     </p>
-                    <p className='text-sm text-[#7a756e] mt-1'>
+                    <p className='text-sm text-[#8b6a61] mt-1'>
                       Ngày phát hành: {formatDateTime(detailsInvoice.issuedAt)}
                     </p>
                   </div>
                   <Link
                     to={`/manager/pos/receipt/${detailsInvoice.id}`}
-                    className='inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-[#2d2a26] text-sm bg-white hover:-translate-y-0.5 transition-all'
+                    className='inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-[#592518] text-sm bg-white hover:-translate-y-0.5 transition-all'
                   >
                     Mở hóa đơn gốc
                     <ExternalLink className='w-4 h-4' />
@@ -336,28 +336,28 @@ export function ManagerRevenueLedgerPage() {
                 </div>
 
                 <div className='grid md:grid-cols-2 gap-3 mt-4'>
-                  <div className='border border-[#2d2a26]/20 rounded-xl p-3'>
-                    <p className='text-xs text-[#7a756e]'>Khách hàng</p>
-                    <p className='text-sm text-[#2d2a26] mt-1' style={{ fontWeight: 600 }}>
+                  <div className='border border-[#592518]/20 rounded-xl p-3'>
+                    <p className='text-xs text-[#8b6a61]'>Khách hàng</p>
+                    <p className='text-sm text-[#592518] mt-1' style={{ fontWeight: 600 }}>
                       {detailsInvoice.customer.name}
                     </p>
-                    <p className='text-xs text-[#7a756e]'>{detailsInvoice.customer.phone}</p>
+                    <p className='text-xs text-[#8b6a61]'>{detailsInvoice.customer.phone}</p>
                   </div>
-                  <div className='border border-[#2d2a26]/20 rounded-xl p-3'>
-                    <p className='text-xs text-[#7a756e]'>Thú cưng</p>
-                    <p className='text-sm text-[#2d2a26] mt-1' style={{ fontWeight: 600 }}>
+                  <div className='border border-[#592518]/20 rounded-xl p-3'>
+                    <p className='text-xs text-[#8b6a61]'>Thú cưng</p>
+                    <p className='text-sm text-[#592518] mt-1' style={{ fontWeight: 600 }}>
                       {detailsResolvedPet?.name ?? 'Không có'}
                     </p>
-                    <p className='text-xs text-[#7a756e]'>
+                    <p className='text-xs text-[#8b6a61]'>
                       {detailsResolvedPet?.species ?? 'Chưa xác định'}
                     </p>
                   </div>
                 </div>
 
-                <div className='mt-4 overflow-hidden rounded-xl border border-[#2d2a26]/20'>
+                <div className='mt-4 overflow-hidden rounded-xl border border-[#592518]/20'>
                   <table className='w-full text-sm'>
                     <thead>
-                      <tr className='bg-[#f5f0eb] border-b border-[#2d2a26]/20'>
+                      <tr className='bg-[#f6eee7] border-b border-[#592518]/20'>
                         <th className='text-left px-3 py-2'>Mục</th>
                         <th className='text-right px-3 py-2'>SL</th>
                         <th className='text-right px-3 py-2'>Đơn giá</th>
@@ -366,7 +366,7 @@ export function ManagerRevenueLedgerPage() {
                     </thead>
                     <tbody>
                       {detailsInvoice.items.map((line) => (
-                        <tr key={line.id} className='border-b last:border-b-0 border-[#2d2a26]/10'>
+                        <tr key={line.id} className='border-b last:border-b-0 border-[#592518]/10'>
                           <td className='px-3 py-2'>{line.name}</td>
                           <td className='px-3 py-2 text-right'>{line.qty}</td>
                           <td className='px-3 py-2 text-right'>{formatCurrency(line.unitPrice)}</td>
@@ -377,16 +377,16 @@ export function ManagerRevenueLedgerPage() {
                   </table>
                 </div>
 
-                <div className='mt-4 ml-auto max-w-xs border border-[#2d2a26]/20 rounded-xl p-3 space-y-1 text-sm'>
+                <div className='mt-4 ml-auto max-w-xs border border-[#592518]/20 rounded-xl p-3 space-y-1 text-sm'>
                   <div className='flex justify-between'>
-                    <span className='text-[#7a756e]'>Tạm tính</span>
+                    <span className='text-[#8b6a61]'>Tạm tính</span>
                     <span>{formatCurrency(detailsInvoice.subtotal)}</span>
                   </div>
                   <div className='flex justify-between'>
-                    <span className='text-[#7a756e]'>VAT ({Number(detailsInvoice.taxPercent)}%)</span>
+                    <span className='text-[#8b6a61]'>VAT ({Number(detailsInvoice.taxPercent)}%)</span>
                     <span>{formatCurrency(detailsInvoice.taxAmount)}</span>
                   </div>
-                  <div className='flex justify-between text-[#2d2a26]' style={{ fontWeight: 700 }}>
+                  <div className='flex justify-between text-[#592518]' style={{ fontWeight: 700 }}>
                     <span>Tổng cộng</span>
                     <span>{formatCurrency(detailsInvoice.grandTotal)}</span>
                   </div>
@@ -399,3 +399,4 @@ export function ManagerRevenueLedgerPage() {
     </div>
   );
 }
+

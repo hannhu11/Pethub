@@ -1,4 +1,4 @@
-import { ShieldCheck } from 'lucide-react';
+﻿import { ShieldCheck } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import type { Pet } from './pet-types';
 import { ImageWithFallback } from './figma/ImageWithFallback';
@@ -39,7 +39,7 @@ export function PetDigitalCard({ pet, className }: PetDigitalCardProps) {
   ];
 
   return (
-    <div className={cn('rounded-3xl overflow-hidden border border-[#2d2a26] relative bg-[#1f2327] text-white shadow-none', className)}>
+    <div className={cn('rounded-3xl overflow-hidden border border-[#592518] relative bg-[#1f2327] text-white shadow-none', className)}>
       <div className='absolute inset-0 bg-[radial-gradient(circle_at_top_right,#8a6d5e_0%,transparent_38%),radial-gradient(circle_at_bottom_left,#5b7a67_0%,transparent_40%)] opacity-70' />
       <div className='absolute inset-0 opacity-15' style={{ backgroundImage: 'linear-gradient(115deg, transparent 0%, #ffffff 45%, transparent 85%)' }} />
 
@@ -56,7 +56,7 @@ export function PetDigitalCard({ pet, className }: PetDigitalCardProps) {
                 <ImageWithFallback src={pet.image} alt={pet.name} className='w-full h-full object-cover' />
               </div>
               <div>
-                <h2 className='text-3xl leading-tight' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                <h2 className='text-3xl leading-tight' style={{ fontWeight: 700 }}>
                   {pet.name}
                 </h2>
                 <p className='text-sm text-white/85 mt-1'>{pet.breed}</p>
@@ -121,3 +121,4 @@ export function PetDigitalCard({ pet, className }: PetDigitalCardProps) {
     </div>
   );
 }
+

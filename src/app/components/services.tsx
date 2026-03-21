@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { Clock, ChevronRight } from 'lucide-react';
@@ -79,10 +79,10 @@ export function ServicesPage() {
     <div className='py-12'>
       <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
         <div className='text-center mb-12'>
-          <h1 className='text-3xl md:text-4xl text-[#2d2a26] mb-3' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <h1 className='text-3xl md:text-4xl text-[#592518] mb-3' style={{ fontWeight: 700 }}>
             Dịch vụ chăm sóc thú cưng
           </h1>
-          <p className='text-[#7a756e] max-w-lg mx-auto'>
+          <p className='text-[#8b6a61] max-w-lg mx-auto'>
             Danh mục dịch vụ được chuẩn hóa cho cửa hàng và phòng khám. Khi bấm đặt lịch, hệ thống sẽ chuyển bạn sang trang Lịch hẹn để hoàn tất booking.
           </p>
         </div>
@@ -90,13 +90,13 @@ export function ServicesPage() {
         {error ? <div className='mb-6 rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-700'>{error}</div> : null}
 
         {loading ? (
-          <div className='rounded-2xl border border-[#2d2a26] bg-white p-5 text-sm text-[#7a756e]'>
+          <div className='rounded-2xl border border-[#592518] bg-white p-5 text-sm text-[#8b6a61]'>
             Đang tải danh mục dịch vụ...
           </div>
         ) : null}
 
         {!loading && services.length === 0 ? (
-          <div className='rounded-2xl border border-[#2d2a26] bg-white p-5 text-sm text-[#7a756e]'>
+          <div className='rounded-2xl border border-[#592518] bg-white p-5 text-sm text-[#8b6a61]'>
             Phòng khám chưa cập nhật dịch vụ. Vui lòng liên hệ quản trị viên để mở đặt lịch.
           </div>
         ) : null}
@@ -111,7 +111,7 @@ export function ServicesPage() {
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.08 }}
-                className='bg-white border border-[#2d2a26] rounded-2xl overflow-hidden'
+                className='bg-white border border-[#592518] rounded-2xl overflow-hidden'
               >
                 <div className='relative h-48 overflow-hidden'>
                   <ImageWithFallback
@@ -119,9 +119,9 @@ export function ServicesPage() {
                     alt={service.name}
                     className='w-full h-full object-cover'
                   />
-                  <div className='absolute inset-0 bg-gradient-to-t from-[#2d2a26]/50 to-transparent' />
+                  <div className='absolute inset-0 bg-gradient-to-t from-[#592518]/50 to-transparent' />
                   <div className='absolute bottom-4 left-4'>
-                    <div className='inline-flex items-center gap-1 px-3 py-1 bg-white/90 rounded-full text-xs border border-[#2d2a26]/20'>
+                    <div className='inline-flex items-center gap-1 px-3 py-1 bg-white/90 rounded-full text-xs border border-[#592518]/20'>
                       <Clock className='w-3 h-3' />
                       {formatDuration(service.durationMin)}
                     </div>
@@ -137,21 +137,21 @@ export function ServicesPage() {
                       <Icon className='w-5 h-5' style={{ color: iconOption.color }} />
                     </div>
                     <div>
-                      <h3 className='text-[#2d2a26] mb-1' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                      <h3 className='text-[#592518] mb-1' style={{ fontWeight: 700 }}>
                         {service.name}
                       </h3>
-                      <p className='text-sm text-[#7a756e]'>{service.description || 'Dịch vụ chăm sóc thú cưng theo chuẩn phòng khám.'}</p>
+                      <p className='text-sm text-[#8b6a61]'>{service.description || 'Dịch vụ chăm sóc thú cưng theo chuẩn phòng khám.'}</p>
                     </div>
                   </div>
 
-                  <div className='flex items-center justify-between pt-3 border-t border-[#2d2a26]/10'>
-                    <span className='text-lg text-[#6b8f5e]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                  <div className='flex items-center justify-between pt-3 border-t border-[#592518]/10'>
+                    <span className='text-lg text-[#d56756]' style={{ fontWeight: 700 }}>
                       {formatCurrency(service.price)}
                     </span>
                     <button
                       type='button'
                       onClick={() => navigate(`/customer/appointments?serviceId=${service.id}`)}
-                      className='flex items-center gap-1 text-sm text-[#c67d5b] border border-[#2d2a26] rounded-xl px-3 py-1.5 hover:-translate-y-0.5 active:translate-y-[2px] transition-transform'
+                      className='flex items-center gap-1 text-sm text-[#c75b4c] border border-[#592518] rounded-xl px-3 py-1.5 hover:-translate-y-0.5 active:translate-y-[2px] transition-transform'
                     >
                       Đặt lịch
                       <ChevronRight className='w-4 h-4' />
@@ -166,3 +166,4 @@ export function ServicesPage() {
     </div>
   );
 }
+

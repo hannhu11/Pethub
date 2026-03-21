@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { AlertTriangle, DollarSign, FileText, Stethoscope, Users } from 'lucide-react';
 import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -23,7 +23,7 @@ type KpiCard = {
   color: string;
 };
 
-const serviceChartColors = ['#6b8f5e', '#4a90d9', '#c67d5b', '#b8850a', '#6587a8', '#8f6b5e', '#3d7c72', '#7a6ca9'];
+const serviceChartColors = ['#d56756', '#c75b4c', '#b85143', '#b8850a', '#8f6b5e', '#e4a396', '#9d6f61', '#c99b8e'];
 
 export function ManagerDashboardPage() {
   const [overview, setOverview] = useState<AnalyticsOverviewResponse | null>(null);
@@ -112,31 +112,31 @@ export function ManagerDashboardPage() {
   const kpiCards: KpiCard[] = [
     {
       icon: Users,
-      label: 'Tổng LTV khách hàng',
+      label: 'Tổng doanh thu khách hàng',
       value: formatCurrency(totalLtv),
       hint: `${ltvSummary?.totalCustomers ?? 0} khách hàng`,
-      color: '#6b8f5e',
+      color: '#d56756',
     },
     {
       icon: DollarSign,
       label: 'Doanh thu đã thanh toán (30 ngày)',
       value: formatCurrency(overview?.totals.paidRevenue ?? 0),
       hint: `${overview?.totals.paidInvoices ?? 0} hóa đơn đã thu`,
-      color: '#4a90d9',
+      color: '#c75b4c',
     },
     {
       icon: AlertTriangle,
       label: 'Lịch hẹn hoàn tất chưa thu tiền',
       value: `${overview?.totals.completedUnpaidAppointments ?? 0}`,
       hint: 'Cần xử lý tại POS',
-      color: '#c67d5b',
+      color: '#b8850a',
     },
     {
       icon: Stethoscope,
       label: 'Dịch vụ doanh thu cao nhất',
       value: overview?.topServiceRevenue?.serviceName ?? 'Chưa có',
       hint: formatCurrency(overview?.topServiceRevenue?.revenue ?? 0),
-      color: '#b8850a',
+      color: '#8f6b5e',
     },
   ];
 
@@ -144,10 +144,10 @@ export function ManagerDashboardPage() {
     <div className='space-y-6'>
       <div className='flex items-center justify-between gap-3'>
         <div>
-          <h1 className='text-2xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
-            Tổng quan
-          </h1>
-          <p className='text-sm text-[#7a756e]'>
+            <h1 className='text-2xl text-[#592518]' style={{ fontWeight: 700 }}>
+              Tổng quan
+            </h1>
+          <p className='text-sm text-[#8b6a61]'>
             Trung tâm điều hành toàn diện. Phân tích doanh thu theo thời gian và tối ưu giá trị trọn đời khách hàng.
           </p>
         </div>
@@ -162,55 +162,55 @@ export function ManagerDashboardPage() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.06 }}
-            className='bg-white border border-[#2d2a26] rounded-2xl p-5'
+            className='bg-white border border-[#592518] rounded-2xl p-5'
           >
             <div className='flex items-start justify-between mb-3'>
               <div className='w-10 h-10 rounded-xl flex items-center justify-center' style={{ backgroundColor: `${card.color}20` }}>
                 <card.icon className='w-5 h-5' style={{ color: card.color }} />
               </div>
             </div>
-            <p className='text-xs text-[#7a756e] mb-1'>{card.label}</p>
-            <p className='text-xl text-[#2d2a26] break-words' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <p className='text-xs text-[#8b6a61] mb-1'>{card.label}</p>
+            <p className='text-xl text-[#592518] break-words' style={{ fontWeight: 700 }}>
               {loading ? 'Đang tải...' : card.value}
             </p>
-            <p className='text-xs text-[#7a756e] mt-2'>{card.hint}</p>
+            <p className='text-xs text-[#8b6a61] mt-2'>{card.hint}</p>
           </motion.div>
         ))}
       </div>
 
       <div className='grid grid-cols-1 xl:grid-cols-3 gap-6'>
-        <div className='xl:col-span-2 bg-white border border-[#2d2a26] rounded-2xl p-5'>
-          <h3 className='text-base mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
-            Doanh thu theo tháng
-          </h3>
+        <div className='xl:col-span-2 bg-white border border-[#592518] rounded-2xl p-5'>
+            <h3 className='text-base mb-4' style={{ fontWeight: 700 }}>
+              Doanh thu theo tháng
+            </h3>
           <div className='h-64'>
             {monthlyRevenue.length === 0 ? (
-              <div className='h-full rounded-xl border border-dashed border-[#2d2a26]/25 flex items-center justify-center text-sm text-[#7a756e]'>
+              <div className='h-full rounded-xl border border-dashed border-[#592518]/25 flex items-center justify-center text-sm text-[#8b6a61]'>
                 Chưa có dữ liệu doanh thu để hiển thị biểu đồ.
               </div>
             ) : (
               <ResponsiveContainer width='100%' height='100%'>
                 <BarChart data={monthlyRevenue}>
-                  <XAxis dataKey='month' stroke='#7a756e' fontSize={12} />
-                  <YAxis stroke='#7a756e' fontSize={12} tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k`} />
+                  <XAxis dataKey='month' stroke='#8b6a61' fontSize={12} />
+                  <YAxis stroke='#8b6a61' fontSize={12} tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k`} />
                   <Tooltip
                     formatter={(value: number) => formatCurrency(value)}
                     labelFormatter={(label) => `Tháng ${label.replace('Th', '')}`}
                   />
-                  <Bar dataKey='paidRevenue' fill='#6b8f5e' radius={[10, 10, 0, 0]} />
+                  <Bar dataKey='paidRevenue' fill='#d56756' radius={[10, 10, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
           </div>
         </div>
 
-        <div className='bg-white border border-[#2d2a26] rounded-2xl p-5'>
-          <h3 className='text-base mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
-            Doanh thu theo dịch vụ
-          </h3>
+        <div className='bg-white border border-[#592518] rounded-2xl p-5'>
+            <h3 className='text-base mb-4' style={{ fontWeight: 700 }}>
+              Doanh thu theo dịch vụ
+            </h3>
           <div className='h-64'>
             {serviceRevenueChartData.length === 0 ? (
-              <div className='h-full rounded-xl border border-dashed border-[#2d2a26]/25 flex items-center justify-center text-sm text-[#7a756e]'>
+              <div className='h-full rounded-xl border border-dashed border-[#592518]/25 flex items-center justify-center text-sm text-[#8b6a61]'>
                 Chưa có dịch vụ phát sinh doanh thu.
               </div>
             ) : (
@@ -229,11 +229,11 @@ export function ManagerDashboardPage() {
           <div className='mt-2 space-y-1'>
             {serviceRevenueChartData.slice(0, 4).map((item) => (
               <div key={item.serviceId} className='flex items-center justify-between text-xs'>
-                <span className='inline-flex items-center gap-2 text-[#2d2a26] min-w-0'>
+                <span className='inline-flex items-center gap-2 text-[#592518] min-w-0'>
                   <span className='w-2.5 h-2.5 rounded-full' style={{ backgroundColor: item.fill }} />
                   <span className='truncate'>{item.serviceName}</span>
                 </span>
-                <span className='text-[#6b8f5e]' style={{ fontWeight: 700 }}>
+                <span className='text-[#d56756]' style={{ fontWeight: 700 }}>
                   {formatCurrency(item.revenue)}
                 </span>
               </div>
@@ -243,54 +243,54 @@ export function ManagerDashboardPage() {
       </div>
 
       <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
-        <div className='lg:col-span-2 bg-white border border-[#2d2a26] rounded-2xl p-5'>
-          <h3 className='text-sm mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
-            Khách hàng LTV cao nhất
+        <div className='lg:col-span-2 bg-white border border-[#592518] rounded-2xl p-5'>
+            <h3 className='text-sm mb-4' style={{ fontWeight: 600 }}>
+            Khách hàng có doanh thu cao nhất
           </h3>
           <div className='space-y-2'>
             {(ltvSummary?.items ?? []).slice(0, 8).map((item) => (
               <div
                 key={item.id}
-                className='flex items-center justify-between rounded-xl border border-[#2d2a26]/15 px-3 py-2'
+                className='flex items-center justify-between rounded-xl border border-[#592518]/15 px-3 py-2'
               >
                 <div className='min-w-0'>
-                  <p className='text-sm text-[#2d2a26] truncate' style={{ fontWeight: 600 }}>
+                  <p className='text-sm text-[#592518] truncate' style={{ fontWeight: 600 }}>
                     {item.name}
                   </p>
-                  <p className='text-xs text-[#7a756e] truncate'>
+                  <p className='text-xs text-[#8b6a61] truncate'>
                     {item.phone} • {item.email || 'Chưa cập nhật email'}
                   </p>
                 </div>
-                <p className='text-sm text-[#6b8f5e]' style={{ fontWeight: 700 }}>
+                <p className='text-sm text-[#d56756]' style={{ fontWeight: 700 }}>
                   {formatCurrency(item.totalSpent)}
                 </p>
               </div>
             ))}
             {!loading && (ltvSummary?.items?.length ?? 0) === 0 ? (
-              <p className='text-sm text-[#7a756e]'>Chưa có khách hàng phát sinh doanh thu.</p>
+              <p className='text-sm text-[#8b6a61]'>Chưa có khách hàng phát sinh doanh thu.</p>
             ) : null}
           </div>
         </div>
 
-        <div className='bg-white border border-[#2d2a26] rounded-2xl p-5 space-y-3'>
-          <h3 className='text-sm' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
-            Đối soát số liệu
+        <div className='bg-white border border-[#592518] rounded-2xl p-5 space-y-3'>
+            <h3 className='text-sm' style={{ fontWeight: 600 }}>
+              Đối soát số liệu
           </h3>
-          <div className='rounded-xl border border-[#2d2a26]/15 p-3'>
-            <p className='text-xs text-[#7a756e]'>LTV từ summary</p>
-            <p className='text-lg text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <div className='rounded-xl border border-[#592518]/15 p-3'>
+            <p className='text-xs text-[#8b6a61]'>Doanh thu từ tổng hợp</p>
+            <p className='text-lg text-[#592518]' style={{ fontWeight: 700 }}>
               {formatCurrency(totalLtv)}
             </p>
           </div>
-          <div className='rounded-xl border border-[#2d2a26]/15 p-3'>
-            <p className='text-xs text-[#7a756e]'>Tổng cộng từ danh sách khách hàng</p>
-            <p className='text-lg text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <div className='rounded-xl border border-[#592518]/15 p-3'>
+            <p className='text-xs text-[#8b6a61]'>Tổng cộng từ danh sách khách hàng</p>
+            <p className='text-lg text-[#592518]' style={{ fontWeight: 700 }}>
               {formatCurrency(sumFromItems)}
             </p>
           </div>
-          <div className='rounded-xl border border-[#2d2a26]/15 p-3'>
-            <p className='text-xs text-[#7a756e]'>Số hóa đơn paid (30 ngày)</p>
-            <p className='text-lg text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <div className='rounded-xl border border-[#592518]/15 p-3'>
+            <p className='text-xs text-[#8b6a61]'>Số hóa đơn paid (30 ngày)</p>
+            <p className='text-lg text-[#592518]' style={{ fontWeight: 700 }}>
               <FileText className='w-4 h-4 inline-block mr-1' />
               {overview?.totals.paidInvoices ?? 0}
             </p>
@@ -300,3 +300,4 @@ export function ManagerDashboardPage() {
     </div>
   );
 }
+

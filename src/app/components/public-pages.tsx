@@ -1,4 +1,4 @@
-import { Link } from 'react-router';
+﻿import { Link } from 'react-router';
 import { Check, Sparkles, ShieldCheck, HeartHandshake, BookOpenText, Phone, FileText, Shield, LifeBuoy } from 'lucide-react';
 import { BackButton } from './back-button';
 
@@ -7,43 +7,43 @@ export function PricingPage() {
     <div className='py-16 md:py-20'>
       <div className='max-w-5xl mx-auto px-4 sm:px-6 lg:px-8'>
         <div className='text-center mb-12'>
-          <h1 className='text-4xl text-[#2d2a26] mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <h1 className='text-4xl text-[#592518] mb-4' style={{ fontWeight: 700 }}>
             Bảng giá PetHub
           </h1>
-          <p className='text-[#7a756e] max-w-2xl mx-auto'>
+          <p className='text-[#8b6a61] max-w-2xl mx-auto'>
             Mở đầu miễn phí để thử hệ thống. Khi sẵn sàng mở rộng, nâng cấp Premium để dùng CRM, nhắc lịch tự động và Digital Pet Card.
           </p>
         </div>
 
         <div className='grid md:grid-cols-2 gap-6 max-w-4xl mx-auto'>
-          <article className='bg-white border border-[#2d2a26] rounded-2xl p-8'>
-            <h2 className='text-xl text-[#2d2a26] mb-2' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Basic</h2>
-            <p className='text-3xl text-[#2d2a26] mb-6' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
-              0đ <span className='text-sm text-[#7a756e]' style={{ fontWeight: 400 }}>/ tháng</span>
+          <article className='bg-white border border-[#592518] rounded-2xl p-8'>
+            <h2 className='text-xl text-[#592518] mb-2' style={{ fontWeight: 700 }}>Basic</h2>
+            <p className='text-3xl text-[#592518] mb-6' style={{ fontWeight: 700 }}>
+              0đ <span className='text-sm text-[#8b6a61]' style={{ fontWeight: 400 }}>/ tháng</span>
             </p>
-            <ul className='space-y-3 text-sm text-[#2d2a26]'>
+            <ul className='space-y-3 text-sm text-[#592518]'>
               {['Tối đa 50 hồ sơ thú cưng', 'Đặt lịch & quản lý cơ bản', '1 tài khoản quản lý'].map((item) => (
                 <li key={item} className='flex items-center gap-2'>
-                  <Check className='w-4 h-4 text-[#6b8f5e]' />
+                  <Check className='w-4 h-4 text-[#d56756]' />
                   <span>{item}</span>
                 </li>
               ))}
             </ul>
             <Link
               to='/register'
-              className='mt-8 inline-flex w-full justify-center px-5 py-3 rounded-xl border border-[#2d2a26] text-[#2d2a26] hover:-translate-y-0.5 transition-all'
+              className='mt-8 inline-flex w-full justify-center px-5 py-3 rounded-xl border border-[#592518] text-[#592518] hover:-translate-y-0.5 transition-all'
             >
               Bắt đầu miễn phí
             </Link>
           </article>
 
-          <article className='bg-[#6b8f5e] text-white border border-[#2d2a26] rounded-2xl p-8'>
-            <div className='inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#2d2a26] bg-[#c67d5b] text-xs mb-4'>
+          <article className='bg-[#d56756] text-white border border-[#592518] rounded-2xl p-8'>
+            <div className='inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#592518] bg-[#c75b4c] text-xs mb-4'>
               <Sparkles className='w-3.5 h-3.5' />
               Gói khuyên dùng
             </div>
-            <h2 className='text-xl mb-2' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Premium</h2>
-            <p className='text-3xl mb-6' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <h2 className='text-xl mb-2' style={{ fontWeight: 700 }}>Premium</h2>
+            <p className='text-3xl mb-6' style={{ fontWeight: 700 }}>
               249.000đ <span className='text-sm opacity-80' style={{ fontWeight: 400 }}>/ tháng</span>
             </p>
             <ul className='space-y-3 text-sm'>
@@ -56,7 +56,7 @@ export function PricingPage() {
             </ul>
             <Link
               to='/register'
-              className='mt-8 inline-flex w-full justify-center px-5 py-3 rounded-xl border border-[#2d2a26] bg-white text-[#6b8f5e] hover:-translate-y-0.5 transition-all'
+              className='mt-8 inline-flex w-full justify-center px-5 py-3 rounded-xl border border-[#592518] bg-white text-[#d56756] hover:-translate-y-0.5 transition-all'
               style={{ fontWeight: 600 }}
             >
               Dùng thử 14 ngày
@@ -73,30 +73,30 @@ export function AboutPage() {
     <div className='py-16 md:py-20'>
       <div className='max-w-5xl mx-auto px-4 sm:px-6 lg:px-8'>
         <div className='max-w-3xl'>
-          <h1 className='text-4xl text-[#2d2a26] mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <h1 className='text-4xl text-[#592518] mb-4' style={{ fontWeight: 700 }}>
             Về chúng tôi
           </h1>
-          <p className='text-[#7a756e] leading-7'>
+          <p className='text-[#8b6a61] leading-7'>
             PetHub được xây dựng để giúp chủ pet clinic và pet store vận hành tự tin hơn mỗi ngày: lịch hẹn rõ ràng, chăm sóc khách hàng nhất quán
             và tăng trưởng doanh thu dựa trên dữ liệu thực tế.
           </p>
         </div>
 
         <div className='grid md:grid-cols-3 gap-5 mt-10'>
-          <div className='bg-white border border-[#2d2a26] rounded-2xl p-5'>
-            <ShieldCheck className='w-6 h-6 text-[#6b8f5e] mb-3' />
-            <h2 className='text-lg mb-2' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Vận hành chuẩn hóa</h2>
-            <p className='text-sm text-[#7a756e]'>Từ tiếp nhận khách, đặt lịch, chăm sóc đến thanh toán đều theo một luồng rõ ràng và dễ kiểm soát.</p>
+          <div className='bg-white border border-[#592518] rounded-2xl p-5'>
+            <ShieldCheck className='w-6 h-6 text-[#d56756] mb-3' />
+            <h2 className='text-lg mb-2' style={{ fontWeight: 700 }}>Vận hành chuẩn hóa</h2>
+            <p className='text-sm text-[#8b6a61]'>Từ tiếp nhận khách, đặt lịch, chăm sóc đến thanh toán đều theo một luồng rõ ràng và dễ kiểm soát.</p>
           </div>
-          <div className='bg-white border border-[#2d2a26] rounded-2xl p-5'>
-            <HeartHandshake className='w-6 h-6 text-[#c67d5b] mb-3' />
-            <h2 className='text-lg mb-2' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Giữ chân khách hàng</h2>
-            <p className='text-sm text-[#7a756e]'>Nhắc lịch thông minh, dữ liệu khách hàng tập trung và trải nghiệm liền mạch giúp khách quay lại đều đặn hơn.</p>
+          <div className='bg-white border border-[#592518] rounded-2xl p-5'>
+            <HeartHandshake className='w-6 h-6 text-[#c75b4c] mb-3' />
+            <h2 className='text-lg mb-2' style={{ fontWeight: 700 }}>Giữ chân khách hàng</h2>
+            <p className='text-sm text-[#8b6a61]'>Nhắc lịch thông minh, dữ liệu khách hàng tập trung và trải nghiệm liền mạch giúp khách quay lại đều đặn hơn.</p>
           </div>
-          <div className='bg-white border border-[#2d2a26] rounded-2xl p-5'>
-            <Sparkles className='w-6 h-6 text-[#6b8f5e] mb-3' />
-            <h2 className='text-lg mb-2' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Sẵn sàng mở rộng</h2>
-            <p className='text-sm text-[#7a756e]'>Phù hợp cho cả cửa hàng đơn lẻ lẫn mô hình nhiều chi nhánh, giữ chuẩn dịch vụ đồng nhất khi tăng trưởng.</p>
+          <div className='bg-white border border-[#592518] rounded-2xl p-5'>
+            <Sparkles className='w-6 h-6 text-[#d56756] mb-3' />
+            <h2 className='text-lg mb-2' style={{ fontWeight: 700 }}>Sẵn sàng mở rộng</h2>
+            <p className='text-sm text-[#8b6a61]'>Phù hợp cho cả cửa hàng đơn lẻ lẫn mô hình nhiều chi nhánh, giữ chuẩn dịch vụ đồng nhất khi tăng trưởng.</p>
           </div>
         </div>
       </div>
@@ -123,21 +123,21 @@ export function BlogPage() {
   return (
     <div className='py-16 md:py-20'>
       <div className='max-w-5xl mx-auto px-4 sm:px-6 lg:px-8'>
-        <h1 className='text-4xl text-[#2d2a26] mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+        <h1 className='text-4xl text-[#592518] mb-4' style={{ fontWeight: 700 }}>
           Blog
         </h1>
-        <p className='text-[#7a756e] mb-8'>Góc chia sẻ thực chiến cho chủ pet clinic và pet store muốn vận hành tinh gọn và tăng trưởng bền vững.</p>
+        <p className='text-[#8b6a61] mb-8'>Góc chia sẻ thực chiến cho chủ pet clinic và pet store muốn vận hành tinh gọn và tăng trưởng bền vững.</p>
         <div className='grid gap-4'>
           {posts.map((post) => (
-            <article key={post.title} className='bg-white border border-[#2d2a26] rounded-2xl p-5'>
-              <div className='flex items-center gap-2 text-[#c67d5b] mb-2'>
+            <article key={post.title} className='bg-white border border-[#592518] rounded-2xl p-5'>
+              <div className='flex items-center gap-2 text-[#c75b4c] mb-2'>
                 <BookOpenText className='w-4 h-4' />
                 <span className='text-xs'>PetHub Insight</span>
               </div>
-              <h2 className='text-xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+              <h2 className='text-xl text-[#592518]' style={{ fontWeight: 700 }}>
                 {post.title}
               </h2>
-              <p className='text-sm text-[#7a756e] mt-2'>{post.desc}</p>
+              <p className='text-sm text-[#8b6a61] mt-2'>{post.desc}</p>
             </article>
           ))}
         </div>
@@ -150,48 +150,48 @@ export function ContactPage() {
   return (
     <div className='py-16 md:py-20'>
       <div className='max-w-6xl mx-auto px-4 sm:px-6 lg:px-8'>
-        <h1 className='text-4xl text-[#2d2a26] mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+        <h1 className='text-4xl text-[#592518] mb-4' style={{ fontWeight: 700 }}>
           Liên hệ
         </h1>
-        <p className='text-[#7a756e] mb-8'>Đội ngũ PetHub luôn sẵn sàng hỗ trợ vận hành cho bạn.</p>
+        <p className='text-[#8b6a61] mb-8'>Đội ngũ PetHub luôn sẵn sàng hỗ trợ vận hành cho bạn.</p>
 
         <div className='grid lg:grid-cols-2 gap-6'>
-          <div className='bg-white border border-[#2d2a26] rounded-2xl p-6'>
-            <h2 className='text-2xl text-[#2d2a26] mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Gửi yêu cầu tư vấn</h2>
+          <div className='bg-white border border-[#592518] rounded-2xl p-6'>
+            <h2 className='text-2xl text-[#592518] mb-4' style={{ fontWeight: 700 }}>Gửi yêu cầu tư vấn</h2>
             <div className='space-y-3'>
-              <input placeholder='Họ và tên' className='w-full p-3 border border-[#2d2a26]/30 rounded-xl bg-[#faf9f6]' />
-              <input placeholder='Số điện thoại' className='w-full p-3 border border-[#2d2a26]/30 rounded-xl bg-[#faf9f6]' />
-              <input placeholder='Email' className='w-full p-3 border border-[#2d2a26]/30 rounded-xl bg-[#faf9f6]' />
-              <textarea rows={4} placeholder='Nội dung' className='w-full p-3 border border-[#2d2a26]/30 rounded-xl bg-[#faf9f6] resize-none' />
-              <button className='px-5 py-3 rounded-xl border border-[#2d2a26] bg-[#6b8f5e] text-white hover:-translate-y-0.5 transition-all'>
+              <input placeholder='Họ và tên' className='w-full p-3 border border-[#592518]/30 rounded-xl bg-[#faf8f5]' />
+              <input placeholder='Số điện thoại' className='w-full p-3 border border-[#592518]/30 rounded-xl bg-[#faf8f5]' />
+              <input placeholder='Email' className='w-full p-3 border border-[#592518]/30 rounded-xl bg-[#faf8f5]' />
+              <textarea rows={4} placeholder='Nội dung' className='w-full p-3 border border-[#592518]/30 rounded-xl bg-[#faf8f5] resize-none' />
+              <button className='px-5 py-3 rounded-xl border border-[#592518] bg-[#d56756] text-white hover:-translate-y-0.5 transition-all'>
                 Gửi yêu cầu
               </button>
             </div>
           </div>
 
-          <div className='bg-white border border-[#2d2a26] rounded-2xl p-6'>
-            <h2 className='text-2xl text-[#2d2a26] mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Thông tin hỗ trợ</h2>
-            <div className='space-y-4 text-[#2d2a26]'>
+          <div className='bg-white border border-[#592518] rounded-2xl p-6'>
+            <h2 className='text-2xl text-[#592518] mb-4' style={{ fontWeight: 700 }}>Thông tin hỗ trợ</h2>
+            <div className='space-y-4 text-[#592518]'>
               <div className='flex gap-3 items-start'>
-                <Phone className='w-5 h-5 text-[#c67d5b] mt-0.5' />
+                <Phone className='w-5 h-5 text-[#c75b4c] mt-0.5' />
                 <div>
                   <p style={{ fontWeight: 600 }}>Hotline: 1900 123 456</p>
-                  <p className='text-sm text-[#7a756e]'>Thứ 2 - Chủ nhật, 8:00 - 21:00</p>
+                  <p className='text-sm text-[#8b6a61]'>Thứ 2 - Chủ nhật, 8:00 - 21:00</p>
                 </div>
               </div>
               <div className='flex gap-3 items-start'>
-                <FileText className='w-5 h-5 text-[#c67d5b] mt-0.5' />
+                <FileText className='w-5 h-5 text-[#c75b4c] mt-0.5' />
                 <div>
                   <p style={{ fontWeight: 600 }}>Email: support@pethub.vn</p>
-                  <p className='text-sm text-[#7a756e]'>Phản hồi trong 24h</p>
+                  <p className='text-sm text-[#8b6a61]'>Phản hồi trong 24h</p>
                 </div>
               </div>
               <div className='flex gap-3 items-start'>
-                <LifeBuoy className='w-5 h-5 text-[#c67d5b] mt-0.5' />
+                <LifeBuoy className='w-5 h-5 text-[#c75b4c] mt-0.5' />
                 <div>
                   <p style={{ fontWeight: 600 }}>Trung tâm trợ giúp</p>
-                  <p className='text-sm text-[#7a756e]'>Xem FAQ và hướng dẫn chi tiết tại trang hỗ trợ.</p>
-                  <Link to='/help' className='text-sm text-[#6b8f5e] underline underline-offset-2'>Đi tới Help Center</Link>
+                  <p className='text-sm text-[#8b6a61]'>Xem FAQ và hướng dẫn chi tiết tại trang hỗ trợ.</p>
+                  <Link to='/help' className='text-sm text-[#d56756] underline underline-offset-2'>Đi tới Help Center</Link>
                 </div>
               </div>
             </div>
@@ -224,15 +224,15 @@ export function HelpPage() {
         <div className='mb-5'>
           <BackButton fallbackPath='/' />
         </div>
-        <h1 className='text-4xl text-[#2d2a26] mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+        <h1 className='text-4xl text-[#592518] mb-4' style={{ fontWeight: 700 }}>
           Trung tâm trợ giúp
         </h1>
-        <p className='text-[#7a756e] mb-8'>Tìm nhanh câu trả lời cho các thao tác quan trọng.</p>
+        <p className='text-[#8b6a61] mb-8'>Tìm nhanh câu trả lời cho các thao tác quan trọng.</p>
         <div className='space-y-3'>
           {faqs.map((faq) => (
-            <details key={faq.q} className='bg-white border border-[#2d2a26] rounded-2xl p-4'>
-              <summary className='cursor-pointer text-[#2d2a26]' style={{ fontWeight: 700 }}>{faq.q}</summary>
-              <p className='text-sm text-[#7a756e] mt-3'>{faq.a}</p>
+            <details key={faq.q} className='bg-white border border-[#592518] rounded-2xl p-4'>
+              <summary className='cursor-pointer text-[#592518]' style={{ fontWeight: 700 }}>{faq.q}</summary>
+              <p className='text-sm text-[#8b6a61] mt-3'>{faq.a}</p>
             </details>
           ))}
         </div>
@@ -259,14 +259,14 @@ function LegalPageShell({
           <BackButton fallbackPath='/' />
         </div>
 
-        <article className='bg-white border border-[#2d2a26] rounded-2xl p-6 md:p-8'>
-          <div className='flex items-center gap-3 mb-3 text-[#c67d5b]'>
+        <article className='bg-white border border-[#592518] rounded-2xl p-6 md:p-8'>
+          <div className='flex items-center gap-3 mb-3 text-[#c75b4c]'>
             {icon}
             <span className='text-sm'>Cập nhật: 11/03/2026</span>
           </div>
-          <h1 className='text-4xl text-[#2d2a26] mb-2' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>{title}</h1>
-          <p className='text-[#7a756e] mb-6'>{subtitle}</p>
-          <div className='space-y-5 text-[#2d2a26] text-sm leading-7'>{children}</div>
+          <h1 className='text-4xl text-[#592518] mb-2' style={{ fontWeight: 700 }}>{title}</h1>
+          <p className='text-[#8b6a61] mb-6'>{subtitle}</p>
+          <div className='space-y-5 text-[#592518] text-sm leading-7'>{children}</div>
         </article>
       </div>
     </div>
@@ -302,3 +302,4 @@ export function PrivacyPage() {
     </LegalPageShell>
   );
 }
+

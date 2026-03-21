@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useRef, useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router';
 import {
   PawPrint,
@@ -21,6 +21,7 @@ import {
   Inbox,
 } from 'lucide-react';
 import { useAuthSession } from '../auth-session';
+import { BrandLockup } from './brand-lockup';
 import {
   getClinicSettings,
   getProfileSettings,
@@ -121,10 +122,10 @@ function SidebarNav({
         if (item.type === 'separator') {
           return (
             <div key={`sep-${idx}`} className='pt-4 pb-1 px-4'>
-              <p className='text-[9px] text-[#7a756e]/70 uppercase tracking-[0.15em]' style={{ fontWeight: 600 }}>
+              <p className='text-[9px] text-[#8b6a61]/70 uppercase tracking-[0.15em]' style={{ fontWeight: 600 }}>
                 {item.label}
               </p>
-              <div className='border-b border-[#2d2a26]/8 mt-1.5' />
+              <div className='border-b border-[#592518]/8 mt-1.5' />
             </div>
           );
         }
@@ -135,7 +136,7 @@ function SidebarNav({
             to={item.to}
             onClick={onClickLink}
             className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all ${
-              isActive(item.to, item.exact) ? 'bg-[#6b8f5e] text-white' : 'text-[#2d2a26] hover:bg-[#e8e4de]'
+              isActive(item.to, item.exact) ? 'bg-[#d56756] text-white' : 'text-[#592518] hover:bg-[#efe3d7]'
             }`}
           >
             <item.icon className='w-[18px] h-[18px]' />
@@ -424,19 +425,12 @@ export function ManagerLayout() {
   };
 
   return (
-    <div className='min-h-screen flex bg-[#faf9f6]'>
-      <aside className='hidden lg:flex flex-col w-64 bg-[#f5f0eb] border-r border-[#2d2a26] print:hidden'>
-        <div className='p-5 border-b border-[#2d2a26]'>
-          <Link to='/manager' className='flex items-center gap-2'>
-            <div className='w-9 h-9 rounded-xl bg-[#6b8f5e] flex items-center justify-center'>
-              <PawPrint className='w-5 h-5 text-white' />
-            </div>
-            <div>
-              <span className='text-lg' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
-                Pet<span className='text-[#c67d5b]'>Hub</span>
-              </span>
-              <p className='text-[10px] text-[#7a756e] -mt-1'>Quản trị viên</p>
-            </div>
+    <div className='min-h-screen flex bg-[#faf8f5]'>
+      <aside className='hidden lg:flex flex-col w-64 bg-[#f6eee7] border-r border-[#592518] print:hidden'>
+        <div className='p-5 border-b border-[#592518]'>
+          <Link to='/manager' className='flex flex-col items-start gap-1'>
+            <BrandLockup imageClassName='h-10' />
+            <p className='text-[10px] text-[#8b6a61]'>Quản trị viên</p>
           </Link>
         </div>
 
@@ -448,7 +442,7 @@ export function ManagerLayout() {
           <Link
             to='/manager/settings'
             className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all ${
-              isActive('/manager/settings') ? 'bg-[#6b8f5e] text-white' : 'text-[#2d2a26] hover:bg-[#e8e4de]'
+              isActive('/manager/settings') ? 'bg-[#d56756] text-white' : 'text-[#592518] hover:bg-[#efe3d7]'
             }`}
           >
             <Settings className='w-[18px] h-[18px]' />
@@ -456,20 +450,20 @@ export function ManagerLayout() {
           </Link>
         </div>
 
-        <div className='p-3 border-t border-[#2d2a26]/15 space-y-2'>
+        <div className='p-3 border-t border-[#592518]/15 space-y-2'>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className='w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-[#2d2a26]/20 bg-white hover:-translate-y-0.5 transition-all text-left'>
-                <div className='w-8 h-8 rounded-full bg-[#c67d5b] flex items-center justify-center border border-[#2d2a26]/20'>
+              <button className='w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-[#592518]/20 bg-white hover:-translate-y-0.5 transition-all text-left'>
+                <div className='w-8 h-8 rounded-full bg-[#c75b4c] flex items-center justify-center border border-[#592518]/20'>
                   <span className='text-white text-xs' style={{ fontWeight: 600 }}>{initialsFromName(managerProfile.name)}</span>
                 </div>
                 <div className='min-w-0'>
                   <p className='text-sm truncate' style={{ fontWeight: 600 }}>{managerProfile.name}</p>
-                  <p className='text-xs text-[#7a756e] truncate'>{clinic.name}</p>
+                  <p className='text-xs text-[#8b6a61] truncate'>{clinic.name}</p>
                 </div>
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align='end' className='border-[#2d2a26] w-56'>
+            <DropdownMenuContent align='end' className='border-[#592518] w-56'>
               <DropdownMenuLabel>Tài khoản quản lý</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={goToProfileSettings}>
@@ -502,11 +496,9 @@ export function ManagerLayout() {
       {sidebarOpen && (
         <div className='fixed inset-0 z-50 lg:hidden print:hidden'>
           <div className='absolute inset-0 bg-black/30' onClick={() => setSidebarOpen(false)} />
-          <aside className='relative w-64 h-full bg-[#f5f0eb] border-r border-[#2d2a26] overflow-y-auto'>
-            <div className='p-5 flex items-center justify-between border-b border-[#2d2a26]'>
-              <span className='text-lg' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
-                Pet<span className='text-[#c67d5b]'>Hub</span>
-              </span>
+          <aside className='relative w-64 h-full bg-[#f6eee7] border-r border-[#592518] overflow-y-auto'>
+            <div className='p-5 flex items-center justify-between border-b border-[#592518]'>
+              <BrandLockup imageClassName='h-9' />
               <button onClick={() => setSidebarOpen(false)}>
                 <X className='w-5 h-5' />
               </button>
@@ -519,7 +511,7 @@ export function ManagerLayout() {
                   to='/manager/settings'
                   onClick={() => setSidebarOpen(false)}
                   className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all ${
-                    isActive('/manager/settings') ? 'bg-[#6b8f5e] text-white' : 'text-[#2d2a26] hover:bg-[#e8e4de]'
+                    isActive('/manager/settings') ? 'bg-[#d56756] text-white' : 'text-[#592518] hover:bg-[#efe3d7]'
                   }`}
                 >
                   <Settings className='w-[18px] h-[18px]' />
@@ -528,20 +520,20 @@ export function ManagerLayout() {
               </div>
             </nav>
 
-            <div className='p-3 border-t border-[#2d2a26]/15 space-y-2'>
+            <div className='p-3 border-t border-[#592518]/15 space-y-2'>
               <button
                 onClick={() => {
                   setSidebarOpen(false);
                   goToProfileSettings();
                 }}
-                className='w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-[#2d2a26]/20 bg-white text-left'
+                className='w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-[#592518]/20 bg-white text-left'
               >
-                <div className='w-8 h-8 rounded-full bg-[#c67d5b] flex items-center justify-center border border-[#2d2a26]/20'>
+                <div className='w-8 h-8 rounded-full bg-[#c75b4c] flex items-center justify-center border border-[#592518]/20'>
                   <span className='text-white text-xs' style={{ fontWeight: 600 }}>{initialsFromName(managerProfile.name)}</span>
                 </div>
                 <div>
                   <p className='text-sm' style={{ fontWeight: 600 }}>{managerProfile.name}</p>
-                  <p className='text-xs text-[#7a756e]'>{clinic.name}</p>
+                  <p className='text-xs text-[#8b6a61]'>{clinic.name}</p>
                 </div>
               </button>
               <button
@@ -556,7 +548,7 @@ export function ManagerLayout() {
       )}
 
       <div className='flex-1 flex flex-col min-h-screen'>
-        <header className='h-14 border-b border-[#2d2a26] bg-white flex items-center px-4 sticky top-0 z-40 print:hidden'>
+        <header className='h-14 border-b border-[#592518] bg-white flex items-center px-4 sticky top-0 z-40 print:hidden'>
           <div className='flex items-center gap-2 min-w-0 flex-1'>
             <button className='lg:hidden p-1' onClick={() => setSidebarOpen(true)}>
               <Menu className='w-5 h-5' />
@@ -565,11 +557,11 @@ export function ManagerLayout() {
             <button
               type='button'
               onClick={() => setCommandOpen(true)}
-              className='hidden sm:flex w-full max-w-xl items-center gap-2 px-3 py-1.5 rounded-xl bg-[#faf9f6] border border-[#2d2a26]/15 hover:border-[#6b8f5e]/50 transition-colors text-left'
+              className='hidden sm:flex w-full max-w-xl items-center gap-2 px-3 py-1.5 rounded-xl bg-[#faf8f5] border border-[#592518]/15 hover:border-[#d56756]/50 transition-colors text-left'
             >
-              <Search className='w-4 h-4 text-[#7a756e]' />
+              <Search className='w-4 h-4 text-[#8b6a61]' />
               <span className='text-sm text-[#a09b94] flex-1'>Tìm kiếm nhanh...</span>
-              <kbd className='text-[10px] text-[#7a756e] border border-[#2d2a26]/20 rounded px-1.5 py-0.5'>Ctrl K</kbd>
+              <kbd className='text-[10px] text-[#8b6a61] border border-[#592518]/20 rounded px-1.5 py-0.5'>Ctrl K</kbd>
             </button>
           </div>
 
@@ -578,9 +570,9 @@ export function ManagerLayout() {
               <PopoverTrigger asChild>
                 <button
                   type='button'
-                  className='relative p-1.5 rounded-xl border border-[#2d2a26]/20 hover:bg-[#f0ede8] transition-all'
+                  className='relative p-1.5 rounded-xl border border-[#592518]/20 hover:bg-[#f4ece4] transition-all'
                 >
-                  <Bell className='w-5 h-5 text-[#2d2a26]' />
+                  <Bell className='w-5 h-5 text-[#592518]' />
                   {unreadCount > 0 && (
                     <span
                       className='absolute -top-1 -right-1 bg-[#e04444] text-white text-[9px] rounded-full flex items-center justify-center'
@@ -591,12 +583,12 @@ export function ManagerLayout() {
                   )}
                 </button>
               </PopoverTrigger>
-            <PopoverContent align='end' className='w-[22rem] p-0 border-[#2d2a26] bg-white'>
-              <div className='p-3 border-b border-[#2d2a26]/10 flex items-center justify-between'>
-                <h3 className='text-sm' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <PopoverContent align='end' className='w-[22rem] p-0 border-[#592518] bg-white'>
+              <div className='p-3 border-b border-[#592518]/10 flex items-center justify-between'>
+                <h3 className='text-sm' style={{ fontWeight: 700 }}>
                   Thông báo
                 </h3>
-                <span className='text-[10px] text-[#6b8f5e] px-2 py-0.5 rounded-full bg-[#6b8f5e]/10' style={{ fontWeight: 600 }}>
+                <span className='text-[10px] text-[#d56756] px-2 py-0.5 rounded-full bg-[#d56756]/10' style={{ fontWeight: 600 }}>
                   {unreadCount} mới
                 </span>
               </div>
@@ -606,31 +598,31 @@ export function ManagerLayout() {
                     key={item.id}
                     type='button'
                     onClick={() => void handleNotificationClick(item)}
-                    className={`w-full text-left px-4 py-3 border-b border-[#2d2a26]/5 hover:bg-[#faf9f6] transition-colors ${
-                      !item.read ? 'bg-[#6b8f5e]/5' : ''
+                    className={`w-full text-left px-4 py-3 border-b border-[#592518]/5 hover:bg-[#faf8f5] transition-colors ${
+                      !item.read ? 'bg-[#d56756]/5' : ''
                     }`}
                   >
                     <div className='flex items-start gap-2'>
-                      {!item.read && <div className='w-2 h-2 rounded-full bg-[#6b8f5e] mt-1.5 flex-shrink-0' />}
+                      {!item.read && <div className='w-2 h-2 rounded-full bg-[#d56756] mt-1.5 flex-shrink-0' />}
                       <div className={!item.read ? '' : 'pl-4'}>
-                        <p className='text-xs text-[#2d2a26]' style={!item.read ? { fontWeight: 500 } : {}}>
+                        <p className='text-xs text-[#592518]' style={!item.read ? { fontWeight: 500 } : {}}>
                           {item.title}
                         </p>
-                        <p className='text-[10px] text-[#7a756e] mt-0.5'>{formatTimestamp(item.createdAt)}</p>
+                        <p className='text-[10px] text-[#8b6a61] mt-0.5'>{formatTimestamp(item.createdAt)}</p>
                         <p className='text-[10px] text-[#9b948b] mt-0.5'>{item.body}</p>
                       </div>
                     </div>
                   </button>
                 ))}
               </div>
-              <div className='p-2 border-t border-[#2d2a26]/10'>
+              <div className='p-2 border-t border-[#592518]/10'>
                 <button
                   type='button'
                   onClick={() => {
                     setNotifOpen(false);
                     navigate('/manager/notifications');
                   }}
-                  className='w-full py-2 text-xs text-[#6b8f5e] hover:bg-[#6b8f5e]/5 rounded-xl transition-colors'
+                  className='w-full py-2 text-xs text-[#d56756] hover:bg-[#d56756]/5 rounded-xl transition-colors'
                   style={{ fontWeight: 500 }}
                 >
                   Xem tất cả thông báo
@@ -642,9 +634,9 @@ export function ManagerLayout() {
             <button
               type='button'
               onClick={goToProfileSettings}
-              className='flex items-center gap-2 px-2 py-1 rounded-xl border border-[#2d2a26]/15 hover:bg-[#f0ede8] transition-all'
+              className='flex items-center gap-2 px-2 py-1 rounded-xl border border-[#592518]/15 hover:bg-[#f4ece4] transition-all'
             >
-              <div className='w-7 h-7 rounded-full bg-[#c67d5b] flex items-center justify-center border border-[#2d2a26]/20'>
+              <div className='w-7 h-7 rounded-full bg-[#c75b4c] flex items-center justify-center border border-[#592518]/20'>
                 <span className='text-white text-xs' style={{ fontWeight: 600 }}>{initialsFromName(managerProfile.name)}</span>
               </div>
               <span className='text-sm hidden md:block max-w-[9rem] truncate' style={{ fontWeight: 600 }}>
@@ -666,20 +658,20 @@ export function ManagerLayout() {
 
           <CommandGroup heading='Thao tác nhanh'>
             <CommandItem onSelect={() => handleCommandNavigate('/manager/pets?action=quick-add')}>
-              <PawPrint className='w-4 h-4 text-[#6b8f5e]' />
+              <PawPrint className='w-4 h-4 text-[#d56756]' />
               Quick Add Walk-in
               <CommandShortcut>New</CommandShortcut>
             </CommandItem>
             <CommandItem onSelect={() => handleCommandNavigate('/manager/bookings')}>
-              <CalendarDays className='w-4 h-4 text-[#c67d5b]' />
+              <CalendarDays className='w-4 h-4 text-[#c75b4c]' />
               Quản lý lịch hẹn
             </CommandItem>
             <CommandItem onSelect={() => handleCommandNavigate('/manager/settings?tab=profile')}>
-              <Settings className='w-4 h-4 text-[#2d2a26]' />
+              <Settings className='w-4 h-4 text-[#592518]' />
               Hồ sơ quản lý
             </CommandItem>
             <CommandItem onSelect={() => handleCommandNavigate('/manager/notifications')}>
-              <Inbox className='w-4 h-4 text-[#6b8f5e]' />
+              <Inbox className='w-4 h-4 text-[#d56756]' />
               Trung tâm thông báo
             </CommandItem>
           </CommandGroup>
@@ -689,7 +681,7 @@ export function ManagerLayout() {
           <CommandGroup heading='Thú cưng'>
             {quickSearchData.pets.map((pet) => (
               <CommandItem key={pet.id} onSelect={() => handleCommandNavigate('/manager/pets')}>
-                <PawPrint className='w-4 h-4 text-[#6b8f5e]' />
+                <PawPrint className='w-4 h-4 text-[#d56756]' />
                 {pet.name} • {pet.breed || pet.species}
                 <CommandShortcut>{pet.id}</CommandShortcut>
               </CommandItem>
@@ -701,7 +693,7 @@ export function ManagerLayout() {
           <CommandGroup heading='Khách hàng'>
             {quickSearchData.customers.map((customer) => (
               <CommandItem key={customer.id} onSelect={() => handleCommandNavigate('/manager/customers')}>
-                <Users className='w-4 h-4 text-[#2d2a26]' />
+                <Users className='w-4 h-4 text-[#592518]' />
                 {customer.name}
                 <CommandShortcut>{customer.phone}</CommandShortcut>
               </CommandItem>
@@ -713,7 +705,7 @@ export function ManagerLayout() {
           <CommandGroup heading='Lịch hẹn gần nhất'>
             {quickSearchData.appointments.map((booking) => (
               <CommandItem key={booking.id} onSelect={() => handleCommandNavigate('/manager/bookings')}>
-                <Stethoscope className='w-4 h-4 text-[#c67d5b]' />
+                <Stethoscope className='w-4 h-4 text-[#c75b4c]' />
                 {(booking.pet?.name || 'Thú cưng')} • {(booking.service?.name || 'Dịch vụ')}
                 <CommandShortcut>{new Date(booking.appointmentAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</CommandShortcut>
               </CommandItem>
@@ -726,3 +718,4 @@ export function ManagerLayout() {
     </div>
   );
 }
+

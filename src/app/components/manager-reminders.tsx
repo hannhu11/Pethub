@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import {
@@ -49,7 +49,7 @@ const statusColorMap: Record<ReminderStatus, string> = {
   scheduled: 'bg-amber-50 text-amber-700 border-amber-300',
   sent: 'bg-emerald-50 text-emerald-700 border-emerald-300',
   failed: 'bg-red-50 text-red-700 border-red-300',
-  cancelled: 'bg-[#f0ede8] text-[#7a756e] border-[#2d2a26]/15',
+  cancelled: 'bg-[#f4ece4] text-[#8b6a61] border-[#592518]/15',
 };
 
 const getStatusIcon = (status: ReminderStatus) => {
@@ -61,11 +61,11 @@ const getStatusIcon = (status: ReminderStatus) => {
 
 const getTypeColor = (templateName: string | null) => {
   const normalized = (templateName || '').toLowerCase();
-  if (normalized.includes('vacc')) return 'bg-blue-50 text-blue-700 border-blue-200';
-  if (normalized.includes('tái khám') || normalized.includes('checkup')) return 'bg-[#6b8f5e]/10 text-[#6b8f5e] border-[#6b8f5e]/30';
-  if (normalized.includes('groom')) return 'bg-[#c67d5b]/10 text-[#c67d5b] border-[#c67d5b]/30';
-  if (normalized.includes('thuốc') || normalized.includes('med')) return 'bg-violet-50 text-violet-700 border-violet-300';
-  return 'bg-gray-50 text-gray-700 border-gray-200';
+  if (normalized.includes('vacc')) return 'bg-[#f6eee7] text-[#d56756] border-[#d56756]/30';
+  if (normalized.includes('tái khám') || normalized.includes('checkup')) return 'bg-[#d56756]/10 text-[#d56756] border-[#d56756]/30';
+  if (normalized.includes('groom')) return 'bg-[#c75b4c]/10 text-[#c75b4c] border-[#c75b4c]/30';
+  if (normalized.includes('thuốc') || normalized.includes('med')) return 'bg-[#f4ece4] text-[#8f6b5e] border-[#592518]/20';
+  return 'bg-[#f6eee7] text-[#592518] border-[#592518]/20';
 };
 
 function toDateLabel(value: string | null) {
@@ -267,15 +267,15 @@ export function ManagerRemindersPage() {
     <div className='space-y-6'>
       <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4'>
         <div>
-          <h1 className='text-2xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <h1 className='text-2xl text-[#592518]' style={{ fontWeight: 700 }}>
             Smart Reminders & Automations
           </h1>
-          <p className='text-sm text-[#7a756e]'>Tự động nhắc lịch hẹn đa kênh và theo dõi trạng thái gửi theo thời gian thực.</p>
+          <p className='text-sm text-[#8b6a61]'>Tự động nhắc lịch hẹn đa kênh và theo dõi trạng thái gửi theo thời gian thực.</p>
         </div>
         <div className='flex flex-wrap items-center gap-2'>
           <button
             onClick={() => navigate('/manager/reminders/templates')}
-            className='inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[#2d2a26] bg-white hover:-translate-y-0.5 transition-all text-sm'
+            className='inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[#592518] bg-white hover:-translate-y-0.5 transition-all text-sm'
             style={{ fontWeight: 600 }}
           >
             <LayoutTemplate className='w-4 h-4' />
@@ -283,7 +283,7 @@ export function ManagerRemindersPage() {
           </button>
           <button
             onClick={() => setShowForm(true)}
-            className='inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#6b8f5e] text-white hover:-translate-y-0.5 transition-all border border-[#2d2a26] text-sm'
+            className='inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#d56756] text-white hover:-translate-y-0.5 transition-all border border-[#592518] text-sm'
           >
             <Plus className='w-4 h-4' /> Tạo nhắc nhở
           </button>
@@ -297,25 +297,25 @@ export function ManagerRemindersPage() {
 
       <div className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
         {[
-          { icon: Mail, label: 'Đã gửi thành công', value: metrics.sent.toString(), sub: 'trong kỳ hiện tại', color: '#6b8f5e' },
-          { icon: Clock, label: 'Đang lên lịch gửi', value: metrics.scheduled.toString(), sub: 'Scheduled', color: '#c67d5b' },
-          { icon: TrendingUp, label: 'Tỷ lệ gửi thành công', value: `${metrics.successRate}%`, sub: 'Sent / (Sent + Failed)', color: '#4a90d9' },
+          { icon: Mail, label: 'Đã gửi thành công', value: metrics.sent.toString(), sub: 'trong kỳ hiện tại', color: '#d56756' },
+          { icon: Clock, label: 'Đang lên lịch gửi', value: metrics.scheduled.toString(), sub: 'Scheduled', color: '#c75b4c' },
+          { icon: TrendingUp, label: 'Tỷ lệ gửi thành công', value: `${metrics.successRate}%`, sub: 'Sent / (Sent + Failed)', color: '#8f6b5e' },
         ].map((kpi, i) => (
           <motion.div
             key={kpi.label}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.08 }}
-            className='bg-white border border-[#2d2a26] rounded-2xl p-5'
+            className='bg-white border border-[#592518] rounded-2xl p-5'
           >
             <div className='flex items-start justify-between mb-3'>
               <div className='w-10 h-10 rounded-xl flex items-center justify-center' style={{ backgroundColor: kpi.color + '15' }}>
                 <kpi.icon className='w-5 h-5' style={{ color: kpi.color }} />
               </div>
-              <span className='text-xs text-[#7a756e]'>{kpi.sub}</span>
+              <span className='text-xs text-[#8b6a61]'>{kpi.sub}</span>
             </div>
-            <p className='text-xs text-[#7a756e] mb-1'>{kpi.label}</p>
-            <p className='text-xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <p className='text-xs text-[#8b6a61] mb-1'>{kpi.label}</p>
+            <p className='text-xl text-[#592518]' style={{ fontWeight: 700 }}>
               {kpi.value}
             </p>
           </motion.div>
@@ -335,7 +335,7 @@ export function ManagerRemindersPage() {
               key={item.key}
               onClick={() => setFilter(item.key as ReminderFilter)}
               className={`px-4 py-2 rounded-xl text-sm border transition-all hover:-translate-y-0.5 ${
-                filter === item.key ? 'bg-[#6b8f5e] text-white border-[#6b8f5e]' : 'bg-white text-[#2d2a26] border-[#2d2a26]/30'
+                filter === item.key ? 'bg-[#d56756] text-white border-[#d56756]' : 'bg-white text-[#592518] border-[#592518]/30'
               }`}
             >
               {item.label}
@@ -343,28 +343,28 @@ export function ManagerRemindersPage() {
           ))}
         </div>
         <div className='relative'>
-          <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7a756e]' />
+          <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8b6a61]' />
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder='Tìm kiếm...'
-            className='pl-9 pr-4 py-2 border border-[#2d2a26] rounded-xl bg-white text-sm w-64'
+            className='pl-9 pr-4 py-2 border border-[#592518] rounded-xl bg-white text-sm w-64'
           />
         </div>
       </div>
 
-      <div className='bg-white border border-[#2d2a26] rounded-2xl overflow-hidden'>
+      <div className='bg-white border border-[#592518] rounded-2xl overflow-hidden'>
         <div className='overflow-x-auto'>
           <table className='w-full text-sm'>
             <thead>
-              <tr className='border-b border-[#2d2a26]'>
-                <th className='text-left py-3 px-3 text-xs text-[#7a756e]'>Khách hàng</th>
-                <th className='text-left py-3 px-3 text-xs text-[#7a756e]'>Thú cưng</th>
-                <th className='text-left py-3 px-3 text-xs text-[#7a756e]'>Loại nhắc nhở</th>
-                <th className='text-left py-3 px-3 text-xs text-[#7a756e]'>Kênh</th>
-                <th className='text-left py-3 px-3 text-xs text-[#7a756e]'>Trạng thái</th>
-                <th className='text-left py-3 px-3 text-xs text-[#7a756e]'>Ngày gửi</th>
-                <th className='text-left py-3 px-3 text-xs text-[#7a756e]'>Thao tác</th>
+              <tr className='border-b border-[#592518]'>
+                <th className='text-left py-3 px-3 text-xs text-[#8b6a61]'>Khách hàng</th>
+                <th className='text-left py-3 px-3 text-xs text-[#8b6a61]'>Thú cưng</th>
+                <th className='text-left py-3 px-3 text-xs text-[#8b6a61]'>Loại nhắc nhở</th>
+                <th className='text-left py-3 px-3 text-xs text-[#8b6a61]'>Kênh</th>
+                <th className='text-left py-3 px-3 text-xs text-[#8b6a61]'>Trạng thái</th>
+                <th className='text-left py-3 px-3 text-xs text-[#8b6a61]'>Ngày gửi</th>
+                <th className='text-left py-3 px-3 text-xs text-[#8b6a61]'>Thao tác</th>
               </tr>
             </thead>
             <tbody>
@@ -377,11 +377,11 @@ export function ManagerRemindersPage() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: index * 0.02 }}
-                    className='border-b border-[#2d2a26]/10 hover:bg-[#faf9f6]'
+                    className='border-b border-[#592518]/10 hover:bg-[#faf8f5]'
                   >
                     <td className='py-3 px-3'>
                       <p style={{ fontWeight: 500 }}>{reminder.customer.name}</p>
-                      <p className='text-xs text-[#7a756e]'>{reminder.customer.phone}</p>
+                      <p className='text-xs text-[#8b6a61]'>{reminder.customer.phone}</p>
                     </td>
                     <td className='py-3 px-3'>{reminder.pet.name}</td>
                     <td className='py-3 px-3'>
@@ -390,7 +390,7 @@ export function ManagerRemindersPage() {
                       </span>
                     </td>
                     <td className='py-3 px-3'>
-                      <span className='inline-flex items-center gap-1 text-xs text-[#7a756e]'>
+                      <span className='inline-flex items-center gap-1 text-xs text-[#8b6a61]'>
                         {reminder.channel === 'email' ? <Mail className='w-3.5 h-3.5' /> : <Bell className='w-3.5 h-3.5' />}
                         {reminder.channel === 'email' ? 'Gmail' : 'SMS'}
                       </span>
@@ -401,7 +401,7 @@ export function ManagerRemindersPage() {
                         {statusLabelMap[reminder.status]}
                       </span>
                     </td>
-                    <td className='py-3 px-3 text-[#7a756e]'>
+                    <td className='py-3 px-3 text-[#8b6a61]'>
                       <div className='inline-flex items-center gap-1'>
                         <Calendar className='w-3.5 h-3.5' />
                         {toDateLabel(reminder.sentAt || reminder.scheduledAt)}
@@ -414,7 +414,7 @@ export function ManagerRemindersPage() {
                             <button
                               onClick={() => void handleResend(reminder, true)}
                               disabled={actionWorking}
-                              className='px-2.5 py-1 rounded-lg text-xs border border-[#6b8f5e]/30 bg-[#6b8f5e]/10 text-[#6b8f5e] disabled:opacity-60'
+                              className='px-2.5 py-1 rounded-lg text-xs border border-[#d56756]/30 bg-[#d56756]/10 text-[#d56756] disabled:opacity-60'
                             >
                               Gửi ngay
                             </button>
@@ -432,13 +432,13 @@ export function ManagerRemindersPage() {
                           <button
                             onClick={() => void handleResend(reminder, false)}
                             disabled={actionWorking}
-                            className='px-2.5 py-1 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors text-xs disabled:opacity-60'
+                            className='px-2.5 py-1 rounded-lg bg-[#f6eee7] text-[#d56756] hover:bg-[#efe3d7] transition-colors text-xs disabled:opacity-60'
                           >
                             Lên lịch lại
                           </button>
                         ) : null}
                         {(reminder.status === 'sent' || reminder.status === 'cancelled') ? (
-                          <span className='text-xs text-[#7a756e] italic'>—</span>
+                          <span className='text-xs text-[#8b6a61] italic'>—</span>
                         ) : null}
                       </div>
                     </td>
@@ -449,9 +449,9 @@ export function ManagerRemindersPage() {
           </table>
         </div>
 
-        {loading ? <div className='py-10 text-center text-sm text-[#7a756e]'>Đang tải nhắc nhở...</div> : null}
+        {loading ? <div className='py-10 text-center text-sm text-[#8b6a61]'>Đang tải nhắc nhở...</div> : null}
         {!loading && filtered.length === 0 ? (
-          <div className='text-center py-12 text-[#7a756e]'>
+          <div className='text-center py-12 text-[#8b6a61]'>
             <Bell className='w-12 h-12 mx-auto mb-3 opacity-30' />
             <p>Không có nhắc nhở nào</p>
           </div>
@@ -460,22 +460,22 @@ export function ManagerRemindersPage() {
 
       {showForm ? (
         <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4' onClick={() => setShowForm(false)}>
-          <div className='bg-[#faf9f6] border border-[#2d2a26] rounded-2xl w-full max-w-md' onClick={(event) => event.stopPropagation()}>
-            <div className='flex items-center justify-between p-5 border-b border-[#2d2a26]/20'>
-              <h2 className='text-lg' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
+          <div className='bg-[#faf8f5] border border-[#592518] rounded-2xl w-full max-w-md' onClick={(event) => event.stopPropagation()}>
+            <div className='flex items-center justify-between p-5 border-b border-[#592518]/20'>
+              <h2 className='text-lg' style={{ fontWeight: 600 }}>
                 Tạo nhắc nhở mới
               </h2>
-              <button onClick={() => setShowForm(false)} className='p-1 hover:bg-[#f0ede8] rounded-lg'>
+              <button onClick={() => setShowForm(false)} className='p-1 hover:bg-[#f4ece4] rounded-lg'>
                 <X className='w-5 h-5' />
               </button>
             </div>
             <div className='p-5 space-y-3'>
               <div>
-                <label className='text-xs text-[#7a756e] mb-1 block'>Khách hàng</label>
+                <label className='text-xs text-[#8b6a61] mb-1 block'>Khách hàng</label>
                 <select
                   value={formData.customerId}
                   onChange={(event) => setFormData((prev) => ({ ...prev, customerId: event.target.value, petId: '' }))}
-                  className='w-full p-3 border border-[#2d2a26] rounded-xl text-sm bg-white'
+                  className='w-full p-3 border border-[#592518] rounded-xl text-sm bg-white'
                 >
                   <option value=''>Chọn khách hàng</option>
                   {customers.map((customer) => (
@@ -486,11 +486,11 @@ export function ManagerRemindersPage() {
                 </select>
               </div>
               <div>
-                <label className='text-xs text-[#7a756e] mb-1 block'>Thú cưng</label>
+                <label className='text-xs text-[#8b6a61] mb-1 block'>Thú cưng</label>
                 <select
                   value={formData.petId}
                   onChange={(event) => setFormData((prev) => ({ ...prev, petId: event.target.value }))}
-                  className='w-full p-3 border border-[#2d2a26] rounded-xl text-sm bg-white'
+                  className='w-full p-3 border border-[#592518] rounded-xl text-sm bg-white'
                 >
                   <option value=''>Chọn thú cưng</option>
                   {customerPets.map((pet) => (
@@ -502,7 +502,7 @@ export function ManagerRemindersPage() {
               </div>
               <div className='grid grid-cols-2 gap-3'>
                 <div>
-                  <label className='text-xs text-[#7a756e] mb-1 block'>Loại nhắc nhở</label>
+                  <label className='text-xs text-[#8b6a61] mb-1 block'>Loại nhắc nhở</label>
                   <select
                     value={formData.type}
                     onChange={(event) =>
@@ -512,7 +512,7 @@ export function ManagerRemindersPage() {
                         typeName: reminderTypes[event.target.value as ReminderType],
                       }))
                     }
-                    className='w-full p-3 border border-[#2d2a26] rounded-xl text-sm bg-white'
+                    className='w-full p-3 border border-[#592518] rounded-xl text-sm bg-white'
                   >
                     {Object.entries(reminderTypes).map(([type, name]) => (
                       <option key={type} value={type}>
@@ -522,11 +522,11 @@ export function ManagerRemindersPage() {
                   </select>
                 </div>
                 <div>
-                  <label className='text-xs text-[#7a756e] mb-1 block'>Kênh gửi</label>
+                  <label className='text-xs text-[#8b6a61] mb-1 block'>Kênh gửi</label>
                   <select
                     value={formData.channel}
                     onChange={(event) => setFormData((prev) => ({ ...prev, channel: event.target.value as 'email' | 'sms' }))}
-                    className='w-full p-3 border border-[#2d2a26] rounded-xl text-sm bg-white'
+                    className='w-full p-3 border border-[#592518] rounded-xl text-sm bg-white'
                   >
                     <option value='email'>Gmail</option>
                     <option value='sms'>SMS</option>
@@ -534,45 +534,45 @@ export function ManagerRemindersPage() {
                 </div>
               </div>
               <div>
-                <label className='text-xs text-[#7a756e] mb-1 block'>Chi tiết nhắc nhở</label>
+                <label className='text-xs text-[#8b6a61] mb-1 block'>Chi tiết nhắc nhở</label>
                 <input
                   value={formData.typeName}
                   onChange={(event) => setFormData((prev) => ({ ...prev, typeName: event.target.value }))}
                   placeholder='VD: Tiêm vaccine dại lần 2'
-                  className='w-full p-3 border border-[#2d2a26] rounded-xl text-sm bg-white'
+                  className='w-full p-3 border border-[#592518] rounded-xl text-sm bg-white'
                 />
               </div>
               <div>
-                <label className='text-xs text-[#7a756e] mb-1 block'>Nội dung</label>
+                <label className='text-xs text-[#8b6a61] mb-1 block'>Nội dung</label>
                 <textarea
                   value={formData.message}
                   onChange={(event) => setFormData((prev) => ({ ...prev, message: event.target.value }))}
                   rows={4}
-                  className='w-full p-3 border border-[#2d2a26] rounded-xl text-sm bg-white resize-none'
+                  className='w-full p-3 border border-[#592518] rounded-xl text-sm bg-white resize-none'
                   placeholder='Nhập nội dung nhắc nhở gửi cho khách hàng'
                 />
               </div>
               <div>
-                <label className='text-xs text-[#7a756e] mb-1 block'>Ngày gửi</label>
+                <label className='text-xs text-[#8b6a61] mb-1 block'>Ngày gửi</label>
                 <input
                   type='date'
                   value={formData.scheduledDate}
                   onChange={(event) => setFormData((prev) => ({ ...prev, scheduledDate: event.target.value }))}
-                  className='w-full p-3 border border-[#2d2a26] rounded-xl text-sm bg-white'
+                  className='w-full p-3 border border-[#592518] rounded-xl text-sm bg-white'
                 />
               </div>
               <div className='grid grid-cols-2 gap-2 pt-2'>
                 <button
                   onClick={() => void handleCreate(false)}
                   disabled={submitting}
-                  className='py-2.5 rounded-xl border border-[#2d2a26]/30 text-sm hover:-translate-y-0.5 transition-all disabled:opacity-60'
+                  className='py-2.5 rounded-xl border border-[#592518]/30 text-sm hover:-translate-y-0.5 transition-all disabled:opacity-60'
                 >
                   Lên lịch gửi
                 </button>
                 <button
                   onClick={() => void handleCreate(true)}
                   disabled={submitting}
-                  className='py-2.5 rounded-xl bg-[#6b8f5e] text-white text-sm border border-[#2d2a26] disabled:opacity-60'
+                  className='py-2.5 rounded-xl bg-[#d56756] text-white text-sm border border-[#592518] disabled:opacity-60'
                 >
                   <span className='inline-flex items-center justify-center gap-2'>
                     <Send className='w-4 h-4' />
@@ -587,3 +587,4 @@ export function ManagerRemindersPage() {
     </div>
   );
 }
+

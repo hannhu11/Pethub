@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { CalendarDays, ChevronDown, Clock3, PawPrint, PlusCircle, Stethoscope } from 'lucide-react';
 import { useSearchParams } from 'react-router';
 import type { ApiAppointment, ApiPet, ApiService, BookingDraft, CancelDialogState } from '../types';
@@ -68,7 +68,7 @@ function statusClass(status: ApiAppointment['status']) {
   if (status === 'confirmed') return 'border-sky-300 bg-sky-50 text-sky-700';
   if (status === 'completed') return 'border-emerald-300 bg-emerald-50 text-emerald-700';
   if (status === 'cancelled') return 'border-red-300 bg-red-50 text-red-700';
-  return 'border-[#2d2a26]/20 bg-white text-[#2d2a26]';
+  return 'border-[#592518]/20 bg-white text-[#592518]';
 }
 
 function dedupeAppointments(items: ApiAppointment[]) {
@@ -239,7 +239,7 @@ export function CustomerAppointmentsPage() {
   return (
     <div className='py-12'>
       <div className='max-w-6xl mx-auto px-4'>
-        <h1 className='text-3xl text-[#2d2a26] mb-6' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+        <h1 className='text-3xl text-[#592518] mb-6' style={{ fontWeight: 700 }}>
           Lịch hẹn của tôi
         </h1>
 
@@ -248,18 +248,18 @@ export function CustomerAppointmentsPage() {
           <div className='mb-4 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-700'>{message}</div>
         ) : null}
 
-        <section className='bg-white border border-[#2d2a26] rounded-2xl p-5 md:p-6 mb-8'>
+        <section className='bg-white border border-[#592518] rounded-2xl p-5 md:p-6 mb-8'>
           <div className='flex items-center gap-2 mb-4'>
-            <PlusCircle className='w-5 h-5 text-[#6b8f5e]' />
-            <h2 className='text-xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <PlusCircle className='w-5 h-5 text-[#d56756]' />
+            <h2 className='text-xl text-[#592518]' style={{ fontWeight: 700 }}>
               Đặt lịch mới
             </h2>
           </div>
 
           <div className='grid md:grid-cols-2 gap-4'>
             <div>
-              <label className='text-sm text-[#2d2a26] mb-2 flex items-center gap-2'>
-                <Stethoscope className='w-4 h-4 text-[#6b8f5e]' />
+              <label className='text-sm text-[#592518] mb-2 flex items-center gap-2'>
+                <Stethoscope className='w-4 h-4 text-[#d56756]' />
                 Dịch vụ
               </label>
               <div className='relative'>
@@ -267,7 +267,7 @@ export function CustomerAppointmentsPage() {
                   value={draft.serviceId || ''}
                   onChange={(event) => setDraft((prev) => ({ ...prev, serviceId: event.target.value }))}
                   disabled={!hasServices}
-                  className='w-full appearance-none p-3 pr-10 border border-[#2d2a26] rounded-xl bg-[#faf9f6]'
+                  className='w-full appearance-none p-3 pr-10 border border-[#592518] rounded-xl bg-[#faf8f5]'
                 >
                   <option value=''>-- Chọn dịch vụ --</option>
                   {services.map((service) => (
@@ -276,16 +276,16 @@ export function CustomerAppointmentsPage() {
                     </option>
                   ))}
                 </select>
-                <ChevronDown className='pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2d2a26]/70' />
+                <ChevronDown className='pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#592518]/70' />
               </div>
               {!loading && !hasServices ? (
-                <p className='mt-2 text-xs text-[#7a756e]'>Phòng khám chưa cập nhật dịch vụ. Vui lòng thử lại sau.</p>
+                <p className='mt-2 text-xs text-[#8b6a61]'>Phòng khám chưa cập nhật dịch vụ. Vui lòng thử lại sau.</p>
               ) : null}
             </div>
 
             <div>
-              <label className='text-sm text-[#2d2a26] mb-2 flex items-center gap-2'>
-                <PawPrint className='w-4 h-4 text-[#6b8f5e]' />
+              <label className='text-sm text-[#592518] mb-2 flex items-center gap-2'>
+                <PawPrint className='w-4 h-4 text-[#d56756]' />
                 Thú cưng
               </label>
               <div className='relative'>
@@ -293,7 +293,7 @@ export function CustomerAppointmentsPage() {
                   value={draft.petId || ''}
                   onChange={(event) => setDraft((prev) => ({ ...prev, petId: event.target.value }))}
                   disabled={!hasPets}
-                  className='w-full appearance-none p-3 pr-10 border border-[#2d2a26] rounded-xl bg-[#faf9f6]'
+                  className='w-full appearance-none p-3 pr-10 border border-[#592518] rounded-xl bg-[#faf8f5]'
                 >
                   <option value=''>-- Chọn thú cưng --</option>
                   {pets.map((pet) => (
@@ -302,18 +302,18 @@ export function CustomerAppointmentsPage() {
                     </option>
                   ))}
                 </select>
-                <ChevronDown className='pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2d2a26]/70' />
+                <ChevronDown className='pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#592518]/70' />
               </div>
               {!loading && !hasPets ? (
-                <p className='mt-2 text-xs text-[#7a756e]'>
+                <p className='mt-2 text-xs text-[#8b6a61]'>
                   Bạn chưa có thú cưng nào. Vui lòng liên hệ quản trị viên để thêm hồ sơ thú cưng trước khi đặt lịch.
                 </p>
               ) : null}
             </div>
 
             <div>
-              <label className='text-sm text-[#2d2a26] mb-2 flex items-center gap-2'>
-                <CalendarDays className='w-4 h-4 text-[#6b8f5e]' />
+              <label className='text-sm text-[#592518] mb-2 flex items-center gap-2'>
+                <CalendarDays className='w-4 h-4 text-[#d56756]' />
                 Ngày hẹn
               </label>
               <input
@@ -321,13 +321,13 @@ export function CustomerAppointmentsPage() {
                 value={draft.date || toDateInputValue(new Date())}
                 min={toDateInputValue(new Date())}
                 onChange={(event) => setDraft((prev) => ({ ...prev, date: event.target.value }))}
-                className='w-full p-3 border border-[#2d2a26] rounded-xl bg-[#faf9f6]'
+                className='w-full p-3 border border-[#592518] rounded-xl bg-[#faf8f5]'
               />
             </div>
 
             <div>
-              <label className='text-sm text-[#2d2a26] mb-2 flex items-center gap-2'>
-                <Clock3 className='w-4 h-4 text-[#6b8f5e]' />
+              <label className='text-sm text-[#592518] mb-2 flex items-center gap-2'>
+                <Clock3 className='w-4 h-4 text-[#d56756]' />
                 Khung giờ
               </label>
               <div className='grid grid-cols-4 sm:grid-cols-6 gap-2'>
@@ -338,8 +338,8 @@ export function CustomerAppointmentsPage() {
                     onClick={() => setDraft((prev) => ({ ...prev, time: slot }))}
                     className={`py-2 rounded-xl text-sm border ${
                       draft.time === slot
-                        ? 'bg-[#6b8f5e] text-white border-[#6b8f5e]'
-                        : 'bg-white border-[#2d2a26]/25'
+                        ? 'bg-[#d56756] text-white border-[#d56756]'
+                        : 'bg-white border-[#592518]/25'
                     }`}
                   >
                     {slot}
@@ -350,32 +350,32 @@ export function CustomerAppointmentsPage() {
           </div>
 
           <div className='mt-4'>
-            <label className='text-sm text-[#2d2a26] mb-2 block'>Ghi chú</label>
+            <label className='text-sm text-[#592518] mb-2 block'>Ghi chú</label>
             <textarea
               rows={3}
               value={draft.note || ''}
               onChange={(event) => setDraft((prev) => ({ ...prev, note: event.target.value }))}
               placeholder='Mô tả triệu chứng hoặc yêu cầu đặc biệt...'
-              className='w-full p-3 border border-[#2d2a26] rounded-xl bg-[#faf9f6] resize-none'
+              className='w-full p-3 border border-[#592518] rounded-xl bg-[#faf8f5] resize-none'
             />
           </div>
 
-          <div className='mt-5 p-4 rounded-xl border border-[#2d2a26]/20 bg-[#f0ede8] text-sm'>
+          <div className='mt-5 p-4 rounded-xl border border-[#592518]/20 bg-[#f4ece4] text-sm'>
             <div className='flex justify-between gap-4'>
-              <span className='text-[#7a756e]'>Dịch vụ</span>
+              <span className='text-[#8b6a61]'>Dịch vụ</span>
               <span>{selectedService?.name || 'Chưa chọn'}</span>
             </div>
             <div className='flex justify-between gap-4 mt-1'>
-              <span className='text-[#7a756e]'>Thú cưng</span>
+              <span className='text-[#8b6a61]'>Thú cưng</span>
               <span>{selectedPet?.name || 'Chưa chọn'}</span>
             </div>
             <div className='flex justify-between gap-4 mt-1'>
-              <span className='text-[#7a756e]'>Thời gian</span>
+              <span className='text-[#8b6a61]'>Thời gian</span>
               <span>{draft.date && draft.time ? `${draft.date} ${draft.time}` : 'Chưa chọn'}</span>
             </div>
             <div className='flex justify-between gap-4 mt-1'>
-              <span className='text-[#7a756e]'>Chi phí dự kiến</span>
-              <span className='text-[#6b8f5e]' style={{ fontWeight: 700 }}>
+              <span className='text-[#8b6a61]'>Chi phí dự kiến</span>
+              <span className='text-[#d56756]' style={{ fontWeight: 700 }}>
                 {selectedService ? formatCurrency(selectedService.price) : '--'}
               </span>
             </div>
@@ -386,16 +386,16 @@ export function CustomerAppointmentsPage() {
               type='button'
               onClick={() => void handleSubmit()}
               disabled={!canSubmit || submitting}
-              className='px-6 py-3 rounded-xl bg-[#6b8f5e] text-white border border-[#2d2a26] disabled:opacity-50'
+              className='px-6 py-3 rounded-xl bg-[#d56756] text-white border border-[#592518] disabled:opacity-50'
             >
               {submitting ? 'Đang gửi...' : 'Xác nhận đặt lịch'}
             </button>
           </div>
         </section>
 
-        <section className='bg-white border border-[#2d2a26] rounded-2xl p-5 md:p-6'>
+        <section className='bg-white border border-[#592518] rounded-2xl p-5 md:p-6'>
           <div className='flex flex-wrap items-center justify-between gap-4 mb-4'>
-            <h2 className='text-xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <h2 className='text-xl text-[#592518]' style={{ fontWeight: 700 }}>
               Danh sách lịch hẹn
             </h2>
             <div className='flex items-center gap-2'>
@@ -408,7 +408,7 @@ export function CustomerAppointmentsPage() {
                   key={item.key}
                   onClick={() => setFilter(item.key as 'upcoming' | 'past' | 'all')}
                   className={`px-3 py-2 text-sm rounded-xl border ${
-                    filter === item.key ? 'bg-[#6b8f5e] text-white border-[#6b8f5e]' : 'bg-white border-[#2d2a26]/25'
+                    filter === item.key ? 'bg-[#d56756] text-white border-[#d56756]' : 'bg-white border-[#592518]/25'
                   }`}
                 >
                   {item.label}
@@ -420,21 +420,21 @@ export function CustomerAppointmentsPage() {
           <div className='overflow-x-auto'>
             <table className='w-full min-w-[840px] text-sm'>
               <thead>
-                <tr className='border-b border-[#2d2a26]'>
-                  <th className='text-left py-3 px-2 text-[#7a756e]'>Ngày</th>
-                  <th className='text-left py-3 px-2 text-[#7a756e]'>Giờ</th>
-                  <th className='text-left py-3 px-2 text-[#7a756e]'>Dịch vụ</th>
-                  <th className='text-left py-3 px-2 text-[#7a756e]'>Thú cưng</th>
-                  <th className='text-left py-3 px-2 text-[#7a756e]'>Trạng thái</th>
-                  <th className='text-right py-3 px-2 text-[#7a756e]'>Chi phí</th>
-                  <th className='text-right py-3 px-2 text-[#7a756e]'>Hành động</th>
+                <tr className='border-b border-[#592518]'>
+                  <th className='text-left py-3 px-2 text-[#8b6a61]'>Ngày</th>
+                  <th className='text-left py-3 px-2 text-[#8b6a61]'>Giờ</th>
+                  <th className='text-left py-3 px-2 text-[#8b6a61]'>Dịch vụ</th>
+                  <th className='text-left py-3 px-2 text-[#8b6a61]'>Thú cưng</th>
+                  <th className='text-left py-3 px-2 text-[#8b6a61]'>Trạng thái</th>
+                  <th className='text-right py-3 px-2 text-[#8b6a61]'>Chi phí</th>
+                  <th className='text-right py-3 px-2 text-[#8b6a61]'>Hành động</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredAppointments.map((item) => {
                   const canCancel = item.status === 'pending';
                   return (
-                    <tr key={item.id} className='border-b border-[#2d2a26]/10'>
+                    <tr key={item.id} className='border-b border-[#592518]/10'>
                       <td className='py-3 px-2'>{formatDate(item.appointmentAt)}</td>
                       <td className='py-3 px-2' style={{ fontWeight: 600 }}>
                         {formatTime(item.appointmentAt)}
@@ -446,7 +446,7 @@ export function CustomerAppointmentsPage() {
                           {statusLabel(item.status)}
                         </span>
                       </td>
-                      <td className='py-3 px-2 text-right text-[#6b8f5e]' style={{ fontWeight: 700 }}>
+                      <td className='py-3 px-2 text-right text-[#d56756]' style={{ fontWeight: 700 }}>
                         {formatCurrency(item.service?.price ?? 0)}
                       </td>
                       <td className='py-3 px-2 text-right'>
@@ -458,7 +458,7 @@ export function CustomerAppointmentsPage() {
                             Hủy lịch hẹn
                           </button>
                         ) : (
-                          <span className='text-xs text-[#7a756e]'>-</span>
+                          <span className='text-xs text-[#8b6a61]'>-</span>
                         )}
                       </td>
                     </tr>
@@ -468,38 +468,38 @@ export function CustomerAppointmentsPage() {
             </table>
           </div>
 
-          {loading ? <p className='text-sm text-[#7a756e] py-6'>Đang tải lịch hẹn...</p> : null}
+          {loading ? <p className='text-sm text-[#8b6a61] py-6'>Đang tải lịch hẹn...</p> : null}
           {!loading && filteredAppointments.length === 0 ? (
-            <p className='text-sm text-[#7a756e] py-6'>Không có lịch hẹn phù hợp bộ lọc hiện tại.</p>
+            <p className='text-sm text-[#8b6a61] py-6'>Không có lịch hẹn phù hợp bộ lọc hiện tại.</p>
           ) : null}
         </section>
       </div>
 
       <AlertDialog open={cancelDialog.open} onOpenChange={(open) => !open && setCancelDialog({ open: false, appointmentId: null })}>
-        <AlertDialogContent className='border-[#2d2a26] bg-[#faf9f6]'>
+        <AlertDialogContent className='border-[#592518] bg-[#faf8f5]'>
           <AlertDialogHeader>
-            <AlertDialogTitle style={{ fontFamily: "'Playfair Display', serif" }}>Xác nhận hủy lịch hẹn?</AlertDialogTitle>
+              <AlertDialogTitle>Xác nhận hủy lịch hẹn?</AlertDialogTitle>
             <AlertDialogDescription>
               Hành động này không thể hoàn tác. Lịch hẹn của bạn sẽ bị hủy khỏi hệ thống.
             </AlertDialogDescription>
           </AlertDialogHeader>
 
           {appointmentToCancel ? (
-            <div className='p-3 rounded-xl border border-[#2d2a26]/20 bg-[#f0ede8] text-sm'>
+            <div className='p-3 rounded-xl border border-[#592518]/20 bg-[#f4ece4] text-sm'>
               <p>
-                <span className='text-[#7a756e]'>Dịch vụ:</span> {appointmentToCancel.service?.name || 'Dịch vụ'}
+                <span className='text-[#8b6a61]'>Dịch vụ:</span> {appointmentToCancel.service?.name || 'Dịch vụ'}
               </p>
               <p>
-                <span className='text-[#7a756e]'>Ngày:</span> {formatDate(appointmentToCancel.appointmentAt)}
+                <span className='text-[#8b6a61]'>Ngày:</span> {formatDate(appointmentToCancel.appointmentAt)}
               </p>
               <p>
-                <span className='text-[#7a756e]'>Giờ:</span> {formatTime(appointmentToCancel.appointmentAt)}
+                <span className='text-[#8b6a61]'>Giờ:</span> {formatTime(appointmentToCancel.appointmentAt)}
               </p>
             </div>
           ) : null}
 
           <AlertDialogFooter>
-            <AlertDialogCancel className='border-[#2d2a26] text-[#2d2a26]'>Không, giữ lại</AlertDialogCancel>
+            <AlertDialogCancel className='border-[#592518] text-[#592518]'>Không, giữ lại</AlertDialogCancel>
             <AlertDialogAction onClick={() => void confirmCancel()} className='bg-red-600 hover:bg-red-700 text-white border border-red-700'>
               Có, Hủy lịch
             </AlertDialogAction>
@@ -509,3 +509,4 @@ export function CustomerAppointmentsPage() {
     </div>
   );
 }
+

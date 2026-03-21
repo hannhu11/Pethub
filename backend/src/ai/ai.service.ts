@@ -23,7 +23,8 @@ type GeminiHistoryMessage = {
 
 const DEFAULT_CHAT_MODEL = 'gemini-2.5-flash';
 const DEFAULT_HISTORY_TURNS = 6;
-const CHAT_PROVIDER_TIMEOUT_MS = 55_000;
+const CHAT_PROVIDER_ATTEMPT_TIMEOUT_MS = 18_000;
+const CHAT_PROVIDER_MAX_ATTEMPTS = 3;
 const DEFAULT_CLINIC_TIMEZONE = 'Asia/Ho_Chi_Minh';
 const DEFAULT_CONTEXT_BUDGET_CHARS = 14_000;
 const RETRY_CONTEXT_BUDGET_CHARS = 8_000;
@@ -117,8 +118,8 @@ export class AiService {
       return this.buildFallbackResponse(scope, model, 'disabled');
     }
 
-    const key = this.configService.get<string>('GEMINI_API_KEY');
-    if (!key) {
+    const keys = this.getGeminiKeySequence();
+    if (keys.length === 0) {
       return this.buildFallbackResponse(scope, model, 'missing-key');
     }
 
@@ -150,10 +151,12 @@ export class AiService {
     try {
       const text = await this.callGeminiChat({
         model,
-        key,
+        keys,
         systemPrompt,
         history,
         userMessage,
+        requestId,
+        scope,
       });
 
       if (!text) {
@@ -187,10 +190,12 @@ export class AiService {
           );
           const retryText = await this.callGeminiChat({
             model,
-            key,
+            keys,
             systemPrompt: this.buildSystemPrompt(retryContext),
             history: this.compactHistory(history),
             userMessage,
+            requestId,
+            scope,
           });
 
           if (retryText) {
@@ -227,6 +232,51 @@ export class AiService {
 
   private async callGeminiChat(params: {
     model: string;
+    keys: string[];
+    systemPrompt: string;
+    history: GeminiHistoryMessage[];
+    userMessage: string;
+    requestId: string;
+    scope: ChatScope;
+  }): Promise<string | undefined> {
+    const keys = params.keys.slice(0, CHAT_PROVIDER_MAX_ATTEMPTS);
+    let lastError: unknown;
+
+    for (let index = 0; index < keys.length; index += 1) {
+      const key = keys[index];
+
+      try {
+        return await this.callGeminiChatOnce({
+          model: params.model,
+          key,
+          systemPrompt: params.systemPrompt,
+          history: params.history,
+          userMessage: params.userMessage,
+        });
+      } catch (error) {
+        lastError = error;
+        if (!this.shouldFailoverGeminiChat(error) || index === keys.length - 1) {
+          throw error;
+        }
+
+        this.logger.warn(
+          JSON.stringify({
+            event: 'ai_chat_key_failover',
+            requestId: params.requestId,
+            scope: params.scope,
+            failedKeyIndex: index,
+            nextKeyIndex: index + 1,
+            reason: this.describeGeminiError(error),
+          }),
+        );
+      }
+    }
+
+    throw lastError ?? new Error('gemini_failover_exhausted');
+  }
+
+  private async callGeminiChatOnce(params: {
+    model: string;
     key: string;
     systemPrompt: string;
     history: GeminiHistoryMessage[];
@@ -250,7 +300,7 @@ export class AiService {
           topP: 0.9,
         },
       },
-      { timeout: CHAT_PROVIDER_TIMEOUT_MS },
+      { timeout: CHAT_PROVIDER_ATTEMPT_TIMEOUT_MS },
     );
 
     return this.extractGeminiText(response.data);
@@ -261,12 +311,8 @@ export class AiService {
       return false;
     }
 
-    if (error.code === 'ECONNABORTED') {
-      return true;
-    }
-
     const status = error.response?.status;
-    if (status === 408 || status === 413) {
+    if (status === 413) {
       return true;
     }
     if (status === 400) {
@@ -275,12 +321,35 @@ export class AiService {
         payload.includes('token') ||
         payload.includes('context') ||
         payload.includes('too large') ||
-        payload.includes('quota')
+        payload.includes('request too large') ||
+        payload.includes('prompt')
       ) {
         return true;
       }
     }
-    return status === 429 || (typeof status === 'number' && status >= 500);
+    return false;
+  }
+
+  private shouldFailoverGeminiChat(error: unknown): boolean {
+    if (!axios.isAxiosError(error)) {
+      return false;
+    }
+
+    const recoverableCodes = new Set([
+      'ECONNABORTED',
+      'ERR_NETWORK',
+      'ECONNRESET',
+      'ETIMEDOUT',
+      'EAI_AGAIN',
+      'ENOTFOUND',
+    ]);
+
+    if (error.code && recoverableCodes.has(error.code)) {
+      return true;
+    }
+
+    const status = error.response?.status;
+    return status === 408 || status === 429 || (typeof status === 'number' && status >= 500);
   }
 
   private describeGeminiError(error: unknown): string {
@@ -337,6 +406,17 @@ export class AiService {
     );
   }
 
+  private getGeminiKeySequence(): string[] {
+    const primary = this.configService.get<string>('GEMINI_API_KEY')?.trim() ?? '';
+    const pool = (this.configService.get<string>('GEMINI_API_KEY_POOL') ?? '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+
+    const keys = primary ? [primary, ...pool] : pool;
+    return Array.from(new Set(keys));
+  }
+
   private getHistoryTurns(): number {
     const configured = Number(
       this.configService.get<string>('AI_CHAT_HISTORY_TURNS') ?? DEFAULT_HISTORY_TURNS,
@@ -360,7 +440,7 @@ export class AiService {
       .slice(-maxMessages)
       .map((item) => ({
         role: item.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: this.sanitizePromptText(item.content, 700) }],
+        parts: [{ text: this.normalizeChatText(item.content, 450) }],
       }));
   }
 
@@ -372,7 +452,7 @@ export class AiService {
     return history.slice(-6).map((item) => ({
       role: item.role,
       parts: item.parts.map((part) => ({
-        text: this.sanitizePromptText(part.text, 320),
+        text: this.normalizeChatText(part.text, 240),
       })),
     }));
   }
@@ -1562,6 +1642,27 @@ export class AiService {
     return `${normalized.slice(0, Math.max(max - 3, 1))}...`;
   }
 
+  private normalizeChatText(value: string | null | undefined, max?: number): string {
+    if (!value) {
+      return '';
+    }
+
+    const normalized = value
+      .replace(/\r\n?/g, '\n')
+      .split('\n')
+      .map((line) => line.trimEnd())
+      .join('\n')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
+    if (typeof max !== 'number' || normalized.length <= max) {
+      return normalized;
+    }
+
+    return `${normalized.slice(0, Math.max(max - 3, 1)).trimEnd()}...`;
+  }
+
   private toPromptNumber(value: unknown): number {
     const numeric = Number(value);
     if (!Number.isFinite(numeric)) {
@@ -1629,6 +1730,6 @@ export class AiService {
   }
 
   private sanitizeChat(input: string): string {
-    return input.replace(/\r\n?/g, '\n').trim();
+    return this.normalizeChatText(input);
   }
 }

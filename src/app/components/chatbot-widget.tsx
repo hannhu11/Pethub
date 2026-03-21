@@ -13,11 +13,32 @@ type ChatMessage = {
   content: string;
 };
 
-const MAX_HISTORY_MESSAGES = 12;
+const MAX_HISTORY_MESSAGES = 8;
+const MAX_HISTORY_CONTENT = 400;
 const ASSISTANT_SLOGAN_BY_ROLE = {
   customer: 'Hiểu thú cưng của bạn, hỗ trợ đúng nhu cầu',
   manager: 'Nắm số liệu tức thời, điều hành chuẩn xác',
 } as const;
+
+function normalizeChatContent(content: string): string {
+  return content
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((line) => line.trimEnd())
+    .join('\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function compactHistoryContent(content: string, max = MAX_HISTORY_CONTENT): string {
+  const normalized = normalizeChatContent(content);
+  if (normalized.length <= max) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, Math.max(max - 3, 1)).trimEnd()}...`;
+}
 
 function createMessage(role: 'user' | 'assistant', content: string): ChatMessage {
   return {
@@ -122,7 +143,7 @@ export function ChatbotWidget() {
   }
 
   const sendMessage = async () => {
-    const message = input.trim();
+    const message = normalizeChatContent(input);
     if (!message || sending) {
       return;
     }
@@ -133,7 +154,7 @@ export function ChatbotWidget() {
       .slice(-MAX_HISTORY_MESSAGES)
       .map((item) => ({
         role: item.role,
-        content: item.content,
+        content: compactHistoryContent(item.content),
       }));
 
     setMessages((previous) => [...previous, userMessage]);
@@ -146,7 +167,8 @@ export function ChatbotWidget() {
         history,
       });
       const assistantText =
-        response.text?.trim() || 'Mình chưa nhận được nội dung phù hợp. Bạn vui lòng thử lại.';
+        normalizeChatContent(response.text?.trim() || '') ||
+        'Mình chưa nhận được nội dung phù hợp. Bạn vui lòng thử lại.';
       setMessages((previous) => [...previous, createMessage('assistant', assistantText)]);
     } catch (error) {
       const reason = extractApiError(error);
@@ -166,21 +188,21 @@ export function ChatbotWidget() {
         <button
           type='button'
           onClick={() => setOpen((value) => !value)}
-          className='relative w-16 h-16 rounded-full border border-[#2d2a26]/50 bg-white shadow-[0_20px_38px_rgba(15,23,42,0.28)] hover:-translate-y-0.5 transition-all flex items-center justify-center overflow-hidden'
+          className='relative w-16 h-16 rounded-full border border-[#592518]/50 bg-white shadow-[0_20px_38px_rgba(15,23,42,0.28)] hover:-translate-y-0.5 transition-all flex items-center justify-center overflow-hidden'
           aria-label={open ? 'Đóng chatbot' : 'Mở chatbot'}
         >
           {!open ? (
             <AssistantAvatar size='lg' />
           ) : (
-            <X className='w-6 h-6 text-[#2d2a26]' />
+            <X className='w-6 h-6 text-[#592518]' />
           )}
         </button>
       </div>
 
       {open && (
         <section className='fixed z-[69] right-2 bottom-20 w-[min(420px,calc(100vw-1rem))] h-[min(620px,78vh)] print:hidden'>
-          <div className='h-full rounded-[28px] border border-[#2d2a26]/35 bg-[#f7f8f4]/95 backdrop-blur-lg shadow-[0_26px_62px_rgba(15,23,42,0.33)] flex flex-col overflow-hidden'>
-            <header className='px-4 py-3 border-b border-[#2d2a26]/15 bg-[linear-gradient(125deg,#6b8f5e_0%,#6aa182_60%,#2f7f8a_100%)] text-white flex items-center gap-2'>
+          <div className='h-full rounded-[28px] border border-[#592518]/35 bg-[#faf8f5]/95 backdrop-blur-lg shadow-[0_26px_62px_rgba(89,37,24,0.22)] flex flex-col overflow-hidden'>
+            <header className='px-4 py-3 border-b border-[#592518]/15 bg-[linear-gradient(135deg,#d56756_0%,#c75b4c_52%,#592518_100%)] text-white flex items-center gap-2'>
               <AssistantAvatar size='md' />
               <div className='min-w-0'>
                 <p className='text-sm truncate' style={{ fontWeight: 700 }}>
@@ -192,7 +214,7 @@ export function ChatbotWidget() {
 
             <div
               ref={scrollRef}
-              className='flex-1 overflow-y-auto px-3 py-3 space-y-2.5 bg-[linear-gradient(180deg,#f6f7f3_0%,#eff2ec_100%)]'
+              className='flex-1 overflow-y-auto px-3 py-3 space-y-2.5 bg-[linear-gradient(180deg,#faf8f5_0%,#f6eee7_100%)]'
             >
               {messages.map((item) => (
                 <div
@@ -203,8 +225,8 @@ export function ChatbotWidget() {
                   <div
                     className={`max-w-[85%] rounded-2xl px-3 py-2.5 text-sm border shadow-sm ${
                       item.role === 'user'
-                        ? 'bg-[linear-gradient(135deg,#6b8f5e_0%,#76a267_100%)] text-white border-[#6b8f5e] rounded-br-md shadow-[0_8px_20px_rgba(107,143,94,0.3)]'
-                        : 'bg-[#fbfbfa] text-[#1f2937] border-[#2d2a26]/18 rounded-bl-md'
+                        ? 'bg-[linear-gradient(135deg,#d56756_0%,#c75b4c_100%)] text-white border-[#d56756] rounded-br-md shadow-[0_8px_20px_rgba(213,103,86,0.28)]'
+                        : 'bg-[#fffdfa] text-[#592518] border-[#592518]/18 rounded-bl-md'
                     }`}
                   >
                     {item.role === 'assistant' ? (
@@ -212,37 +234,39 @@ export function ChatbotWidget() {
                         remarkPlugins={[remarkGfm]}
                         components={{
                           p: ({ children }) => (
-                            <p className='my-1 leading-relaxed whitespace-pre-wrap break-words'>
+                            <p className='mb-2 last:mb-0 leading-relaxed break-words'>
                               {children}
                             </p>
                           ),
                           ul: ({ children }) => (
-                            <ul className='my-1 pl-5 list-disc space-y-1 whitespace-pre-wrap break-words'>
+                            <ul className='my-2 ml-4 list-disc break-words'>
                               {children}
                             </ul>
                           ),
                           ol: ({ children }) => (
-                            <ol className='my-1 pl-5 list-decimal space-y-1 whitespace-pre-wrap break-words'>
+                            <ol className='my-2 ml-4 list-decimal break-words'>
                               {children}
                             </ol>
                           ),
                           li: ({ children }) => (
-                            <li className='leading-relaxed whitespace-pre-wrap break-words'>
+                            <li className='mb-1 leading-relaxed break-words'>
                               {children}
                             </li>
                           ),
                           strong: ({ children }) => <strong className='font-semibold'>{children}</strong>,
                           code: ({ children }) => (
-                            <code className='px-1 py-0.5 rounded bg-[#2d2a26]/10 text-[0.92em]'>
+                            <code className='px-1 py-0.5 rounded bg-[#592518]/10 text-[0.92em]'>
                               {children}
                             </code>
                           ),
                         }}
                       >
-                        {item.content}
+                        {normalizeChatContent(item.content)}
                       </ReactMarkdown>
                     ) : (
-                      <p className='leading-relaxed whitespace-pre-wrap break-words'>{item.content}</p>
+                      <p className='leading-relaxed break-words whitespace-normal'>
+                        {normalizeChatContent(item.content)}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -250,17 +274,17 @@ export function ChatbotWidget() {
               {sending && (
                 <div className='flex justify-start items-start gap-2'>
                   <AssistantAvatar size='sm' />
-                  <div className='rounded-2xl rounded-bl-md px-3 py-2.5 text-sm border border-[#2d2a26]/18 bg-[#fbfbfa] text-[#374151] shadow-sm'>
+                  <div className='rounded-2xl rounded-bl-md px-3 py-2.5 text-sm border border-[#592518]/18 bg-[#fffdfa] text-[#592518] shadow-sm'>
                     <div className='flex items-center gap-2'>
                       <span>AI đang suy nghĩ...</span>
                       <span className='inline-flex items-center gap-1'>
-                        <span className='h-1.5 w-1.5 rounded-full bg-[#6b8f5e] animate-bounce' />
+                        <span className='h-1.5 w-1.5 rounded-full bg-[#d56756] animate-bounce' />
                         <span
-                          className='h-1.5 w-1.5 rounded-full bg-[#6b8f5e] animate-bounce'
+                          className='h-1.5 w-1.5 rounded-full bg-[#d56756] animate-bounce'
                           style={{ animationDelay: '120ms' }}
                         />
                         <span
-                          className='h-1.5 w-1.5 rounded-full bg-[#6b8f5e] animate-bounce'
+                          className='h-1.5 w-1.5 rounded-full bg-[#d56756] animate-bounce'
                           style={{ animationDelay: '240ms' }}
                         />
                       </span>
@@ -271,7 +295,7 @@ export function ChatbotWidget() {
             </div>
 
             <form
-              className='border-t border-[#2d2a26]/10 p-3 bg-[#f8f8f6]'
+              className='border-t border-[#592518]/10 p-3 bg-[#faf8f5]'
               onSubmit={(event) => {
                 event.preventDefault();
                 void sendMessage();
@@ -283,7 +307,7 @@ export function ChatbotWidget() {
                   onChange={(event) => setInput(event.target.value)}
                   placeholder='Nhập câu hỏi về PetHub...'
                   rows={2}
-                  className='flex-1 resize-none rounded-2xl border border-[#2d2a26]/20 bg-[#fbfbfa] px-3 py-2 text-sm text-[#1f2937] focus:outline-none focus:ring-2 focus:ring-[#6b8f5e]/40'
+                  className='flex-1 resize-none rounded-2xl border border-[#592518]/20 bg-[#fffdfa] px-3 py-2 text-sm text-[#592518] focus:outline-none focus:ring-2 focus:ring-[#d56756]/40'
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' && !event.shiftKey) {
                       event.preventDefault();
@@ -294,7 +318,7 @@ export function ChatbotWidget() {
                 <button
                   type='submit'
                   disabled={sending || input.trim().length === 0}
-                  className='h-10 w-10 rounded-full border border-[#2d2a26]/50 bg-[linear-gradient(135deg,#7fb779_0%,#6b8f5e_100%)] text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-[0_8px_18px_rgba(107,143,94,0.34)]'
+                  className='h-10 w-10 rounded-full border border-[#592518]/50 bg-[linear-gradient(135deg,#7fb779_0%,#d56756_100%)] text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-[0_8px_18px_rgba(107,143,94,0.34)]'
                   aria-label='Gửi tin nhắn'
                 >
                   <SendHorizontal className='w-4 h-4' />
