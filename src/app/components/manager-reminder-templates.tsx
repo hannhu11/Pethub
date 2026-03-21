@@ -38,6 +38,22 @@ const reminderTemplates: LocalReminderTemplate[] = [
     messageTemplate:
       'PetHub xin nhắc [Customer Name]: bé [Pet Name] đã đến kỳ grooming để giữ lông và da khỏe mạnh.',
   },
+  {
+    id: 'tpl-birthday',
+    name: 'Chúc mừng sinh nhật thú cưng',
+    type: 'birthday',
+    channelDefaults: ['email'],
+    messageTemplate:
+      'PetHub chúc [Pet Name] sinh nhật vui vẻ! Tặng ngay voucher giảm giá 20% cho dịch vụ Spa trong tuần lễ sinh nhật của bé. Đặt lịch ngay!',
+  },
+  {
+    id: 'tpl-promotion',
+    name: 'Gửi ưu đãi cá nhân',
+    type: 'promotion',
+    channelDefaults: ['email'],
+    messageTemplate:
+      'Chào [Customer Name], PetHub dành tặng bạn ưu đãi đặc biệt: Giảm 50K cho hóa đơn mua sắm phụ kiện từ 500K. Mã Code: VIP50. Ghé PetHub ngay nhé!',
+  },
 ];
 
 function todayISO() {
