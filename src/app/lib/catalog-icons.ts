@@ -71,7 +71,7 @@ export type CatalogIconOption = {
 };
 
 export const CATALOG_ICON_OPTIONS: CatalogIconOption[] = [
-  { key: 'checkup', label: 'Khám tổng quát', color: '#6b8f5e', bgColor: '#6b8f5e20', icon: Stethoscope },
+  { key: 'checkup', label: 'Khám tổng quát', color: '#d56756', bgColor: '#d5675620', icon: Stethoscope },
   { key: 'diagnostics', label: 'Chẩn đoán', color: '#5f7f92', bgColor: '#5f7f9220', icon: Microscope },
   { key: 'lab', label: 'Xét nghiệm', color: '#3c86a8', bgColor: '#3c86a820', icon: TestTube },
   { key: 'pathology', label: 'Giải phẫu bệnh', color: '#546a84', bgColor: '#546a8420', icon: FlaskConical },
@@ -79,7 +79,7 @@ export const CATALOG_ICON_OPTIONS: CatalogIconOption[] = [
   { key: 'monitoring', label: 'Theo dõi lâm sàng', color: '#507c7a', bgColor: '#507c7a20', icon: Activity },
   { key: 'spa', label: 'Tắm & Spa', color: '#4a90d9', bgColor: '#4a90d920', icon: Droplets },
   { key: 'bathing', label: 'Tắm chuyên sâu', color: '#4a7ed9', bgColor: '#4a7ed920', icon: Bath },
-  { key: 'grooming', label: 'Cắt tỉa lông', color: '#c67d5b', bgColor: '#c67d5b20', icon: Scissors },
+  { key: 'grooming', label: 'Cắt tỉa lông', color: '#c75b4c', bgColor: '#c75b4c20', icon: Scissors },
   { key: 'premium-care', label: 'Chăm sóc cao cấp', color: '#a07d56', bgColor: '#a07d5620', icon: Sparkles },
   { key: 'vaccine', label: 'Tiêm phòng', color: '#d4940a', bgColor: '#d4940a20', icon: Shield },
   { key: 'medical', label: 'Điều trị', color: '#4f8f8a', bgColor: '#4f8f8a20', icon: Syringe },

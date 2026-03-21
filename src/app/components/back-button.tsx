@@ -8,7 +8,7 @@ export function BackButton({ fallbackPath, label = 'Quay lại' }: { fallbackPat
     <button
       type='button'
       onClick={goBack}
-      className='inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-[#2d2a26]/30 rounded-xl bg-white hover:-translate-y-0.5 transition-all'
+      className='inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-[#592518]/30 rounded-xl bg-white hover:-translate-y-0.5 transition-all'
     >
       <ChevronLeft className='w-4 h-4' />
       {label}

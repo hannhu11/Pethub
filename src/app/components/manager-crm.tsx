@@ -112,8 +112,8 @@ function segmentLabel(segment: CustomerSegment) {
 
 function segmentClass(segment: CustomerSegment) {
   if (segment === 'vip') return 'bg-amber-100 text-amber-800 border-amber-300';
-  if (segment === 'loyal') return 'bg-[#6b8f5e]/10 text-[#6b8f5e] border-[#6b8f5e]/30';
-  if (segment === 'regular') return 'bg-[#f0ede8] text-[#7a756e] border-[#2d2a26]/10';
+  if (segment === 'loyal') return 'bg-[#d56756]/10 text-[#d56756] border-[#d56756]/30';
+  if (segment === 'regular') return 'bg-[#f4ece4] text-[#8b6a61] border-[#592518]/10';
   return 'bg-emerald-100 text-emerald-700 border-emerald-300';
 }
 
@@ -729,7 +729,7 @@ export function ManagerPetsPage() {
     try {
       await downloadElementAsPng(cardCaptureRef.current, {
         fileName: `digital-card-${selectedPet.name.replace(/\s+/g, '-').toLowerCase()}.png`,
-        backgroundColor: '#1f2327',
+        backgroundColor: '#592518',
       });
       setMessage('Đã tải Digital Card (PNG).');
     } catch {
@@ -741,26 +741,26 @@ export function ManagerPetsPage() {
     <div className='space-y-5'>
       <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3'>
         <div>
-          <h1 className='text-2xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <h1 className='text-2xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
             Quản lý thú cưng
           </h1>
-          <p className='text-sm text-[#7a756e] mt-1'>{pets.length} hồ sơ thú cưng • {pets.length} Digital Card</p>
+          <p className='text-sm text-[#8b6a61] mt-1'>{pets.length} hồ sơ thú cưng • {pets.length} Digital Card</p>
         </div>
         <div className='flex items-center gap-2'>
           <div className='relative'>
-            <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7a756e]' />
+            <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8b6a61]' />
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder='Tìm tên, ID, chủ...'
-              className='pl-9 pr-4 py-2.5 border border-[#2d2a26] rounded-xl bg-white text-sm w-56'
+              className='pl-9 pr-4 py-2.5 border border-[#592518] rounded-xl bg-white text-sm w-56'
             />
           </div>
           <div className='relative'>
             <select
               value={customerFilter}
               onChange={(event) => setCustomerFilter(event.target.value)}
-              className='min-w-[210px] appearance-none pl-3 pr-9 py-2.5 border border-[#2d2a26] rounded-xl bg-white text-sm'
+              className='min-w-[210px] appearance-none pl-3 pr-9 py-2.5 border border-[#592518] rounded-xl bg-white text-sm'
             >
               <option value='all'>Tất cả khách hàng</option>
               {customers.map((customer) => (
@@ -769,11 +769,11 @@ export function ManagerPetsPage() {
                 </option>
               ))}
             </select>
-            <ChevronDown className='pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2d2a26]/70' />
+            <ChevronDown className='pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#592518]/70' />
           </div>
           <button
             onClick={openCreate}
-            className='inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#6b8f5e] text-white border border-[#2d2a26] text-sm'
+            className='inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#d56756] text-white border border-[#592518] text-sm'
           >
             <UserPlus className='w-4 h-4' />
             Quick Add Walk-in
@@ -808,21 +808,21 @@ export function ManagerPetsPage() {
                   }}
                   className={`text-left bg-white border rounded-2xl p-4 transition-all duration-200 cursor-pointer ${
                     selected
-                      ? 'border-[#6b8f5e] shadow-[0_10px_25px_rgba(107,143,94,0.16)]'
-                      : 'border-[#2d2a26] hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(45,42,38,0.12)]'
+                      ? 'border-[#d56756] shadow-[0_10px_25px_rgba(107,143,94,0.16)]'
+                      : 'border-[#592518] hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(45,42,38,0.12)]'
                   }`}
                   aria-label={`Xem chi tiết thú cưng ${pet.name}`}
                 >
                   <div className='flex gap-3'>
-                    <div className='w-14 h-14 rounded-xl overflow-hidden border border-[#2d2a26]'>
+                    <div className='w-14 h-14 rounded-xl overflow-hidden border border-[#592518]'>
                       <ImageWithFallback src={view.image} alt={view.name} className='w-full h-full object-cover' />
                     </div>
                     <div className='flex-1'>
-                      <p className='text-sm text-[#2d2a26] transition-colors' style={{ fontWeight: 700 }}>
+                      <p className='text-sm text-[#592518] transition-colors' style={{ fontWeight: 700 }}>
                         {pet.name}
                       </p>
-                      <p className='text-xs text-[#7a756e]'>{pet.species} • {pet.breed || 'Chưa cập nhật giống'}</p>
-                      <p className='text-xs text-[#7a756e]'>{pet.customer?.name || 'Chưa có chủ'}</p>
+                      <p className='text-xs text-[#8b6a61]'>{pet.species} • {pet.breed || 'Chưa cập nhật giống'}</p>
+                      <p className='text-xs text-[#8b6a61]'>{pet.customer?.name || 'Chưa có chủ'}</p>
                     </div>
                   </div>
                   <button
@@ -831,7 +831,7 @@ export function ManagerPetsPage() {
                       event.stopPropagation();
                       openEdit(pet);
                     }}
-                    className='mt-3 w-full px-3 py-2 rounded-xl border border-[#2d2a26]/25 text-sm hover:bg-[#f0ede8]'
+                    className='mt-3 w-full px-3 py-2 rounded-xl border border-[#592518]/25 text-sm hover:bg-[#f4ece4]'
                   >
                     Sửa hồ sơ
                   </button>
@@ -840,35 +840,35 @@ export function ManagerPetsPage() {
             })}
           </div>
 
-          {loading ? <p className='text-sm text-[#7a756e] mt-4'>Đang tải dữ liệu thú cưng...</p> : null}
+          {loading ? <p className='text-sm text-[#8b6a61] mt-4'>Đang tải dữ liệu thú cưng...</p> : null}
           {!loading && filteredPets.length === 0 ? (
-            <div className='rounded-xl border border-[#2d2a26] bg-white p-6 text-center text-sm text-[#7a756e] mt-4'>
+            <div className='rounded-xl border border-[#592518] bg-white p-6 text-center text-sm text-[#8b6a61] mt-4'>
               Không có thú cưng phù hợp bộ lọc hiện tại.
             </div>
           ) : null}
         </div>
 
         {selectedPet && selectedUiPet ? (
-          <div className='bg-[linear-gradient(180deg,#ffffff_0%,#f8f6f1_100%)] border border-[#2d2a26] rounded-3xl overflow-hidden shadow-[0_18px_42px_rgba(45,42,38,0.10)]'>
+          <div className='bg-[linear-gradient(180deg,#ffffff_0%,#f8f6f1_100%)] border border-[#592518] rounded-3xl overflow-hidden shadow-[0_18px_42px_rgba(45,42,38,0.10)]'>
             <>
-              <div className='p-4 md:p-5 border-b border-[#2d2a26]/10 bg-white/75 flex items-center justify-between gap-3'>
+              <div className='p-4 md:p-5 border-b border-[#592518]/10 bg-white/75 flex items-center justify-between gap-3'>
                 <div className='flex items-center gap-3 min-w-0'>
-                  <div className='w-14 h-14 rounded-2xl overflow-hidden border border-[#2d2a26]/20 shadow-sm'>
+                  <div className='w-14 h-14 rounded-2xl overflow-hidden border border-[#592518]/20 shadow-sm'>
                     <ImageWithFallback src={selectedUiPet.image} alt={selectedUiPet.name} className='w-full h-full object-cover' />
                   </div>
                   <div className='min-w-0'>
-                    <p className='text-2xl text-[#2d2a26] truncate leading-none' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                    <p className='text-2xl text-[#592518] truncate leading-none' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
                       {selectedUiPet.name}
                     </p>
-                    <p className='text-sm text-[#7a756e] truncate mt-1'>{selectedUiPet.breed} • {selectedUiPet.species}</p>
-                    <p className='text-xs text-[#7a756e] truncate'>{selectedUiPet.ownerName}</p>
+                    <p className='text-sm text-[#8b6a61] truncate mt-1'>{selectedUiPet.breed} • {selectedUiPet.species}</p>
+                    <p className='text-xs text-[#8b6a61] truncate'>{selectedUiPet.ownerName}</p>
                   </div>
                 </div>
                 <div className='flex items-center gap-3 shrink-0'>
                   <button
                     type='button'
                     onClick={() => openEdit(selectedPet)}
-                    className='inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[#2d2a26]/20 text-sm bg-white hover:bg-[#f0ede8]'
+                    className='inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[#592518]/20 text-sm bg-white hover:bg-[#f4ece4]'
                   >
                     <Edit3 className='w-4 h-4' />
                     Sửa hồ sơ
@@ -876,7 +876,7 @@ export function ManagerPetsPage() {
                   <button
                     type='button'
                     onClick={() => setSelectedPetId(null)}
-                    className='inline-flex items-center justify-center w-9 h-9 rounded-xl border border-[#2d2a26]/20 text-sm hover:bg-[#f0ede8]'
+                    className='inline-flex items-center justify-center w-9 h-9 rounded-xl border border-[#592518]/20 text-sm hover:bg-[#f4ece4]'
                     aria-label='Đóng chi tiết thú cưng'
                   >
                     <X className='w-4 h-4' />
@@ -884,7 +884,7 @@ export function ManagerPetsPage() {
                 </div>
               </div>
 
-              <div className='px-4 py-3 md:px-5 border-b border-[#2d2a26]/10 flex flex-wrap gap-2'>
+              <div className='px-4 py-3 md:px-5 border-b border-[#592518]/10 flex flex-wrap gap-2'>
                 {[
                   { id: 'info' as const, label: 'Hồ sơ' },
                   { id: 'medical' as const, label: 'Bệnh án' },
@@ -895,8 +895,8 @@ export function ManagerPetsPage() {
                     onClick={() => setDetailTab(tab.id)}
                     className={`px-3 py-1.5 rounded-full text-sm border ${
                       detailTab === tab.id
-                        ? 'bg-[#2d2a26] text-white border-[#2d2a26]'
-                        : 'bg-[#faf9f6] text-[#2d2a26] border-[#2d2a26]/20'
+                        ? 'bg-[#592518] text-white border-[#592518]'
+                        : 'bg-[#faf8f5] text-[#592518] border-[#592518]/20'
                     }`}
                   >
                     {tab.label}
@@ -911,40 +911,40 @@ export function ManagerPetsPage() {
                   <div className='space-y-3'>
                     <div className='flex items-center justify-between gap-2'>
                       <div>
-                        <p className='text-sm text-[#2d2a26]' style={{ fontWeight: 700 }}>
+                        <p className='text-sm text-[#592518]' style={{ fontWeight: 700 }}>
                           Luồng bệnh án
                         </p>
-                        <p className='text-xs text-[#7a756e]'>Tạo/cập nhật bệnh án rồi đồng bộ Digital Card.</p>
+                        <p className='text-xs text-[#8b6a61]'>Tạo/cập nhật bệnh án rồi đồng bộ Digital Card.</p>
                       </div>
                       <button
                         onClick={openCreateMedicalForm}
-                        className='inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#6b8f5e] text-white border border-[#2d2a26] text-sm'
+                        className='inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#d56756] text-white border border-[#592518] text-sm'
                       >
                         <Plus className='w-4 h-4' />
                         Thêm bệnh án
                       </button>
                     </div>
 
-                    {medicalLoading ? <p className='text-sm text-[#7a756e]'>Đang tải bệnh án...</p> : null}
+                    {medicalLoading ? <p className='text-sm text-[#8b6a61]'>Đang tải bệnh án...</p> : null}
                     {!medicalLoading && medicalRecords.length === 0 ? (
-                      <div className='rounded-xl border border-[#2d2a26]/15 bg-[#faf9f6] p-4 text-sm text-[#7a756e]'>
+                      <div className='rounded-xl border border-[#592518]/15 bg-[#faf8f5] p-4 text-sm text-[#8b6a61]'>
                         Chưa có bệnh án nào.
                       </div>
                     ) : null}
                     {medicalRecords.map((record) => {
                       const view = mapMedicalRecordDisplay(record);
                       return (
-                        <article key={record.id} className='rounded-xl border border-[#2d2a26]/15 bg-[#faf9f6] p-3'>
+                        <article key={record.id} className='rounded-xl border border-[#592518]/15 bg-[#faf8f5] p-3'>
                           <div className='flex items-center justify-between gap-2'>
-                            <div className='flex items-center gap-2 text-sm text-[#2d2a26]'>
-                              <CalendarDays className='w-4 h-4 text-[#6b8f5e]' />
+                            <div className='flex items-center gap-2 text-sm text-[#592518]'>
+                              <CalendarDays className='w-4 h-4 text-[#d56756]' />
                               <span style={{ fontWeight: 700 }}>{formatRecordDate(record.recordedAt)}</span>
-                              <span className='text-[#7a756e]'>- {record.doctorName || 'BS. Chưa cập nhật'}</span>
+                              <span className='text-[#8b6a61]'>- {record.doctorName || 'BS. Chưa cập nhật'}</span>
                             </div>
                             <div className='flex items-center gap-1'>
                               <button
                                 onClick={() => openEditMedicalForm(record)}
-                                className='p-1.5 rounded-lg border border-[#2d2a26]/20 hover:bg-white'
+                                className='p-1.5 rounded-lg border border-[#592518]/20 hover:bg-white'
                               >
                                 <Edit3 className='w-4 h-4' />
                               </button>
@@ -967,8 +967,8 @@ export function ManagerPetsPage() {
                     })}
 
                     {medicalFormOpen ? (
-                      <div className='rounded-2xl border border-[#2d2a26] bg-white p-4 space-y-3'>
-                        <p className='text-base text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                      <div className='rounded-2xl border border-[#592518] bg-white p-4 space-y-3'>
+                        <p className='text-base text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
                           {medicalFormMode === 'create' ? 'Tạo bệnh án mới' : 'Cập nhật bệnh án'}
                         </p>
                         <div className='grid md:grid-cols-2 gap-3'>
@@ -976,13 +976,13 @@ export function ManagerPetsPage() {
                             type='date'
                             value={medicalForm.date}
                             onChange={(event) => setMedicalForm((prev) => ({ ...prev, date: event.target.value }))}
-                            className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm'
+                            className='p-3 border border-[#592518]/30 rounded-xl text-sm'
                           />
                           <input
                             value={medicalForm.doctorName}
                             onChange={(event) => setMedicalForm((prev) => ({ ...prev, doctorName: event.target.value }))}
                             placeholder='Bác sĩ phụ trách'
-                            className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm'
+                            className='p-3 border border-[#592518]/30 rounded-xl text-sm'
                           />
                         </div>
                         <textarea
@@ -990,39 +990,39 @@ export function ManagerPetsPage() {
                           value={medicalForm.diagnosis}
                           onChange={(event) => setMedicalForm((prev) => ({ ...prev, diagnosis: event.target.value }))}
                           placeholder='Chẩn đoán'
-                          className='w-full p-3 border border-[#2d2a26]/30 rounded-xl text-sm resize-none'
+                          className='w-full p-3 border border-[#592518]/30 rounded-xl text-sm resize-none'
                         />
                         <textarea
                           rows={2}
                           value={medicalForm.treatment}
                           onChange={(event) => setMedicalForm((prev) => ({ ...prev, treatment: event.target.value }))}
                           placeholder='Điều trị'
-                          className='w-full p-3 border border-[#2d2a26]/30 rounded-xl text-sm resize-none'
+                          className='w-full p-3 border border-[#592518]/30 rounded-xl text-sm resize-none'
                         />
                         <textarea
                           rows={2}
                           value={medicalForm.notes}
                           onChange={(event) => setMedicalForm((prev) => ({ ...prev, notes: event.target.value }))}
                           placeholder='Ghi chú'
-                          className='w-full p-3 border border-[#2d2a26]/30 rounded-xl text-sm resize-none'
+                          className='w-full p-3 border border-[#592518]/30 rounded-xl text-sm resize-none'
                         />
                         <input
                           type='date'
                           value={medicalForm.nextVisitAt}
                           onChange={(event) => setMedicalForm((prev) => ({ ...prev, nextVisitAt: event.target.value }))}
-                          className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm'
+                          className='p-3 border border-[#592518]/30 rounded-xl text-sm'
                         />
                         <div className='flex items-center gap-2'>
                           <button
                             onClick={() => void saveMedical()}
                             disabled={medicalSaving}
-                            className='px-4 py-2 rounded-xl bg-[#6b8f5e] text-white border border-[#2d2a26] text-sm disabled:opacity-60'
+                            className='px-4 py-2 rounded-xl bg-[#d56756] text-white border border-[#592518] text-sm disabled:opacity-60'
                           >
                             {medicalSaving ? 'Đang lưu...' : medicalFormMode === 'create' ? 'Lưu bệnh án' : 'Lưu chỉnh sửa'}
                           </button>
                           <button
                             onClick={closeMedicalForm}
-                            className='px-4 py-2 rounded-xl border border-[#2d2a26]/25 text-sm'
+                            className='px-4 py-2 rounded-xl border border-[#592518]/25 text-sm'
                           >
                             Hủy
                           </button>
@@ -1038,7 +1038,7 @@ export function ManagerPetsPage() {
                       <button
                         onClick={() => void refreshDigitalCard()}
                         disabled={digitalCardLoading}
-                        className='inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#2d2a26]/20 text-sm hover:bg-[#f0ede8] disabled:opacity-60'
+                        className='inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#592518]/20 text-sm hover:bg-[#f4ece4] disabled:opacity-60'
                       >
                         <Sparkles className='w-4 h-4' />
                         Cập nhật từ hồ sơ
@@ -1046,14 +1046,14 @@ export function ManagerPetsPage() {
                       <button
                         onClick={() => void recreateDigitalCard()}
                         disabled={digitalCardSyncing}
-                        className='inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#2d2a26]/20 text-sm hover:bg-[#f0ede8] disabled:opacity-60'
+                        className='inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#592518]/20 text-sm hover:bg-[#f4ece4] disabled:opacity-60'
                       >
                         <Sparkles className='w-4 h-4' />
                         Tạo lại thẻ
                       </button>
                       <button
                         onClick={() => void downloadCard()}
-                        className='inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#6b8f5e] text-white border border-[#2d2a26] text-sm'
+                        className='inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#d56756] text-white border border-[#592518] text-sm'
                       >
                         <Download className='w-4 h-4' />
                         Tải PNG
@@ -1064,9 +1064,9 @@ export function ManagerPetsPage() {
                         <PetDigitalCard pet={selectedCardPet} />
                       </div>
                     ) : (
-                      <p className='text-sm text-[#7a756e]'>Không có dữ liệu Digital Card.</p>
+                      <p className='text-sm text-[#8b6a61]'>Không có dữ liệu Digital Card.</p>
                     )}
-                    <p className='text-xs text-[#7a756e]'>
+                    <p className='text-xs text-[#8b6a61]'>
                       Cập nhật gần nhất:{' '}
                       {toDateLabel(
                         digitalCard?.version.lastRegeneratedAt || digitalCard?.generatedAt || new Date().toISOString(),
@@ -1082,12 +1082,12 @@ export function ManagerPetsPage() {
 
       {drawerOpen ? (
         <div className='fixed inset-0 z-50 bg-black/30 flex justify-end' onClick={() => !saving && setDrawerOpen(false)}>
-          <div className='w-full max-w-xl h-full bg-[#faf9f6] border-l border-[#2d2a26] p-5 overflow-auto' onClick={(event) => event.stopPropagation()}>
+          <div className='w-full max-w-xl h-full bg-[#faf8f5] border-l border-[#592518] p-5 overflow-auto' onClick={(event) => event.stopPropagation()}>
             <div className='flex items-center justify-between'>
-              <h2 className='text-xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+              <h2 className='text-xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
                 {petFormMode === 'create' ? 'Thêm nhanh — Walk-in' : 'Sửa hồ sơ thú cưng'}
               </h2>
-              <button onClick={() => setDrawerOpen(false)} className='p-1.5 hover:bg-[#f0ede8] rounded-lg'>
+              <button onClick={() => setDrawerOpen(false)} className='p-1.5 hover:bg-[#f4ece4] rounded-lg'>
                 <X className='w-5 h-5' />
               </button>
             </div>
@@ -1095,14 +1095,14 @@ export function ManagerPetsPage() {
             <div className='mt-5 space-y-4'>
               {petFormMode === 'create' ? (
                 <div className='space-y-2'>
-                  <p className='text-xs text-[#7a756e] uppercase tracking-wider'>Chủ sở hữu</p>
+                  <p className='text-xs text-[#8b6a61] uppercase tracking-wider'>Chủ sở hữu</p>
                   <div className='flex gap-2'>
                     <button
                       onClick={() => setOwnerMode('existing')}
                       className={`px-3 py-1.5 rounded-full text-xs border ${
                         ownerMode === 'existing'
-                          ? 'bg-[#2d2a26] text-white border-[#2d2a26]'
-                          : 'bg-white border-[#2d2a26]/20'
+                          ? 'bg-[#592518] text-white border-[#592518]'
+                          : 'bg-white border-[#592518]/20'
                       }`}
                     >
                       Khách hiện có
@@ -1111,8 +1111,8 @@ export function ManagerPetsPage() {
                       onClick={() => setOwnerMode('new')}
                       className={`px-3 py-1.5 rounded-full text-xs border ${
                         ownerMode === 'new'
-                          ? 'bg-[#2d2a26] text-white border-[#2d2a26]'
-                          : 'bg-white border-[#2d2a26]/20'
+                          ? 'bg-[#592518] text-white border-[#592518]'
+                          : 'bg-white border-[#592518]/20'
                       }`}
                     >
                       Walk-in mới
@@ -1126,7 +1126,7 @@ export function ManagerPetsPage() {
                   <select
                     value={form.existingOwner}
                     onChange={(event) => setForm((prev) => ({ ...prev, existingOwner: event.target.value }))}
-                    className='w-full appearance-none p-3 pr-10 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
+                    className='w-full appearance-none p-3 pr-10 border border-[#592518]/30 rounded-xl text-sm bg-white'
                   >
                     <option value=''>-- Chọn khách hàng --</option>
                     {customers.map((customer) => (
@@ -1135,7 +1135,7 @@ export function ManagerPetsPage() {
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className='pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2d2a26]/70' />
+                  <ChevronDown className='pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#592518]/70' />
                 </div>
               ) : (
                 <div className='grid gap-3'>
@@ -1143,34 +1143,34 @@ export function ManagerPetsPage() {
                     value={form.ownerName}
                     onChange={(event) => setForm((prev) => ({ ...prev, ownerName: event.target.value }))}
                     placeholder='Tên chủ nuôi'
-                    className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
+                    className='p-3 border border-[#592518]/30 rounded-xl text-sm bg-white'
                   />
                   <input
                     value={form.ownerPhone}
                     onChange={(event) => setForm((prev) => ({ ...prev, ownerPhone: event.target.value }))}
                     placeholder='Số điện thoại'
-                    className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
+                    className='p-3 border border-[#592518]/30 rounded-xl text-sm bg-white'
                   />
                   <input
                     value={form.ownerEmail}
                     onChange={(event) => setForm((prev) => ({ ...prev, ownerEmail: event.target.value }))}
                     placeholder='Email (không bắt buộc)'
-                    className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
+                    className='p-3 border border-[#592518]/30 rounded-xl text-sm bg-white'
                   />
                 </div>
               )}
 
-              <div className='rounded-2xl border border-[#2d2a26]/15 bg-white p-3'>
-                <p className='text-[10px] text-[#7a756e] uppercase tracking-wider mb-2'>Ảnh thú cưng</p>
+              <div className='rounded-2xl border border-[#592518]/15 bg-white p-3'>
+                <p className='text-[10px] text-[#8b6a61] uppercase tracking-wider mb-2'>Ảnh thú cưng</p>
                 <div className='flex items-center gap-3'>
-                  <div className='w-16 h-16 rounded-xl overflow-hidden border border-[#2d2a26]/20 bg-[#faf9f6] flex items-center justify-center'>
+                  <div className='w-16 h-16 rounded-xl overflow-hidden border border-[#592518]/20 bg-[#faf8f5] flex items-center justify-center'>
                     {form.imageUrl ? (
                       <ImageWithFallback src={form.imageUrl} alt='Pet preview' className='w-full h-full object-cover' />
                     ) : (
-                      <span className='text-[10px] text-[#7a756e]'>No image</span>
+                      <span className='text-[10px] text-[#8b6a61]'>No image</span>
                     )}
                   </div>
-                  <label className='inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-[#2d2a26]/25 text-xs bg-white cursor-pointer hover:bg-[#f0ede8]'>
+                  <label className='inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-[#592518]/25 text-xs bg-white cursor-pointer hover:bg-[#f4ece4]'>
                     <Plus className='w-3 h-3' />
                     Upload ảnh
                     <input type='file' accept='image/*' onChange={handlePetImageUpload} className='hidden' />
@@ -1179,18 +1179,18 @@ export function ManagerPetsPage() {
               </div>
 
               <div className='grid grid-cols-2 gap-3'>
-                <input value={form.petName} onChange={(event) => setForm((prev) => ({ ...prev, petName: event.target.value }))} placeholder='Tên thú cưng' className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white' />
-                <input value={form.petSpecies} onChange={(event) => setForm((prev) => ({ ...prev, petSpecies: event.target.value }))} placeholder='Loài' className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white' />
-                <input value={form.petBreed} onChange={(event) => setForm((prev) => ({ ...prev, petBreed: event.target.value }))} placeholder='Giống' className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white' />
-                <input value={form.petGender} onChange={(event) => setForm((prev) => ({ ...prev, petGender: event.target.value }))} placeholder='Giới tính' className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white' />
-                <input type='date' value={form.petDob} onChange={(event) => setForm((prev) => ({ ...prev, petDob: event.target.value }))} className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white' />
-                <input type='number' value={form.petWeight} onChange={(event) => setForm((prev) => ({ ...prev, petWeight: event.target.value }))} placeholder='Cân nặng (kg)' className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white' />
-                <input value={form.coatColor} onChange={(event) => setForm((prev) => ({ ...prev, coatColor: event.target.value }))} placeholder='Màu lông' className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white' />
+                <input value={form.petName} onChange={(event) => setForm((prev) => ({ ...prev, petName: event.target.value }))} placeholder='Tên thú cưng' className='p-3 border border-[#592518]/30 rounded-xl text-sm bg-white' />
+                <input value={form.petSpecies} onChange={(event) => setForm((prev) => ({ ...prev, petSpecies: event.target.value }))} placeholder='Loài' className='p-3 border border-[#592518]/30 rounded-xl text-sm bg-white' />
+                <input value={form.petBreed} onChange={(event) => setForm((prev) => ({ ...prev, petBreed: event.target.value }))} placeholder='Giống' className='p-3 border border-[#592518]/30 rounded-xl text-sm bg-white' />
+                <input value={form.petGender} onChange={(event) => setForm((prev) => ({ ...prev, petGender: event.target.value }))} placeholder='Giới tính' className='p-3 border border-[#592518]/30 rounded-xl text-sm bg-white' />
+                <input type='date' value={form.petDob} onChange={(event) => setForm((prev) => ({ ...prev, petDob: event.target.value }))} className='p-3 border border-[#592518]/30 rounded-xl text-sm bg-white' />
+                <input type='number' value={form.petWeight} onChange={(event) => setForm((prev) => ({ ...prev, petWeight: event.target.value }))} placeholder='Cân nặng (kg)' className='p-3 border border-[#592518]/30 rounded-xl text-sm bg-white' />
+                <input value={form.coatColor} onChange={(event) => setForm((prev) => ({ ...prev, coatColor: event.target.value }))} placeholder='Màu lông' className='p-3 border border-[#592518]/30 rounded-xl text-sm bg-white' />
                 <div className='relative'>
                   <select
                     value={form.bloodType}
                     onChange={(event) => setForm((prev) => ({ ...prev, bloodType: event.target.value }))}
-                    className='w-full appearance-none p-3 pr-10 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
+                    className='w-full appearance-none p-3 pr-10 border border-[#592518]/30 rounded-xl text-sm bg-white'
                   >
                     <option value='none'>Nhóm máu: Không rõ</option>
                     <option value='A'>A</option>
@@ -1199,26 +1199,26 @@ export function ManagerPetsPage() {
                     <option value='DEA 1.1+'>DEA 1.1+</option>
                     <option value='DEA 1.1-'>DEA 1.1-</option>
                   </select>
-                  <ChevronDown className='pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2d2a26]/70' />
+                  <ChevronDown className='pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#592518]/70' />
                 </div>
-                <input value={form.microchipId} onChange={(event) => setForm((prev) => ({ ...prev, microchipId: event.target.value }))} placeholder='Microchip ID' className='p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white' />
+                <input value={form.microchipId} onChange={(event) => setForm((prev) => ({ ...prev, microchipId: event.target.value }))} placeholder='Microchip ID' className='p-3 border border-[#592518]/30 rounded-xl text-sm bg-white' />
                 <div className='relative'>
                   <select
                     value={form.neutered}
                     onChange={(event) => setForm((prev) => ({ ...prev, neutered: event.target.value as 'yes' | 'no' | 'none' }))}
-                    className='w-full appearance-none p-3 pr-10 border border-[#2d2a26]/30 rounded-xl text-sm bg-white'
+                    className='w-full appearance-none p-3 pr-10 border border-[#592518]/30 rounded-xl text-sm bg-white'
                   >
                     <option value='none'>Triệt sản: Không rõ</option>
                     <option value='yes'>Đã triệt sản</option>
                     <option value='no'>Chưa triệt sản</option>
                   </select>
-                  <ChevronDown className='pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2d2a26]/70' />
+                  <ChevronDown className='pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#592518]/70' />
                 </div>
               </div>
               <div className='space-y-1'>
                 <div className='flex items-center justify-between'>
-                  <p className='text-[10px] text-[#7a756e] uppercase tracking-wider'>Ghi chú</p>
-                  <span className='text-[10px] text-[#7a756e]'>{form.specialNotes.length}/55</span>
+                  <p className='text-[10px] text-[#8b6a61] uppercase tracking-wider'>Ghi chú</p>
+                  <span className='text-[10px] text-[#8b6a61]'>{form.specialNotes.length}/55</span>
                 </div>
                 <textarea
                   rows={3}
@@ -1226,10 +1226,10 @@ export function ManagerPetsPage() {
                   maxLength={55}
                   onChange={(event) => setForm((prev) => ({ ...prev, specialNotes: event.target.value }))}
                   placeholder='Lưu ý dưới 55 ký tự'
-                  className='w-full p-3 border border-[#2d2a26]/30 rounded-xl text-sm bg-white resize-none'
+                  className='w-full p-3 border border-[#592518]/30 rounded-xl text-sm bg-white resize-none'
                 />
               </div>
-              <button onClick={() => void savePet()} disabled={saving} className='w-full py-3 rounded-xl bg-[#6b8f5e] text-white text-sm border border-[#2d2a26] disabled:opacity-60'>
+              <button onClick={() => void savePet()} disabled={saving} className='w-full py-3 rounded-xl bg-[#d56756] text-white text-sm border border-[#592518] disabled:opacity-60'>
                 {saving ? 'Đang lưu...' : 'Lưu hồ sơ'}
               </button>
             </div>
@@ -1369,41 +1369,41 @@ export function ManagerCustomersPage() {
     <div className='space-y-6'>
       <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3'>
         <div>
-          <h1 className='text-2xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Quản lý khách hàng</h1>
-          <p className='text-sm text-[#7a756e] mt-1'>CRM 360° — {customers.length} khách hàng</p>
+          <h1 className='text-2xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Quản lý khách hàng</h1>
+          <p className='text-sm text-[#8b6a61] mt-1'>CRM 360° — {customers.length} khách hàng</p>
         </div>
         <div className='relative'>
-          <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7a756e]' />
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder='Tìm theo tên, SĐT...' className='pl-9 pr-4 py-2.5 border border-[#2d2a26] rounded-xl bg-white text-sm w-64' />
+          <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8b6a61]' />
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder='Tìm theo tên, SĐT...' className='pl-9 pr-4 py-2.5 border border-[#592518] rounded-xl bg-white text-sm w-64' />
         </div>
       </div>
 
       {error ? <div className='rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-700'>{error}</div> : null}
 
       <div className='grid sm:grid-cols-2 lg:grid-cols-4 gap-3'>
-        <div className='bg-white border border-[#2d2a26] rounded-2xl p-4'>
-          <p className='text-xs uppercase tracking-wide text-[#7a756e]'>Khách VIP</p>
-          <p className='text-2xl text-[#2d2a26] mt-1' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>{summary.vip}</p>
+        <div className='bg-white border border-[#592518] rounded-2xl p-4'>
+          <p className='text-xs uppercase tracking-wide text-[#8b6a61]'>Khách VIP</p>
+          <p className='text-2xl text-[#592518] mt-1' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>{summary.vip}</p>
         </div>
-        <div className='bg-white border border-[#2d2a26] rounded-2xl p-4'>
-          <p className='text-xs uppercase tracking-wide text-[#7a756e]'>Thân thiết</p>
-          <p className='text-2xl text-[#2d2a26] mt-1' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>{summary.loyal}</p>
+        <div className='bg-white border border-[#592518] rounded-2xl p-4'>
+          <p className='text-xs uppercase tracking-wide text-[#8b6a61]'>Thân thiết</p>
+          <p className='text-2xl text-[#592518] mt-1' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>{summary.loyal}</p>
         </div>
-        <div className='bg-white border border-[#2d2a26] rounded-2xl p-4'>
-          <p className='text-xs uppercase tracking-wide text-[#7a756e]'>Khách thường</p>
-          <p className='text-2xl text-[#2d2a26] mt-1' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>{summary.regular}</p>
+        <div className='bg-white border border-[#592518] rounded-2xl p-4'>
+          <p className='text-xs uppercase tracking-wide text-[#8b6a61]'>Khách thường</p>
+          <p className='text-2xl text-[#592518] mt-1' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>{summary.regular}</p>
         </div>
-        <div className='bg-white border border-[#2d2a26] rounded-2xl p-4'>
-          <p className='text-xs uppercase tracking-wide text-[#7a756e]'>Tổng LTV</p>
-          <p className='text-2xl text-[#2d2a26] mt-1' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+        <div className='bg-white border border-[#592518] rounded-2xl p-4'>
+          <p className='text-xs uppercase tracking-wide text-[#8b6a61]'>Tổng LTV</p>
+          <p className='text-2xl text-[#592518] mt-1' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
             {formatCurrency(summary.totalLtv)}
           </p>
         </div>
       </div>
 
-      <div className='bg-white border border-[#2d2a26] rounded-2xl p-3 flex flex-wrap items-center gap-2'>
+      <div className='bg-white border border-[#592518] rounded-2xl p-3 flex flex-wrap items-center gap-2'>
         {(['all', 'vip', 'loyal', 'regular', 'new'] as const).map((segment) => (
-          <button key={segment} onClick={() => setSegmentFilter(segment)} className={`px-3 py-1.5 rounded-xl text-xs border ${segmentFilter === segment ? 'bg-[#6b8f5e] text-white border-[#2d2a26]' : 'bg-[#faf9f6] text-[#2d2a26] border-[#2d2a26]/20'}`}>
+          <button key={segment} onClick={() => setSegmentFilter(segment)} className={`px-3 py-1.5 rounded-xl text-xs border ${segmentFilter === segment ? 'bg-[#d56756] text-white border-[#592518]' : 'bg-[#faf8f5] text-[#592518] border-[#592518]/20'}`}>
             {segment === 'all'
               ? `Tất cả (${customers.length})`
               : `${segmentLabel(segment)} (${customers.filter((item) => item.segment === segment).length})`}
@@ -1413,8 +1413,8 @@ export function ManagerCustomersPage() {
 
       <div className='flex flex-col lg:flex-row gap-5'>
         <div className={`${detailOpen ? 'lg:w-[45%]' : 'w-full'} transition-all`}>
-          <div className='bg-white border border-[#2d2a26] rounded-2xl overflow-hidden min-h-[340px]'>
-            <div className='divide-y divide-[#2d2a26]/10'>
+          <div className='bg-white border border-[#592518] rounded-2xl overflow-hidden min-h-[340px]'>
+            <div className='divide-y divide-[#592518]/10'>
               {filtered.map((customer) => {
                 const isSelected = selectedId === customer.id;
                 const petCount = customer.pets?.length ?? 0;
@@ -1422,33 +1422,33 @@ export function ManagerCustomersPage() {
                   <div
                     key={customer.id}
                     onClick={() => openDetail(customer.id)}
-                    className={`p-4 cursor-pointer transition-all hover:bg-[#faf9f6] ${
-                      isSelected ? 'bg-[#6b8f5e]/5 border-l-[3px] border-l-[#6b8f5e]' : ''
+                    className={`p-4 cursor-pointer transition-all hover:bg-[#faf8f5] ${
+                      isSelected ? 'bg-[#d56756]/5 border-l-[3px] border-l-[#d56756]' : ''
                     }`}
                   >
                     <div className='flex items-center gap-3'>
-                      <div className='w-10 h-10 rounded-full bg-[#c67d5b] flex items-center justify-center flex-shrink-0 border border-[#2d2a26]/20'>
+                      <div className='w-10 h-10 rounded-full bg-[#c75b4c] flex items-center justify-center flex-shrink-0 border border-[#592518]/20'>
                         <span className='text-white text-xs' style={{ fontWeight: 600 }}>
                           {customer.name.split(' ').filter(Boolean).slice(-1)[0]?.charAt(0).toUpperCase() || 'K'}
                         </span>
                       </div>
                       <div className='flex-1 min-w-0'>
                       <div className='flex items-center gap-2'>
-                          <h3 className='text-xl text-[#2d2a26] truncate leading-none' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                          <h3 className='text-xl text-[#592518] truncate leading-none' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
                             {customer.name}
                           </h3>
                           <span className={`text-[10px] px-2 py-0.5 rounded-full border ${segmentClass(customer.segment)}`} style={{ fontWeight: 600 }}>
                             {segmentLabel(customer.segment)}
                           </span>
                         </div>
-                        <div className='flex items-center gap-3 text-xs text-[#7a756e] mt-1'>
+                        <div className='flex items-center gap-3 text-xs text-[#8b6a61] mt-1'>
                           <span>{customer.phone}</span>
                           <span>{petCount} thú cưng</span>
                         </div>
                       </div>
                       <div className='text-right hidden sm:block'>
-                        <p className='text-[10px] uppercase tracking-wide text-[#7a756e]'>LTV</p>
-                        <p className='text-2xl text-[#6b8f5e]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                        <p className='text-[10px] uppercase tracking-wide text-[#8b6a61]'>LTV</p>
+                        <p className='text-2xl text-[#d56756]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
                           {formatCurrency(customer.totalSpent)}
                         </p>
                       </div>
@@ -1458,41 +1458,41 @@ export function ManagerCustomersPage() {
                           event.stopPropagation();
                           openDetail(customer.id);
                         }}
-                        className='p-1.5 rounded-lg border border-[#2d2a26]/20 hover:bg-[#f0ede8] transition-colors'
+                        className='p-1.5 rounded-lg border border-[#592518]/20 hover:bg-[#f4ece4] transition-colors'
                         aria-label='Xem chi tiết khách hàng'
                       >
-                        <MoreHorizontal className='w-4 h-4 text-[#7a756e]' />
+                        <MoreHorizontal className='w-4 h-4 text-[#8b6a61]' />
                       </button>
                     </div>
                   </div>
                 );
               })}
             </div>
-            {loading ? <p className='p-4 text-sm text-[#7a756e]'>Đang tải danh sách khách hàng...</p> : null}
-            {!loading && filtered.length === 0 ? <p className='p-4 text-sm text-[#7a756e]'>Không có khách hàng phù hợp.</p> : null}
+            {loading ? <p className='p-4 text-sm text-[#8b6a61]'>Đang tải danh sách khách hàng...</p> : null}
+            {!loading && filtered.length === 0 ? <p className='p-4 text-sm text-[#8b6a61]'>Không có khách hàng phù hợp.</p> : null}
           </div>
         </div>
 
         {detailOpen && selectedId && detail ? (
           <div className='lg:w-[55%] space-y-4'>
-            <div className='bg-[linear-gradient(140deg,#ffffff_0%,#f8f5ef_100%)] border border-[#2d2a26] rounded-2xl p-5 shadow-[0_12px_30px_rgba(45,42,38,0.08)]'>
+            <div className='bg-[linear-gradient(140deg,#ffffff_0%,#f8f5ef_100%)] border border-[#592518] rounded-2xl p-5 shadow-[0_12px_30px_rgba(45,42,38,0.08)]'>
               <div className='flex items-start justify-between gap-3'>
                 <div className='flex items-center gap-4'>
-                  <div className='w-14 h-14 rounded-full bg-[#c67d5b] flex items-center justify-center border-2 border-[#2d2a26]'>
+                  <div className='w-14 h-14 rounded-full bg-[#c75b4c] flex items-center justify-center border-2 border-[#592518]'>
                     <span className='text-white text-lg' style={{ fontWeight: 700 }}>
                       {detail.name.split(' ').filter(Boolean).slice(-1)[0]?.charAt(0).toUpperCase() || 'K'}
                     </span>
                   </div>
                   <div>
                     <div className='flex items-center gap-2'>
-                      <h2 className='text-3xl text-[#2d2a26] leading-none' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                      <h2 className='text-3xl text-[#592518] leading-none' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
                         {detail.name}
                       </h2>
                       <span className={`text-[10px] px-2 py-0.5 rounded-full border ${segmentClass(detail.segment)}`} style={{ fontWeight: 600 }}>
                         {segmentLabel(detail.segment)}
                       </span>
                     </div>
-                    <div className='flex items-center gap-4 text-xs text-[#7a756e] mt-2'>
+                    <div className='flex items-center gap-4 text-xs text-[#8b6a61] mt-2'>
                       <span className='inline-flex items-center gap-1'>
                         <Mail className='w-4 h-4' />
                         {detail.email || '--'}
@@ -1509,50 +1509,50 @@ export function ManagerCustomersPage() {
                     setDetailOpen(false);
                     setDetail(null);
                   }}
-                  className='p-1 hover:bg-[#f0ede8] rounded-lg'
+                  className='p-1 hover:bg-[#f4ece4] rounded-lg'
                 >
-                  <X className='w-5 h-5 text-[#7a756e]' />
+                  <X className='w-5 h-5 text-[#8b6a61]' />
                 </button>
               </div>
             </div>
 
             <div className='grid grid-cols-3 gap-3'>
-              <div className='bg-white border border-[#2d2a26] rounded-2xl p-4 text-center'>
-                <p className='text-[10px] text-[#7a756e] uppercase tracking-wider'>Lifetime Value</p>
-                <p className='text-2xl text-[#2d2a26] mt-1' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+              <div className='bg-white border border-[#592518] rounded-2xl p-4 text-center'>
+                <p className='text-[10px] text-[#8b6a61] uppercase tracking-wider'>Lifetime Value</p>
+                <p className='text-2xl text-[#592518] mt-1' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
                   {formatCurrency(detail.totalSpent)}
                 </p>
               </div>
-              <div className='bg-white border border-[#2d2a26] rounded-2xl p-4 text-center'>
-                <p className='text-[10px] text-[#7a756e] uppercase tracking-wider'>Lượt ghé thăm</p>
-                <p className='text-2xl text-[#2d2a26] mt-1' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+              <div className='bg-white border border-[#592518] rounded-2xl p-4 text-center'>
+                <p className='text-[10px] text-[#8b6a61] uppercase tracking-wider'>Lượt ghé thăm</p>
+                <p className='text-2xl text-[#592518] mt-1' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
                   {detail.totalVisits}
                 </p>
               </div>
-              <div className='bg-white border border-[#2d2a26] rounded-2xl p-4 text-center'>
-                <p className='text-[10px] text-[#7a756e] uppercase tracking-wider'>Lần cuối</p>
-                <p className='text-lg text-[#2d2a26] mt-1' style={{ fontWeight: 600 }}>
+              <div className='bg-white border border-[#592518] rounded-2xl p-4 text-center'>
+                <p className='text-[10px] text-[#8b6a61] uppercase tracking-wider'>Lần cuối</p>
+                <p className='text-lg text-[#592518] mt-1' style={{ fontWeight: 600 }}>
                   {detail.lastVisitAt ? toDateLabel(detail.lastVisitAt) : '—'}
                 </p>
               </div>
             </div>
 
-            <div className='bg-[linear-gradient(160deg,#ffffff_0%,#f7f3ec_100%)] border border-[#2d2a26] rounded-2xl p-5'>
-              <h3 className='text-2xl text-[#2d2a26] mb-3' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <div className='bg-[linear-gradient(160deg,#ffffff_0%,#f7f3ec_100%)] border border-[#592518] rounded-2xl p-5'>
+              <h3 className='text-2xl text-[#592518] mb-3' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
                 Thú cưng ({detail.pets?.length || 0})
               </h3>
               <div className='flex gap-3 overflow-x-auto pb-1'>
                 {(detail.pets || []).map((pet) => (
-                  <div key={pet.id} className='flex-shrink-0 w-44 border border-[#2d2a26]/20 rounded-xl p-3 bg-[#faf9f6]'>
-                    <div className='w-14 h-14 rounded-full overflow-hidden border border-[#2d2a26]/20 mx-auto mb-2'>
+                  <div key={pet.id} className='flex-shrink-0 w-44 border border-[#592518]/20 rounded-xl p-3 bg-[#faf8f5]'>
+                    <div className='w-14 h-14 rounded-full overflow-hidden border border-[#592518]/20 mx-auto mb-2'>
                       <ImageWithFallback src={pet.imageUrl || ''} alt={pet.name} className='w-full h-full object-cover' />
                     </div>
                     <p className='text-sm text-center' style={{ fontWeight: 700 }}>{pet.name}</p>
-                    <p className='text-xs text-[#7a756e] text-center'>{pet.species} • {pet.breed || 'Chưa rõ'}</p>
+                    <p className='text-xs text-[#8b6a61] text-center'>{pet.species} • {pet.breed || 'Chưa rõ'}</p>
                     <button
                       type='button'
                       onClick={() => void openDigitalCard(pet.id, pet.name)}
-                      className='w-full mt-1.5 inline-flex items-center justify-center py-1 rounded-lg border border-[#2d2a26]/30 text-[11px] text-[#6b8f5e] hover:bg-[#6b8f5e]/10 transition-all'
+                      className='w-full mt-1.5 inline-flex items-center justify-center py-1 rounded-lg border border-[#592518]/30 text-[11px] text-[#d56756] hover:bg-[#d56756]/10 transition-all'
                       style={{ fontWeight: 600 }}
                     >
                       Digital Card
@@ -1560,29 +1560,29 @@ export function ManagerCustomersPage() {
                   </div>
                 ))}
                 {(detail.pets || []).length === 0 ? (
-                  <p className='text-xs text-[#7a756e] py-4 w-full text-center'>Chưa có thú cưng nào</p>
+                  <p className='text-xs text-[#8b6a61] py-4 w-full text-center'>Chưa có thú cưng nào</p>
                 ) : null}
               </div>
             </div>
 
-            <div className='bg-white border border-[#2d2a26] rounded-2xl p-5'>
-              <h3 className='text-2xl text-[#2d2a26] mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <div className='bg-white border border-[#592518] rounded-2xl p-5'>
+              <h3 className='text-2xl text-[#592518] mb-4' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
                 Lịch sử hoạt động
               </h3>
               <div className='space-y-2'>
                 {(detail.appointments || []).slice(0, 10).map((appointment) => (
-                  <div key={appointment.id} className='text-sm border border-[#2d2a26]/10 rounded-xl p-3'>
+                  <div key={appointment.id} className='text-sm border border-[#592518]/10 rounded-xl p-3'>
                     <div className='flex items-center justify-between gap-2'>
                       <span>{appointment.service?.name || 'Dịch vụ'} • {appointment.pet?.name || 'Thú cưng'}</span>
                       <span className={`px-2 py-0.5 rounded-full border text-xs ${getStatusColor(appointment.status)}`}>
                         {getStatusLabel(appointment.status)}
                       </span>
                     </div>
-                    <p className='text-[#7a756e] mt-1 text-xs'>{toDateLabel(appointment.appointmentAt)} {toTimeLabel(appointment.appointmentAt)}</p>
+                    <p className='text-[#8b6a61] mt-1 text-xs'>{toDateLabel(appointment.appointmentAt)} {toTimeLabel(appointment.appointmentAt)}</p>
                   </div>
                 ))}
                 {(detail.appointments || []).length === 0 ? (
-                  <p className='text-xs text-[#7a756e] text-center py-4'>Chưa có hoạt động nào</p>
+                  <p className='text-xs text-[#8b6a61] text-center py-4'>Chưa có hoạt động nào</p>
                 ) : null}
               </div>
             </div>
@@ -1596,14 +1596,14 @@ export function ManagerCustomersPage() {
           onClick={() => setDigitalCardOpen(false)}
         >
           <div
-            className='max-w-4xl mx-auto rounded-3xl border border-[#2d2a26] bg-[#faf9f6] p-4 md:p-6 shadow-[0_24px_60px_rgba(0,0,0,0.24)]'
+            className='max-w-4xl mx-auto rounded-3xl border border-[#592518] bg-[#faf8f5] p-4 md:p-6 shadow-[0_24px_60px_rgba(0,0,0,0.24)]'
             onClick={(event) => event.stopPropagation()}
           >
             <div className='flex items-center justify-between mb-4'>
               <div>
-                <p className='text-xs uppercase tracking-[0.14em] text-[#7a756e]'>Digital Card</p>
+                <p className='text-xs uppercase tracking-[0.14em] text-[#8b6a61]'>Digital Card</p>
                 <h3
-                  className='text-xl text-[#2d2a26] leading-tight'
+                  className='text-xl text-[#592518] leading-tight'
                   style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}
                 >
                   {digitalCardPetName || 'Thú cưng'}
@@ -1612,15 +1612,15 @@ export function ManagerCustomersPage() {
               <button
                 type='button'
                 onClick={() => setDigitalCardOpen(false)}
-                className='p-1.5 rounded-lg border border-[#2d2a26]/20 hover:bg-[#f0ede8]'
+                className='p-1.5 rounded-lg border border-[#592518]/20 hover:bg-[#f4ece4]'
                 aria-label='Đóng Digital Card'
               >
-                <X className='w-4 h-4 text-[#7a756e]' />
+                <X className='w-4 h-4 text-[#8b6a61]' />
               </button>
             </div>
 
             {digitalCardLoading ? (
-              <p className='text-sm text-[#7a756e]'>Đang tải digital card...</p>
+              <p className='text-sm text-[#8b6a61]'>Đang tải digital card...</p>
             ) : null}
             {digitalCardError ? (
               <div className='rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-700'>

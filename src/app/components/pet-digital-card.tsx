@@ -39,7 +39,7 @@ export function PetDigitalCard({ pet, className }: PetDigitalCardProps) {
   ];
 
   return (
-    <div className={cn('rounded-3xl overflow-hidden border border-[#2d2a26] relative bg-[#1f2327] text-white shadow-none', className)}>
+    <div className={cn('rounded-3xl overflow-hidden border border-[#592518] relative bg-[#1f2327] text-white shadow-none', className)}>
       <div className='absolute inset-0 bg-[radial-gradient(circle_at_top_right,#8a6d5e_0%,transparent_38%),radial-gradient(circle_at_bottom_left,#5b7a67_0%,transparent_40%)] opacity-70' />
       <div className='absolute inset-0 opacity-15' style={{ backgroundImage: 'linear-gradient(115deg, transparent 0%, #ffffff 45%, transparent 85%)' }} />
 

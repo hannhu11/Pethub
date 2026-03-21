@@ -17,9 +17,9 @@ const features = [
 ];
 
 const services = [
-  { icon: Stethoscope, name: 'Khám tổng quát', color: '#6b8f5e' },
+  { icon: Stethoscope, name: 'Khám tổng quát', color: '#d56756' },
   { icon: Droplets, name: 'Tắm & Spa', color: '#4a90d9' },
-  { icon: Scissors, name: 'Cắt tỉa lông', color: '#c67d5b' },
+  { icon: Scissors, name: 'Cắt tỉa lông', color: '#c75b4c' },
   { icon: Shield, name: 'Tiêm phòng', color: '#d4940a' },
 ];
 
@@ -41,30 +41,30 @@ export function HomePage() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#6b8f5e] text-[#6b8f5e] text-sm mb-6">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#d56756] text-[#d56756] text-sm mb-6">
                 <PawPrint className="w-4 h-4" />
                 Nền tảng vận hành hiện đại cho pet clinic & pet store
               </div>
-              <h1 className="text-4xl md:text-5xl mb-6 text-[#2d2a26]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, lineHeight: 1.2 }}>
+              <h1 className="text-4xl md:text-5xl mb-6 text-[#592518]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, lineHeight: 1.2 }}>
                 Tăng trưởng phòng khám thú y
-                <span className="text-[#6b8f5e]"> chuyên nghiệp</span> &
-                <span className="text-[#c67d5b]"> bền vững</span>
+                <span className="text-[#d56756]"> chuyên nghiệp</span> &
+                <span className="text-[#c75b4c]"> bền vững</span>
               </h1>
-              <p className="text-lg text-[#7a756e] mb-8 max-w-lg">
+              <p className="text-lg text-[#8b6a61] mb-8 max-w-lg">
                 PetHub giúp bạn chuẩn hóa vận hành từ đặt lịch, chăm sóc khách hàng đến quản lý hồ sơ thú cưng.
                 Mọi quy trình quan trọng được gom về một nền tảng duy nhất để tăng hiệu suất và giữ chân khách hàng.
               </p>
               <div className="flex flex-wrap gap-4">
                 <Link
                   to="/login"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#6b8f5e] text-white hover:-translate-y-1 transition-all border border-[#2d2a26]"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#d56756] text-white hover:-translate-y-1 transition-all border border-[#592518]"
                 >
                   Khám phá nền tảng
                   <ArrowRight className="w-5 h-5" />
                 </Link>
                 <Link
                   to="/register"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white text-[#2d2a26] hover:-translate-y-1 transition-all border border-[#2d2a26]"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white text-[#592518] hover:-translate-y-1 transition-all border border-[#592518]"
                 >
                   Nhận tư vấn miễn phí
                 </Link>
@@ -78,8 +78,8 @@ export function HomePage() {
                   { num: '95M$', label: 'Quy mô TT' },
                 ].map(s => (
                   <div key={s.label}>
-                    <p className="text-2xl text-[#6b8f5e]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>{s.num}</p>
-                    <p className="text-xs text-[#7a756e]">{s.label}</p>
+                    <p className="text-2xl text-[#d56756]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>{s.num}</p>
+                    <p className="text-xs text-[#8b6a61]">{s.label}</p>
                   </div>
                 ))}
               </div>
@@ -91,23 +91,23 @@ export function HomePage() {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="relative"
             >
-              <div className="relative rounded-3xl overflow-hidden border border-[#2d2a26] aspect-[4/3]">
+              <div className="relative rounded-3xl overflow-hidden border border-[#592518] aspect-[4/3]">
                 <ImageWithFallback
                   src={heroClinicImage}
                   alt="PetHub Veterinary Care"
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#2d2a26]/30 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#592518]/30 to-transparent" />
               </div>
               {/* Floating card */}
-              <div className="absolute -bottom-4 -left-4 bg-white border border-[#2d2a26] rounded-2xl p-4 shadow-none">
+              <div className="absolute -bottom-4 -left-4 bg-white border border-[#592518] rounded-2xl p-4 shadow-none">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
                     <Check className="w-5 h-5 text-emerald-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-[#2d2a26]" style={{ fontWeight: 600 }}>Lịch hẹn mới!</p>
-                    <p className="text-xs text-[#7a756e]">Lucky - Khám tổng quát</p>
+                    <p className="text-sm text-[#592518]" style={{ fontWeight: 600 }}>Lịch hẹn mới!</p>
+                    <p className="text-xs text-[#8b6a61]">Lucky - Khám tổng quát</p>
                   </div>
                 </div>
               </div>
@@ -119,18 +119,18 @@ export function HomePage() {
       {/* Wavy Divider */}
       <div className="relative h-12">
         <svg viewBox="0 0 1440 48" className="absolute w-full" preserveAspectRatio="none">
-          <path d="M0,24 C360,48 720,0 1080,24 C1260,36 1380,12 1440,24 L1440,48 L0,48 Z" fill="#f0ede8" />
+          <path d="M0,24 C360,48 720,0 1080,24 C1260,36 1380,12 1440,24 L1440,48 L0,48 Z" fill="#f4ece4" />
         </svg>
       </div>
 
       {/* Services Preview */}
-      <section id="services-section" className="bg-[#f0ede8] py-16">
+      <section id="services-section" className="bg-[#f4ece4] py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl text-[#2d2a26] mb-3" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <h2 className="text-3xl text-[#592518] mb-3" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
               Dịch vụ của chúng tôi
             </h2>
-            <p className="text-[#7a756e] max-w-lg mx-auto">
+            <p className="text-[#8b6a61] max-w-lg mx-auto">
               Danh mục dịch vụ được chuẩn hóa để khách hàng dễ đặt lịch và phòng khám dễ vận hành.
             </p>
           </div>
@@ -142,19 +142,19 @@ export function HomePage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="bg-white border border-[#2d2a26] rounded-2xl p-6 text-center hover:-translate-y-1 transition-all cursor-pointer group"
+                className="bg-white border border-[#592518] rounded-2xl p-6 text-center hover:-translate-y-1 transition-all cursor-pointer group"
               >
                 <div className="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center mb-4 transition-colors" style={{ backgroundColor: s.color + '20' }}>
                   <s.icon className="w-7 h-7" style={{ color: s.color }} />
                 </div>
-                <p className="text-sm text-[#2d2a26]" style={{ fontWeight: 500 }}>{s.name}</p>
+                <p className="text-sm text-[#592518]" style={{ fontWeight: 500 }}>{s.name}</p>
               </motion.div>
             ))}
           </div>
           <div className="text-center mt-8">
             <Link
               to="/login"
-              className="inline-flex items-center gap-2 text-[#6b8f5e] hover:underline"
+              className="inline-flex items-center gap-2 text-[#d56756] hover:underline"
             >
               Xem toàn bộ dịch vụ <ArrowRight className="w-4 h-4" />
             </Link>
@@ -166,10 +166,10 @@ export function HomePage() {
       <section id="about-section" className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <h2 className="text-3xl text-[#2d2a26] mb-3" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <h2 className="text-3xl text-[#592518] mb-3" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
               Tại sao chọn PetHub?
             </h2>
-            <p className="text-[#7a756e] max-w-lg mx-auto">
+            <p className="text-[#8b6a61] max-w-lg mx-auto">
               Những năng lực cốt lõi giúp PetHub đồng hành cùng chủ pet clinic/pet store ngay từ ngày đầu vận hành.
             </p>
           </div>
@@ -181,15 +181,15 @@ export function HomePage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="bg-white border border-[#2d2a26] rounded-2xl p-6 hover:-translate-y-1 transition-all"
+                className="bg-white border border-[#592518] rounded-2xl p-6 hover:-translate-y-1 transition-all"
               >
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-[#6b8f5e]/10 flex-shrink-0 flex items-center justify-center">
-                    <f.icon className="w-6 h-6 text-[#6b8f5e]" />
+                  <div className="w-12 h-12 rounded-2xl bg-[#d56756]/10 flex-shrink-0 flex items-center justify-center">
+                    <f.icon className="w-6 h-6 text-[#d56756]" />
                   </div>
                   <div>
-                    <h3 className="text-lg text-[#2d2a26] mb-2" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>{f.title}</h3>
-                    <p className="text-sm text-[#7a756e]">{f.desc}</p>
+                    <h3 className="text-lg text-[#592518] mb-2" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>{f.title}</h3>
+                    <p className="text-sm text-[#8b6a61]">{f.desc}</p>
                   </div>
                 </div>
               </motion.div>
@@ -199,36 +199,36 @@ export function HomePage() {
       </section>
 
       {/* Pricing */}
-      <section id="pricing-section" className="bg-[#f0ede8] py-20">
+      <section id="pricing-section" className="bg-[#f4ece4] py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <h2 className="text-3xl text-[#2d2a26] mb-3" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <h2 className="text-3xl text-[#592518] mb-3" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
               Bảng giá minh bạch
             </h2>
-            <p className="text-[#7a756e]">Bắt đầu miễn phí, nâng cấp khi sẵn sàng.</p>
+            <p className="text-[#8b6a61]">Bắt đầu miễn phí, nâng cấp khi sẵn sàng.</p>
           </div>
           <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
             {/* Free */}
-            <div className="bg-white border border-[#2d2a26] rounded-2xl p-8">
+            <div className="bg-white border border-[#592518] rounded-2xl p-8">
               <h3 className="text-lg mb-1" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>Cơ bản</h3>
-              <p className="text-3xl text-[#2d2a26] mb-4" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
-                0 <span className="text-sm text-[#7a756e]" style={{ fontWeight: 400 }}>VND/tháng</span>
+              <p className="text-3xl text-[#592518] mb-4" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                0 <span className="text-sm text-[#8b6a61]" style={{ fontWeight: 400 }}>VND/tháng</span>
               </p>
               <div className="space-y-3 mb-6">
                 {['Giới hạn 50 hồ sơ', 'Tạo booking thủ công', 'Lưu lịch sử dịch vụ', '1 tài khoản admin'].map(f => (
                   <div key={f} className="flex items-center gap-2 text-sm">
-                    <Check className="w-4 h-4 text-[#6b8f5e]" />
+                    <Check className="w-4 h-4 text-[#d56756]" />
                     {f}
                   </div>
                 ))}
               </div>
-              <Link to="/register" className="block w-full text-center py-3 rounded-xl border border-[#2d2a26] hover:-translate-y-0.5 transition-all">
+              <Link to="/register" className="block w-full text-center py-3 rounded-xl border border-[#592518] hover:-translate-y-0.5 transition-all">
                 Bắt đầu miễn phí
               </Link>
             </div>
             {/* Premium */}
-            <div className="bg-[#6b8f5e] text-white border border-[#2d2a26] rounded-2xl p-8 relative">
-              <div className="absolute -top-3 right-6 px-3 py-1 bg-[#c67d5b] text-white text-xs rounded-full border border-[#2d2a26]">
+            <div className="bg-[#d56756] text-white border border-[#592518] rounded-2xl p-8 relative">
+              <div className="absolute -top-3 right-6 px-3 py-1 bg-[#c75b4c] text-white text-xs rounded-full border border-[#592518]">
                 Phổ biến nhất
               </div>
               <h3 className="text-lg mb-1" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>Premium</h3>
@@ -243,7 +243,7 @@ export function HomePage() {
                   </div>
                 ))}
               </div>
-              <Link to="/register" className="block w-full text-center py-3 rounded-xl bg-white text-[#6b8f5e] hover:-translate-y-0.5 transition-all border border-[#2d2a26]" style={{ fontWeight: 600 }}>
+              <Link to="/register" className="block w-full text-center py-3 rounded-xl bg-white text-[#d56756] hover:-translate-y-0.5 transition-all border border-[#592518]" style={{ fontWeight: 600 }}>
                 Dùng thử 14 ngày
               </Link>
             </div>
@@ -255,7 +255,7 @@ export function HomePage() {
       <section id="testimonials-section" className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <h2 className="text-3xl text-[#2d2a26] mb-3" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+            <h2 className="text-3xl text-[#592518] mb-3" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
               Khách hàng nói gì?
             </h2>
           </div>
@@ -267,17 +267,17 @@ export function HomePage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="bg-white border border-[#2d2a26] rounded-2xl p-6"
+                className="bg-white border border-[#592518] rounded-2xl p-6"
               >
                 <div className="flex gap-1 mb-4">
                   {Array(t.rating).fill(0).map((_, j) => (
                     <Star key={j} className="w-4 h-4 fill-[#d4940a] text-[#d4940a]" />
                   ))}
                 </div>
-                <p className="text-sm text-[#2d2a26] mb-4 italic">"{t.text}"</p>
+                <p className="text-sm text-[#592518] mb-4 italic">"{t.text}"</p>
                 <div>
                   <p className="text-sm" style={{ fontWeight: 600 }}>{t.name}</p>
-                  <p className="text-xs text-[#7a756e]">{t.role}</p>
+                  <p className="text-xs text-[#8b6a61]">{t.role}</p>
                 </div>
               </motion.div>
             ))}
@@ -288,7 +288,7 @@ export function HomePage() {
       {/* CTA */}
       <section id="contact-section" className="py-16">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <div className="bg-[#6b8f5e] rounded-3xl p-12 border border-[#2d2a26] relative overflow-hidden">
+          <div className="bg-[#d56756] rounded-3xl p-12 border border-[#592518] relative overflow-hidden">
             <div className="absolute top-4 right-4 opacity-10">
               <PawPrint className="w-32 h-32 text-white" />
             </div>
@@ -300,7 +300,7 @@ export function HomePage() {
             </p>
             <Link
               to="/register"
-              className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white text-[#6b8f5e] hover:-translate-y-1 transition-all border border-[#2d2a26]"
+              className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white text-[#d56756] hover:-translate-y-1 transition-all border border-[#592518]"
               style={{ fontWeight: 600 }}
             >
               Đăng ký ngay — Miễn phí

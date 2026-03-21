@@ -389,10 +389,10 @@ export function ManagerPOSPage() {
   return (
     <div className='space-y-4'>
       <div>
-        <h1 className='text-2xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+        <h1 className='text-2xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
           Thanh toán POS
         </h1>
-        <p className='text-sm text-[#7a756e]'>
+        <p className='text-sm text-[#8b6a61]'>
           Nền tảng thanh toán đa kênh. Giao dịch được xử lý an toàn, nhanh chóng và tự động cập nhật trạng thái.
         </p>
       </div>
@@ -409,7 +409,7 @@ export function ManagerPOSPage() {
               type='button'
               onClick={() => setTab('service')}
               className={`px-4 py-2 rounded-xl border text-sm ${
-                tab === 'service' ? 'bg-[#2d2a26] text-white border-[#2d2a26]' : 'bg-white border-[#2d2a26]/20'
+                tab === 'service' ? 'bg-[#592518] text-white border-[#592518]' : 'bg-white border-[#592518]/20'
               }`}
             >
               <Stethoscope className='w-4 h-4 inline-block mr-1' />
@@ -419,7 +419,7 @@ export function ManagerPOSPage() {
               type='button'
               onClick={() => setTab('product')}
               className={`px-4 py-2 rounded-xl border text-sm ${
-                tab === 'product' ? 'bg-[#2d2a26] text-white border-[#2d2a26]' : 'bg-white border-[#2d2a26]/20'
+                tab === 'product' ? 'bg-[#592518] text-white border-[#592518]' : 'bg-white border-[#592518]/20'
               }`}
             >
               <ShoppingBag className='w-4 h-4 inline-block mr-1' />
@@ -428,12 +428,12 @@ export function ManagerPOSPage() {
           </div>
 
           <div className='relative'>
-            <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7a756e]' />
+            <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8b6a61]' />
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder='Tìm theo tên...'
-              className='w-full pl-9 pr-3 py-3 rounded-xl border border-[#2d2a26] bg-white text-sm'
+              className='w-full pl-9 pr-3 py-3 rounded-xl border border-[#592518] bg-white text-sm'
             />
           </div>
 
@@ -443,42 +443,42 @@ export function ManagerPOSPage() {
                 key={item.key}
                 type='button'
                 onClick={() => addToCart(item)}
-                className='bg-white border border-[#2d2a26] rounded-xl p-3 text-left hover:-translate-y-0.5 transition-all'
+                className='bg-white border border-[#592518] rounded-xl p-3 text-left hover:-translate-y-0.5 transition-all'
               >
-                <p className='text-sm text-[#2d2a26]' style={{ fontWeight: 600 }}>
+                <p className='text-sm text-[#592518]' style={{ fontWeight: 600 }}>
                   {item.name}
                 </p>
-                <p className='text-sm text-[#6b8f5e] mt-1'>{formatCurrency(item.price)}</p>
+                <p className='text-sm text-[#d56756] mt-1'>{formatCurrency(item.price)}</p>
               </button>
             ))}
           </div>
           {!loading && visibleItems.length === 0 ? (
-            <div className='rounded-xl border border-[#2d2a26]/20 bg-white p-4 text-sm text-[#7a756e]'>
+            <div className='rounded-xl border border-[#592518]/20 bg-white p-4 text-sm text-[#8b6a61]'>
               {tab === 'service'
                 ? 'Chưa có dịch vụ trong danh mục. Vui lòng vào mục Sản phẩm & Dịch vụ để thêm dịch vụ.'
                 : 'Chưa có sản phẩm trong danh mục.'}
             </div>
           ) : null}
-          {loading ? <p className='text-sm text-[#7a756e]'>Đang tải dữ liệu POS...</p> : null}
+          {loading ? <p className='text-sm text-[#8b6a61]'>Đang tải dữ liệu POS...</p> : null}
         </div>
 
         <div>
-          <div className='bg-white border-2 border-[#2d2a26] rounded-2xl overflow-hidden'>
-            <div className='bg-[#2d2a26] text-white p-4 flex items-center gap-2'>
+          <div className='bg-white border-2 border-[#592518] rounded-2xl overflow-hidden'>
+            <div className='bg-[#592518] text-white p-4 flex items-center gap-2'>
               <Receipt className='w-4 h-4' />
               <p className='text-sm' style={{ fontWeight: 700 }}>
                 HÓA ĐƠN
               </p>
             </div>
 
-            <div className='p-4 space-y-3 border-b border-[#2d2a26]/10'>
+            <div className='p-4 space-y-3 border-b border-[#592518]/10'>
               <div>
-                <label className='text-xs text-[#7a756e]'>Khách hàng</label>
+                <label className='text-xs text-[#8b6a61]'>Khách hàng</label>
                 <div className='relative mt-1'>
                   <select
                     value={selectedCustomerId}
                     onChange={(event) => setSelectedCustomerId(event.target.value)}
-                    className='w-full appearance-none p-2.5 pr-10 rounded-xl border border-[#2d2a26] text-sm bg-white'
+                    className='w-full appearance-none p-2.5 pr-10 rounded-xl border border-[#592518] text-sm bg-white'
                   >
                     <option value=''>-- Chọn khách hàng --</option>
                     {customers.map((customer) => (
@@ -487,18 +487,18 @@ export function ManagerPOSPage() {
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className='pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2d2a26]/70' />
+                  <ChevronDown className='pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#592518]/70' />
                 </div>
               </div>
 
               <div>
-                <label className='text-xs text-[#7a756e]'>Thú cưng</label>
+                <label className='text-xs text-[#8b6a61]'>Thú cưng</label>
                 <div className='relative mt-1'>
                   <select
                     value={selectedPetId}
                     onChange={(event) => setSelectedPetId(event.target.value)}
                     disabled={pets.length === 0}
-                    className='w-full appearance-none p-2.5 pr-10 rounded-xl border border-[#2d2a26] text-sm bg-white'
+                    className='w-full appearance-none p-2.5 pr-10 rounded-xl border border-[#592518] text-sm bg-white'
                   >
                     <option value=''>-- Chọn thú cưng --</option>
                     {pets.map((pet) => (
@@ -507,26 +507,26 @@ export function ManagerPOSPage() {
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className='pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2d2a26]/70' />
+                  <ChevronDown className='pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#592518]/70' />
                 </div>
                 {!selectedCustomerId ? (
-                  <p className='text-xs text-[#7a756e] mt-1'>Chọn khách hàng để tải danh sách thú cưng.</p>
+                  <p className='text-xs text-[#8b6a61] mt-1'>Chọn khách hàng để tải danh sách thú cưng.</p>
                 ) : null}
               </div>
             </div>
 
             <div className='max-h-64 overflow-y-auto'>
               {cart.length === 0 ? (
-                <p className='p-4 text-sm text-[#7a756e]'>Chưa có mục nào trong giỏ.</p>
+                <p className='p-4 text-sm text-[#8b6a61]'>Chưa có mục nào trong giỏ.</p>
               ) : (
                 cart.map((item) => (
-                  <div key={item.key} className='p-3 border-b border-[#2d2a26]/10'>
+                  <div key={item.key} className='p-3 border-b border-[#592518]/10'>
                     <div className='flex justify-between items-start gap-2'>
                       <div>
-                        <p className='text-sm text-[#2d2a26]' style={{ fontWeight: 600 }}>
+                        <p className='text-sm text-[#592518]' style={{ fontWeight: 600 }}>
                           {item.name}
                         </p>
-                        <p className='text-xs text-[#7a756e]'>{formatCurrency(item.unitPrice)} / mục</p>
+                        <p className='text-xs text-[#8b6a61]'>{formatCurrency(item.unitPrice)} / mục</p>
                       </div>
                       <button type='button' onClick={() => removeFromCart(item.key)} className='text-red-500'>
                         <Trash2 className='w-4 h-4' />
@@ -534,15 +534,15 @@ export function ManagerPOSPage() {
                     </div>
                     <div className='mt-2 flex items-center justify-between'>
                       <div className='flex items-center gap-2'>
-                        <button type='button' onClick={() => updateQty(item.key, -1)} className='w-7 h-7 rounded-lg border border-[#2d2a26]/20'>
+                        <button type='button' onClick={() => updateQty(item.key, -1)} className='w-7 h-7 rounded-lg border border-[#592518]/20'>
                           -
                         </button>
                         <span className='text-sm'>{item.qty}</span>
-                        <button type='button' onClick={() => updateQty(item.key, 1)} className='w-7 h-7 rounded-lg border border-[#2d2a26]/20'>
+                        <button type='button' onClick={() => updateQty(item.key, 1)} className='w-7 h-7 rounded-lg border border-[#592518]/20'>
                           +
                         </button>
                       </div>
-                      <p className='text-sm text-[#6b8f5e]' style={{ fontWeight: 700 }}>
+                      <p className='text-sm text-[#d56756]' style={{ fontWeight: 700 }}>
                         {formatCurrency(item.unitPrice * item.qty)}
                       </p>
                     </div>
@@ -551,13 +551,13 @@ export function ManagerPOSPage() {
               )}
             </div>
 
-            <div className='p-4 space-y-2 border-t border-[#2d2a26]/15'>
+            <div className='p-4 space-y-2 border-t border-[#592518]/15'>
               <div className='flex justify-between text-sm'>
-                <span className='text-[#7a756e]'>Tạm tính</span>
+                <span className='text-[#8b6a61]'>Tạm tính</span>
                 <span>{formatCurrency(subtotal)}</span>
               </div>
               <div className='flex justify-between text-sm'>
-                <span className='text-[#7a756e]'>VAT ({DEFAULT_TAX_PERCENT}%)</span>
+                <span className='text-[#8b6a61]'>VAT ({DEFAULT_TAX_PERCENT}%)</span>
                 <span>{formatCurrency(taxAmount)}</span>
               </div>
               <div className='flex justify-between text-lg'>
@@ -567,7 +567,7 @@ export function ManagerPOSPage() {
             </div>
 
             <div className='px-4 pb-2'>
-              <p className='text-xs text-[#7a756e] mb-2'>Phương thức thanh toán</p>
+              <p className='text-xs text-[#8b6a61] mb-2'>Phương thức thanh toán</p>
               <div className='grid grid-cols-3 gap-2'>
                 {[
                   { id: 'cash' as const, label: 'Tiền mặt', icon: Banknote },
@@ -580,8 +580,8 @@ export function ManagerPOSPage() {
                     onClick={() => setPaymentMethod(item.id)}
                     className={`py-2 rounded-xl border text-xs ${
                       paymentMethod === item.id
-                        ? 'bg-[#2d2a26] text-white border-[#2d2a26]'
-                        : 'bg-white border-[#2d2a26]/20 text-[#2d2a26]'
+                        ? 'bg-[#592518] text-white border-[#592518]'
+                        : 'bg-white border-[#592518]/20 text-[#592518]'
                     }`}
                   >
                     <item.icon className='w-4 h-4 inline-block mr-1' />
@@ -596,7 +596,7 @@ export function ManagerPOSPage() {
                 type='button'
                 onClick={() => void handleCheckout()}
                 disabled={submitting || cart.length === 0 || !selectedCustomerId}
-                className='w-full py-3 rounded-xl border border-[#2d2a26] bg-[#6b8f5e] text-white text-sm disabled:opacity-60'
+                className='w-full py-3 rounded-xl border border-[#592518] bg-[#d56756] text-white text-sm disabled:opacity-60'
                 style={{ fontWeight: 700 }}
               >
                 {submitting ? 'Đang tạo giao dịch...' : 'Hoàn tất thanh toán'}
@@ -607,8 +607,8 @@ export function ManagerPOSPage() {
       </div>
 
       {checkoutResult ? (
-        <div className='bg-white border border-[#2d2a26] rounded-2xl p-5'>
-          <h2 className='text-lg text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+        <div className='bg-white border border-[#592518] rounded-2xl p-5'>
+          <h2 className='text-lg text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
             Trạng thái giao dịch
           </h2>
           <div className='mt-3 grid md:grid-cols-2 gap-4'>
@@ -626,22 +626,22 @@ export function ManagerPOSPage() {
                 </span>
               </p>
               {checkoutResult.paymentAction ? (
-                <p className='text-xs text-[#7a756e]'>
+                <p className='text-xs text-[#8b6a61]'>
                   Hệ thống sẽ tự động cập nhật trạng thái ngay khi giao dịch được ngân hàng xác nhận.
                 </p>
               ) : null}
             </div>
 
             {checkoutResult.paymentAction ? (
-              <div className='border border-[#2d2a26]/15 rounded-xl p-4 flex flex-col items-center gap-3'>
+              <div className='border border-[#592518]/15 rounded-xl p-4 flex flex-col items-center gap-3'>
                 {qrValue?.startsWith('http') || qrValue?.startsWith('data:image') ? (
-                  <img src={qrValue} alt='QR thanh toán' className='w-52 h-52 object-contain border border-[#2d2a26]/10 rounded-lg p-2 bg-white' />
+                  <img src={qrValue} alt='QR thanh toán' className='w-52 h-52 object-contain border border-[#592518]/10 rounded-lg p-2 bg-white' />
                 ) : qrValue ? (
-                  <div className='w-56 h-56 border border-[#2d2a26]/10 rounded-lg p-2 bg-white flex items-center justify-center'>
+                  <div className='w-56 h-56 border border-[#592518]/10 rounded-lg p-2 bg-white flex items-center justify-center'>
                     <QRCodeSVG value={qrValue} size={200} />
                   </div>
                 ) : (
-                  <div className='w-52 h-52 border border-dashed border-[#2d2a26]/20 rounded-lg flex items-center justify-center text-xs text-[#7a756e]'>
+                  <div className='w-52 h-52 border border-dashed border-[#592518]/20 rounded-lg flex items-center justify-center text-xs text-[#8b6a61]'>
                     Chưa có mã QR thanh toán
                   </div>
                 )}
@@ -649,7 +649,7 @@ export function ManagerPOSPage() {
                   href={checkoutResult.paymentAction.checkoutUrl}
                   target='_blank'
                   rel='noreferrer'
-                  className='text-sm text-[#6b8f5e] underline'
+                  className='text-sm text-[#d56756] underline'
                 >
                   Mở liên kết thanh toán
                 </a>

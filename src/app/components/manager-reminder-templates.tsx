@@ -157,16 +157,16 @@ export function ManagerReminderTemplatesPage() {
         <button
           type='button'
           onClick={() => navigate('/manager/reminders')}
-          className='inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-[#2d2a26] bg-white hover:-translate-y-0.5 transition-all text-sm'
+          className='inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-[#592518] bg-white hover:-translate-y-0.5 transition-all text-sm'
         >
           <ArrowLeft className='w-4 h-4' />
           Quay lại
         </button>
         <div>
-          <h1 className='text-2xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <h1 className='text-2xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
             Tạo nhắc nhở từ mẫu
           </h1>
-          <p className='text-sm text-[#7a756e] mt-1'>
+          <p className='text-sm text-[#8b6a61] mt-1'>
             Thư viện kịch bản chăm sóc chuyên nghiệp. Cá nhân hóa thông điệp và tự động hóa hành trình khách hàng.
           </p>
         </div>
@@ -175,8 +175,8 @@ export function ManagerReminderTemplatesPage() {
       {error ? <div className='rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-700'>{error}</div> : null}
 
       <div className='grid lg:grid-cols-[300px_minmax(0,1fr)] gap-5'>
-        <div className='bg-white border border-[#2d2a26] rounded-2xl p-4 space-y-3'>
-          <p className='text-xs uppercase tracking-[0.14em] text-[#7a756e]' style={{ fontWeight: 600 }}>
+        <div className='bg-white border border-[#592518] rounded-2xl p-4 space-y-3'>
+          <p className='text-xs uppercase tracking-[0.14em] text-[#8b6a61]' style={{ fontWeight: 600 }}>
             Mẫu có sẵn
           </p>
           {reminderTemplates.map((item) => (
@@ -185,25 +185,25 @@ export function ManagerReminderTemplatesPage() {
               type='button'
               onClick={() => handleTemplateChange(item.id)}
               className={`w-full text-left border rounded-xl p-3 transition-all ${
-                templateId === item.id ? 'border-[#6b8f5e] bg-[#6b8f5e]/10' : 'border-[#2d2a26]/20 bg-white hover:bg-[#faf9f6]'
+                templateId === item.id ? 'border-[#d56756] bg-[#d56756]/10' : 'border-[#592518]/20 bg-white hover:bg-[#faf8f5]'
               }`}
             >
-              <p className='text-sm text-[#2d2a26]' style={{ fontWeight: 600 }}>
+              <p className='text-sm text-[#592518]' style={{ fontWeight: 600 }}>
                 {item.name}
               </p>
-              <p className='text-xs text-[#7a756e] mt-1'>Kênh gợi ý: {item.channelDefaults.join(' + ')}</p>
+              <p className='text-xs text-[#8b6a61] mt-1'>Kênh gợi ý: {item.channelDefaults.join(' + ')}</p>
             </button>
           ))}
         </div>
 
-        <div className='bg-white border border-[#2d2a26] rounded-2xl p-5 space-y-4'>
+        <div className='bg-white border border-[#592518] rounded-2xl p-5 space-y-4'>
           <div className='grid sm:grid-cols-2 gap-3'>
             <div>
-              <label className='text-xs text-[#7a756e] mb-1 block'>Khách hàng</label>
+              <label className='text-xs text-[#8b6a61] mb-1 block'>Khách hàng</label>
               <select
                 value={customerId}
                 onChange={(event) => handleCustomerChange(event.target.value)}
-                className='w-full p-3 border border-[#2d2a26] rounded-xl text-sm bg-white'
+                className='w-full p-3 border border-[#592518] rounded-xl text-sm bg-white'
               >
                 <option value=''>Chọn khách hàng...</option>
                 {customers.map((customer) => (
@@ -214,11 +214,11 @@ export function ManagerReminderTemplatesPage() {
               </select>
             </div>
             <div>
-              <label className='text-xs text-[#7a756e] mb-1 block'>Thú cưng</label>
+              <label className='text-xs text-[#8b6a61] mb-1 block'>Thú cưng</label>
               <select
                 value={petId}
                 onChange={(event) => handlePetChange(event.target.value)}
-                className='w-full p-3 border border-[#2d2a26] rounded-xl text-sm bg-white'
+                className='w-full p-3 border border-[#592518] rounded-xl text-sm bg-white'
               >
                 <option value=''>Chọn thú cưng...</option>
                 {customerPets.map((pet) => (
@@ -232,15 +232,15 @@ export function ManagerReminderTemplatesPage() {
 
           <div className='grid sm:grid-cols-2 gap-3'>
             <div>
-              <label className='text-xs text-[#7a756e] mb-1 block'>Kênh gửi</label>
+              <label className='text-xs text-[#8b6a61] mb-1 block'>Kênh gửi</label>
               <div className='grid grid-cols-2 gap-2'>
                 <button
                   type='button'
                   onClick={() => setChannel('email')}
                   className={`inline-flex items-center justify-center gap-1 px-3 py-2 rounded-xl border text-sm ${
                     channel === 'email'
-                      ? 'border-[#6b8f5e] bg-[#6b8f5e]/10 text-[#6b8f5e]'
-                      : 'border-[#2d2a26]/20 text-[#2d2a26]'
+                      ? 'border-[#d56756] bg-[#d56756]/10 text-[#d56756]'
+                      : 'border-[#592518]/20 text-[#592518]'
                   }`}
                 >
                   <Mail className='w-4 h-4' />
@@ -251,8 +251,8 @@ export function ManagerReminderTemplatesPage() {
                   onClick={() => setChannel('sms')}
                   className={`inline-flex items-center justify-center gap-1 px-3 py-2 rounded-xl border text-sm ${
                     channel === 'sms'
-                      ? 'border-[#6b8f5e] bg-[#6b8f5e]/10 text-[#6b8f5e]'
-                      : 'border-[#2d2a26]/20 text-[#2d2a26]'
+                      ? 'border-[#d56756] bg-[#d56756]/10 text-[#d56756]'
+                      : 'border-[#592518]/20 text-[#592518]'
                   }`}
                 >
                   <MessageSquare className='w-4 h-4' />
@@ -261,29 +261,29 @@ export function ManagerReminderTemplatesPage() {
               </div>
             </div>
             <div>
-              <label className='text-xs text-[#7a756e] mb-1 block'>Ngày gửi (schedule)</label>
+              <label className='text-xs text-[#8b6a61] mb-1 block'>Ngày gửi (schedule)</label>
               <input
                 type='date'
                 value={scheduledDate}
                 onChange={(event) => setScheduledDate(event.target.value)}
-                className='w-full p-3 border border-[#2d2a26] rounded-xl text-sm bg-white'
+                className='w-full p-3 border border-[#592518] rounded-xl text-sm bg-white'
               />
             </div>
           </div>
 
           <div>
-            <label className='text-xs text-[#7a756e] mb-1 block'>Nội dung review</label>
+            <label className='text-xs text-[#8b6a61] mb-1 block'>Nội dung review</label>
             <textarea
               value={message}
               onChange={(event) => setMessage(event.target.value)}
               rows={7}
               placeholder='Nội dung nhắc nhở sẽ hiển thị ở đây'
-              className='w-full p-3 border border-[#2d2a26] rounded-xl text-sm bg-white resize-none'
+              className='w-full p-3 border border-[#592518] rounded-xl text-sm bg-white resize-none'
             />
           </div>
 
           <div className='flex flex-wrap items-center justify-between gap-2'>
-            <p className='text-xs text-[#7a756e]'>
+            <p className='text-xs text-[#8b6a61]'>
               {selectedCustomer && selectedPet
                 ? `Preview cho ${selectedCustomer.name} • ${selectedPet.name}`
                 : 'Chọn khách hàng + thú cưng để auto-fill đầy đủ'}
@@ -301,7 +301,7 @@ export function ManagerReminderTemplatesPage() {
               type='button'
               onClick={() => void submitReminder(false)}
               disabled={saving}
-              className='inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-[#2d2a26] bg-white hover:-translate-y-0.5 transition-all text-sm disabled:opacity-60'
+              className='inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-[#592518] bg-white hover:-translate-y-0.5 transition-all text-sm disabled:opacity-60'
               style={{ fontWeight: 600 }}
             >
               Lên lịch gửi
@@ -310,7 +310,7 @@ export function ManagerReminderTemplatesPage() {
               type='button'
               onClick={() => void submitReminder(true)}
               disabled={saving}
-              className='inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-[#2d2a26] bg-[#6b8f5e] text-white hover:-translate-y-0.5 transition-all text-sm disabled:opacity-60'
+              className='inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-[#592518] bg-[#d56756] text-white hover:-translate-y-0.5 transition-all text-sm disabled:opacity-60'
               style={{ fontWeight: 700 }}
             >
               <Send className='w-4 h-4' />

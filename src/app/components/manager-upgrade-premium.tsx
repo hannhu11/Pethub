@@ -244,7 +244,7 @@ export function ManagerUpgradePremiumPage() {
       <div className='flex items-center justify-between gap-3 flex-wrap'>
         <Link
           to='/manager/settings?tab=subscription'
-          className='inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[#2d2a26] bg-white hover:-translate-y-0.5 transition-all text-sm'
+          className='inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[#592518] bg-white hover:-translate-y-0.5 transition-all text-sm'
         >
           <ArrowLeft className='w-4 h-4' />
           Quay lại gói thanh toán
@@ -252,53 +252,53 @@ export function ManagerUpgradePremiumPage() {
       </div>
 
       <div className='grid lg:grid-cols-2 gap-6'>
-        <section className='bg-white border border-[#2d2a26] rounded-2xl p-6'>
-          <div className='inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#6b8f5e]/10 border border-[#6b8f5e]/40 text-[#6b8f5e] text-xs mb-4'>
+        <section className='bg-white border border-[#592518] rounded-2xl p-6'>
+          <div className='inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#d56756]/10 border border-[#d56756]/40 text-[#d56756] text-xs mb-4'>
             <ShieldCheck className='w-3.5 h-3.5' />
             Premium Plan
           </div>
-          <h1 className='text-3xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <h1 className='text-3xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
             Nâng cấp lên Premium
           </h1>
-          <p className='text-sm text-[#7a756e] mt-2'>
+          <p className='text-sm text-[#8b6a61] mt-2'>
             Mở khóa toàn bộ bộ công cụ vận hành theo chuẩn quốc tế cho phòng khám và pet shop.
           </p>
 
           <div className='mt-6 space-y-3'>
             {premiumBenefits.map((item) => (
-              <div key={item} className='flex items-start gap-2 text-sm text-[#2d2a26]'>
-                <CheckCircle2 className='w-4 h-4 text-[#6b8f5e] mt-0.5 flex-shrink-0' />
+              <div key={item} className='flex items-start gap-2 text-sm text-[#592518]'>
+                <CheckCircle2 className='w-4 h-4 text-[#d56756] mt-0.5 flex-shrink-0' />
                 <span>{item}</span>
               </div>
             ))}
           </div>
         </section>
 
-        <section className='bg-white border border-[#2d2a26] rounded-2xl p-6'>
-          <h2 className='text-xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+        <section className='bg-white border border-[#592518] rounded-2xl p-6'>
+          <h2 className='text-xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
             Thanh toán nâng cấp Premium
           </h2>
-          <p className='text-xs text-[#7a756e] mt-1'>Chu kỳ thanh toán: Hàng tháng • Giá đã gồm VAT</p>
+          <p className='text-xs text-[#8b6a61] mt-1'>Chu kỳ thanh toán: Hàng tháng • Giá đã gồm VAT</p>
 
-          <div className='mt-4 p-4 rounded-xl border border-[#2d2a26]/20 bg-[#f5f0eb]'>
+          <div className='mt-4 p-4 rounded-xl border border-[#592518]/20 bg-[#f6eee7]'>
             <div className='flex items-center justify-between'>
-              <span className='text-sm text-[#7a756e]'>Gói Premium</span>
-              <span className='text-lg text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+              <span className='text-sm text-[#8b6a61]'>Gói Premium</span>
+              <span className='text-lg text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
                 {formatVnd(amount)}đ
               </span>
             </div>
-            <div className='mt-3 pt-3 border-t border-[#2d2a26]/20 flex items-center justify-between'>
-              <span className='text-sm text-[#2d2a26]' style={{ fontWeight: 600 }}>
+            <div className='mt-3 pt-3 border-t border-[#592518]/20 flex items-center justify-between'>
+              <span className='text-sm text-[#592518]' style={{ fontWeight: 600 }}>
                 Tổng thanh toán
               </span>
-              <span className='text-2xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+              <span className='text-2xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
                 {formatVnd(amount)}đ
               </span>
             </div>
           </div>
 
-          <div className='mt-4 border border-[#2d2a26]/15 rounded-xl p-4 bg-[#faf9f6]'>
-            <div className='flex items-center gap-2 text-xs text-[#2d2a26]' style={{ fontWeight: 700 }}>
+          <div className='mt-4 border border-[#592518]/15 rounded-xl p-4 bg-[#faf8f5]'>
+            <div className='flex items-center gap-2 text-xs text-[#592518]' style={{ fontWeight: 700 }}>
               <QrCode className='w-4 h-4' />
               Quét mã để thanh toán
             </div>
@@ -306,31 +306,31 @@ export function ManagerUpgradePremiumPage() {
               {checkout ? (
                 <>
                   {qrValue?.startsWith('http') || qrValue?.startsWith('data:image') ? (
-                    <img src={qrValue} alt='QR thanh toán Premium' className='w-32 h-32 object-contain rounded-lg border border-[#2d2a26]/20 bg-white p-2' />
+                    <img src={qrValue} alt='QR thanh toán Premium' className='w-32 h-32 object-contain rounded-lg border border-[#592518]/20 bg-white p-2' />
                   ) : qrValue ? (
-                    <div className='w-32 h-32 rounded-lg border border-[#2d2a26]/20 bg-white p-2 flex items-center justify-center'>
+                    <div className='w-32 h-32 rounded-lg border border-[#592518]/20 bg-white p-2 flex items-center justify-center'>
                       <QRCodeSVG value={qrValue} size={112} />
                     </div>
                   ) : (
-                    <div className='w-32 h-32 rounded-lg border border-dashed border-[#2d2a26]/20 bg-white flex items-center justify-center text-[11px] text-[#7a756e] text-center px-2'>
+                    <div className='w-32 h-32 rounded-lg border border-dashed border-[#592518]/20 bg-white flex items-center justify-center text-[11px] text-[#8b6a61] text-center px-2'>
                       Chưa có QR thanh toán
                     </div>
                   )}
-                  <div className='min-w-[220px] text-xs space-y-1 text-[#2d2a26] font-mono'>
+                  <div className='min-w-[220px] text-xs space-y-1 text-[#592518] font-mono'>
                     <p>
-                      <span className='text-[#7a756e]'>Nguồn:</span> Chuyển khoản QR
+                      <span className='text-[#8b6a61]'>Nguồn:</span> Chuyển khoản QR
                     </p>
                     <p>
-                      <span className='text-[#7a756e]'>Mã giao dịch:</span> {checkout.orderCode}
+                      <span className='text-[#8b6a61]'>Mã giao dịch:</span> {checkout.orderCode}
                     </p>
                     <p>
-                      <span className='text-[#7a756e]'>Số tiền:</span> {formatVnd(checkout.amount)} VND
+                      <span className='text-[#8b6a61]'>Số tiền:</span> {formatVnd(checkout.amount)} VND
                     </p>
                     <a
                       href={checkout.checkoutUrl}
                       target='_blank'
                       rel='noreferrer'
-                      className='inline-flex items-center gap-1 text-[#6b8f5e] underline'
+                      className='inline-flex items-center gap-1 text-[#d56756] underline'
                     >
                       Mở liên kết thanh toán
                       <ExternalLink className='w-3.5 h-3.5' />
@@ -338,39 +338,39 @@ export function ManagerUpgradePremiumPage() {
                   </div>
                 </>
               ) : (
-                <div className='w-full rounded-lg border border-dashed border-[#2d2a26]/20 bg-white px-3 py-4 text-xs text-[#7a756e]'>
+                <div className='w-full rounded-lg border border-dashed border-[#592518]/20 bg-white px-3 py-4 text-xs text-[#8b6a61]'>
                   Hệ thống đang chuẩn bị phiên thanh toán Premium...
                 </div>
               )}
             </div>
           </div>
 
-          <div className='mt-4 p-3 rounded-xl border border-[#2d2a26]/15 bg-white text-xs text-[#7a756e]'>
+          <div className='mt-4 p-3 rounded-xl border border-[#592518]/15 bg-white text-xs text-[#8b6a61]'>
             Hệ thống sẽ kích hoạt Premium ngay sau khi ngân hàng xác nhận thanh toán cho tài khoản quản lý{' '}
-            <span className='text-[#2d2a26]' style={{ fontWeight: 600 }}>
+            <span className='text-[#592518]' style={{ fontWeight: 600 }}>
               {profile.name}
             </span>{' '}
             tại{' '}
-            <span className='text-[#2d2a26]' style={{ fontWeight: 600 }}>
+            <span className='text-[#592518]' style={{ fontWeight: 600 }}>
               {clinic.name}
             </span>
             .
           </div>
 
           {message ? (
-            <div className='mt-4 rounded-xl border border-[#2d2a26]/15 bg-[#f8f6f2] p-3 text-xs text-[#2d2a26]'>
+            <div className='mt-4 rounded-xl border border-[#592518]/15 bg-[#f8f6f2] p-3 text-xs text-[#592518]'>
               <div className='flex items-center gap-2'>
                 {(loadingLink || checking) && phase !== 'confirmed' ? (
-                  <Loader2 className='w-4 h-4 animate-spin text-[#6b8f5e]' />
+                  <Loader2 className='w-4 h-4 animate-spin text-[#d56756]' />
                 ) : phase === 'confirmed' ? (
                   <CheckCircle2 className='w-4 h-4 text-emerald-600' />
                 ) : (
-                  <QrCode className='w-4 h-4 text-[#6b8f5e]' />
+                  <QrCode className='w-4 h-4 text-[#d56756]' />
                 )}
                 <span>{message}</span>
               </div>
               {phase === 'waiting' ? (
-                <p className='mt-2 text-[11px] text-[#7a756e]'>Đang kiểm tra trạng thái thanh toán mỗi 3 giây...</p>
+                <p className='mt-2 text-[11px] text-[#8b6a61]'>Đang kiểm tra trạng thái thanh toán mỗi 3 giây...</p>
               ) : null}
             </div>
           ) : null}
@@ -392,12 +392,12 @@ export function ManagerUpgradePremiumPage() {
               }
             }}
             disabled={loadingLink || checking || phase === 'waiting' || phase === 'confirmed'}
-            className={`mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-[#2d2a26] text-sm transition-all ${
+            className={`mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-[#592518] text-sm transition-all ${
               phase === 'confirmed'
                 ? 'bg-emerald-600 text-white'
                 : loadingLink || checking || phase === 'waiting'
-                  ? 'bg-[#2d2a26] text-white cursor-not-allowed'
-                  : 'bg-[#6b8f5e] text-white hover:-translate-y-0.5'
+                  ? 'bg-[#592518] text-white cursor-not-allowed'
+                  : 'bg-[#d56756] text-white hover:-translate-y-0.5'
             }`}
             style={{ fontWeight: 700 }}
           >

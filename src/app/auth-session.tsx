@@ -478,8 +478,8 @@ export function useAuthSession() {
 
 function FullScreenLoading() {
   return (
-    <div className='min-h-screen bg-[#faf9f6] flex items-center justify-center'>
-      <div className='rounded-xl border border-[#2d2a26] bg-white px-5 py-3 text-sm text-[#2d2a26]'>
+    <div className='min-h-screen bg-[#faf8f5] flex items-center justify-center'>
+      <div className='rounded-xl border border-[#592518] bg-white px-5 py-3 text-sm text-[#592518]'>
         Đang xác thực phiên đăng nhập...
       </div>
     </div>

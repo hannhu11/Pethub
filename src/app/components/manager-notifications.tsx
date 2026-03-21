@@ -148,15 +148,15 @@ export function ManagerNotificationsPage() {
     <div className='space-y-6'>
       <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3'>
         <div>
-          <h1 className='text-2xl text-[#2d2a26]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+          <h1 className='text-2xl text-[#592518]' style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
             Trung tâm thông báo
           </h1>
-          <p className='text-sm text-[#7a756e] mt-1'>Cập nhật theo thời gian thực để bạn theo dõi mọi hoạt động quan trọng ngay tức thì.</p>
+          <p className='text-sm text-[#8b6a61] mt-1'>Cập nhật theo thời gian thực để bạn theo dõi mọi hoạt động quan trọng ngay tức thì.</p>
         </div>
         <button
           type='button'
           onClick={() => void markAll()}
-          className='inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[#2d2a26] bg-white hover:-translate-y-0.5 transition-all text-sm'
+          className='inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[#592518] bg-white hover:-translate-y-0.5 transition-all text-sm'
           style={{ fontWeight: 600 }}
         >
           <CheckCheck className='w-4 h-4' />
@@ -166,8 +166,8 @@ export function ManagerNotificationsPage() {
 
       {error ? <div className='rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-700'>{error}</div> : null}
 
-      <div className='bg-white border border-[#2d2a26] rounded-2xl p-3 flex flex-wrap items-center gap-2'>
-        <div className='inline-flex items-center gap-1 text-xs text-[#7a756e] mr-2'>
+      <div className='bg-white border border-[#592518] rounded-2xl p-3 flex flex-wrap items-center gap-2'>
+        <div className='inline-flex items-center gap-1 text-xs text-[#8b6a61] mr-2'>
           <Filter className='w-3.5 h-3.5' />
           Bộ lọc
         </div>
@@ -178,47 +178,47 @@ export function ManagerNotificationsPage() {
             onClick={() => setFilter(item.id)}
             className={`px-3 py-1.5 rounded-xl text-xs border transition-all ${
               filter === item.id
-                ? 'bg-[#6b8f5e] text-white border-[#2d2a26]'
-                : 'bg-[#faf9f6] text-[#2d2a26] border-[#2d2a26]/20 hover:bg-[#f0ede8]'
+                ? 'bg-[#d56756] text-white border-[#592518]'
+                : 'bg-[#faf8f5] text-[#592518] border-[#592518]/20 hover:bg-[#f4ece4]'
             }`}
             style={{ fontWeight: 600 }}
           >
             {item.label} ({item.count})
           </button>
         ))}
-        <span className='ml-auto text-xs text-[#7a756e]'>Đang xem: {selectedFilterLabel} • {unreadCount} chưa đọc</span>
+        <span className='ml-auto text-xs text-[#8b6a61]'>Đang xem: {selectedFilterLabel} • {unreadCount} chưa đọc</span>
       </div>
 
-      <div className='bg-white border border-[#2d2a26] rounded-2xl overflow-hidden'>
+      <div className='bg-white border border-[#592518] rounded-2xl overflow-hidden'>
         {loading ? (
-          <div className='py-12 text-center text-sm text-[#7a756e]'>Đang tải thông báo...</div>
+          <div className='py-12 text-center text-sm text-[#8b6a61]'>Đang tải thông báo...</div>
         ) : notifications.length === 0 ? (
-          <div className='py-16 text-center text-[#7a756e]'>
+          <div className='py-16 text-center text-[#8b6a61]'>
             <Bell className='w-12 h-12 mx-auto mb-3 opacity-30' />
             <p>Không có thông báo phù hợp</p>
           </div>
         ) : (
-          <div className='divide-y divide-[#2d2a26]/10'>
+          <div className='divide-y divide-[#592518]/10'>
             {notifications.map((item) => (
               <button
                 key={item.id}
                 type='button'
                 onClick={() => void openNotification(item)}
-                className='w-full text-left px-4 py-4 hover:bg-[#faf9f6] transition-colors'
+                className='w-full text-left px-4 py-4 hover:bg-[#faf8f5] transition-colors'
               >
                 <div className='flex items-start gap-3'>
                   <div className='mt-1'>
                     {!item.read ? (
-                      <Circle className='w-3.5 h-3.5 fill-[#6b8f5e] text-[#6b8f5e]' />
+                      <Circle className='w-3.5 h-3.5 fill-[#d56756] text-[#d56756]' />
                     ) : (
                       <Circle className='w-3.5 h-3.5 text-[#d0cbc4]' />
                     )}
                   </div>
                   <div className='min-w-0'>
-                    <p className='text-sm text-[#2d2a26]' style={!item.read ? { fontWeight: 600 } : { fontWeight: 500 }}>
+                    <p className='text-sm text-[#592518]' style={!item.read ? { fontWeight: 600 } : { fontWeight: 500 }}>
                       {item.title}
                     </p>
-                    <p className='text-sm text-[#7a756e] mt-0.5'>{item.body}</p>
+                    <p className='text-sm text-[#8b6a61] mt-0.5'>{item.body}</p>
                     <p className='text-xs text-[#9b948b] mt-1'>{formatTimeAgo(item.createdAt)}</p>
                   </div>
                 </div>

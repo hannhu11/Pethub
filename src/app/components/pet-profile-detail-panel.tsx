@@ -60,9 +60,9 @@ export function PetProfileDetailPanel({ pet, includeOwner = true, className = ''
         {fields.map((item) => (
           <div
             key={item.label}
-            className='px-4 py-3 bg-white/95 rounded-2xl border border-[#2d2a26]/10 shadow-[0_1px_0_rgba(255,255,255,0.8)_inset]'
+            className='px-4 py-3 bg-white/95 rounded-2xl border border-[#592518]/10 shadow-[0_1px_0_rgba(255,255,255,0.8)_inset]'
           >
-            <p className='text-[10px] text-[#7a756e] mb-1.5 uppercase tracking-[0.14em]'>{item.label}</p>
+            <p className='text-[10px] text-[#8b6a61] mb-1.5 uppercase tracking-[0.14em]'>{item.label}</p>
             <p className='text-lg leading-6 text-[#1f1d1a]' style={{ fontWeight: 600 }}>
               {item.value}
             </p>
@@ -71,28 +71,28 @@ export function PetProfileDetailPanel({ pet, includeOwner = true, className = ''
       </div>
 
       {includeOwner ? (
-        <div className='bg-[linear-gradient(180deg,#ffffff_0%,#f9f7f2_100%)] rounded-2xl border border-[#2d2a26]/10 p-4 shadow-[0_8px_18px_rgba(45,42,38,0.06)]'>
-          <p className='text-[10px] text-[#7a756e] mb-2 uppercase tracking-[0.14em]'>Chủ sở hữu</p>
+        <div className='bg-[linear-gradient(180deg,#ffffff_0%,#f9f7f2_100%)] rounded-2xl border border-[#592518]/10 p-4 shadow-[0_8px_18px_rgba(45,42,38,0.06)]'>
+          <p className='text-[10px] text-[#8b6a61] mb-2 uppercase tracking-[0.14em]'>Chủ sở hữu</p>
           <div className='flex items-center gap-3'>
-            <div className='w-12 h-12 rounded-2xl bg-[#c67d5b] border border-[#2d2a26]/20 flex items-center justify-center shadow-sm'>
+            <div className='w-12 h-12 rounded-2xl bg-[#c75b4c] border border-[#592518]/20 flex items-center justify-center shadow-sm'>
               <span className='text-white text-sm' style={{ fontWeight: 700 }}>
                 {ownerInitial}
               </span>
             </div>
             <div>
-              <p className='text-base text-[#2d2a26]' style={{ fontWeight: 700 }}>
+              <p className='text-base text-[#592518]' style={{ fontWeight: 700 }}>
                 {pet.ownerName}
               </p>
-              <p className='text-sm text-[#7a756e]'>{pet.ownerPhone}</p>
-              <p className='text-sm text-[#7a756e]'>{pet.ownerEmail}</p>
+              <p className='text-sm text-[#8b6a61]'>{pet.ownerPhone}</p>
+              <p className='text-sm text-[#8b6a61]'>{pet.ownerEmail}</p>
             </div>
           </div>
         </div>
       ) : null}
 
-      <div className='rounded-xl border border-dashed border-[#2d2a26]/20 bg-white/70 px-3 py-2'>
-        <p className='text-[10px] text-[#7a756e] uppercase tracking-[0.14em] mb-1'>ID hồ sơ</p>
-        <p className='text-xs text-[#7a756e] font-mono break-all'>{pet.id}</p>
+      <div className='rounded-xl border border-dashed border-[#592518]/20 bg-white/70 px-3 py-2'>
+        <p className='text-[10px] text-[#8b6a61] uppercase tracking-[0.14em] mb-1'>ID hồ sơ</p>
+        <p className='text-xs text-[#8b6a61] font-mono break-all'>{pet.id}</p>
       </div>
     </div>
   );
