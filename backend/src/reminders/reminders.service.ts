@@ -15,7 +15,7 @@ export class RemindersService {
     emailBooking: true,
     emailReminder: true,
     smsBooking: false,
-    smsReminder: true,
+    smsReminder: false,
     dailyReport: true,
     weeklyReport: false,
   } as const;
@@ -349,7 +349,7 @@ export class RemindersService {
         reason:
           input.channel === ReminderChannel.email
             ? 'Kênh email nhắc lịch đang tắt trong Cài đặt > Thông báo.'
-            : 'Kênh SMS nhắc lịch đang tắt trong Cài đặt > Thông báo.',
+            : 'Kênh nhắc lịch này đã ngưng sử dụng.',
       };
     }
 
@@ -359,7 +359,7 @@ export class RemindersService {
 
     return {
       sent: false,
-      reason: 'Kênh SMS chưa cấu hình nhà cung cấp. Vui lòng cấu hình gateway SMS.',
+      reason: 'Kênh nhắc lịch này đã ngưng sử dụng.',
     };
   }
 
@@ -434,10 +434,11 @@ export class RemindersService {
     };
   }) {
     const managerTitle = input.reminder.status === ReminderStatus.sent ? 'Nhắc nhở đã gửi' : 'Nhắc nhở gửi thất bại';
+    const channelLabel = input.reminder.channel === ReminderChannel.email ? 'EMAIL' : 'KÊNH CŨ';
     const managerBody =
       input.reminder.status === ReminderStatus.sent
-        ? `Đã gửi nhắc nhở ${input.reminder.channel.toUpperCase()} cho ${input.reminder.customer.name} (${input.reminder.pet.name}).`
-        : `Nhắc nhở ${input.reminder.channel.toUpperCase()} cho ${input.reminder.customer.name} thất bại: ${input.reminder.failedReason || 'không rõ lý do'}.`;
+        ? `Đã gửi nhắc nhở ${channelLabel} cho ${input.reminder.customer.name} (${input.reminder.pet.name}).`
+        : `Nhắc nhở ${channelLabel} cho ${input.reminder.customer.name} thất bại: ${input.reminder.failedReason || 'không rõ lý do'}.`;
 
     await this.prisma.notification.create({
       data: {
@@ -482,8 +483,8 @@ export class RemindersService {
     return {
       emailBooking: settings?.emailBooking ?? this.defaultNotificationSettings.emailBooking,
       emailReminder: settings?.emailReminder ?? this.defaultNotificationSettings.emailReminder,
-      smsBooking: settings?.smsBooking ?? this.defaultNotificationSettings.smsBooking,
-      smsReminder: settings?.smsReminder ?? this.defaultNotificationSettings.smsReminder,
+      smsBooking: false,
+      smsReminder: false,
       dailyReport: settings?.dailyReport ?? this.defaultNotificationSettings.dailyReport,
       weeklyReport: settings?.weeklyReport ?? this.defaultNotificationSettings.weeklyReport,
     };
@@ -499,7 +500,7 @@ export class RemindersService {
     if (channel === ReminderChannel.email) {
       return settings.emailReminder;
     }
-    return settings.smsReminder;
+    return false;
   }
 
   private isSchedulerEnabled() {

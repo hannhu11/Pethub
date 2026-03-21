@@ -106,7 +106,7 @@ export function ManagerRemindersPage() {
     type: 'vaccine' as ReminderType,
     typeName: reminderTypes.vaccine,
     scheduledDate: todayISO(),
-    channel: 'email' as 'email' | 'sms',
+    channel: 'email' as 'email',
     message: '',
   });
 
@@ -198,7 +198,7 @@ export function ManagerRemindersPage() {
       });
       if (sendNow && result.reminder.status !== 'sent') {
         await loadData();
-        setError(result.reminder.failedReason || 'Gửi nhắc nhở thất bại. Vui lòng kiểm tra cấu hình email/SMS.');
+        setError(result.reminder.failedReason || 'Gửi nhắc nhở thất bại. Vui lòng kiểm tra cấu hình email.');
         return;
       }
       await loadData();
@@ -244,14 +244,14 @@ export function ManagerRemindersPage() {
         templateName: item.templateName ?? 'manual-template',
         customerId: item.customerId,
         petId: item.petId,
-        channel: item.channel,
+        channel: 'email',
         sendNow,
         scheduleAt: sendNow ? undefined : item.scheduledAt ?? new Date().toISOString(),
         overrideMessage: item.message,
       });
       if (sendNow && result.reminder.status !== 'sent') {
         await loadData();
-        setError(result.reminder.failedReason || 'Gửi nhắc nhở thất bại. Vui lòng kiểm tra cấu hình email/SMS.');
+        setError(result.reminder.failedReason || 'Gửi nhắc nhở thất bại. Vui lòng kiểm tra cấu hình email.');
         return;
       }
       await loadData();
@@ -392,7 +392,7 @@ export function ManagerRemindersPage() {
                     <td className='py-3 px-3'>
                       <span className='inline-flex items-center gap-1 text-xs text-[#8b6a61]'>
                         {reminder.channel === 'email' ? <Mail className='w-3.5 h-3.5' /> : <Bell className='w-3.5 h-3.5' />}
-                        {reminder.channel === 'email' ? 'Gmail' : 'SMS'}
+                        {reminder.channel === 'email' ? 'Gmail' : 'Kênh cũ'}
                       </span>
                     </td>
                     <td className='py-3 px-3'>
@@ -525,11 +525,10 @@ export function ManagerRemindersPage() {
                   <label className='text-xs text-[#8b6a61] mb-1 block'>Kênh gửi</label>
                   <select
                     value={formData.channel}
-                    onChange={(event) => setFormData((prev) => ({ ...prev, channel: event.target.value as 'email' | 'sms' }))}
+                    onChange={() => setFormData((prev) => ({ ...prev, channel: 'email' }))}
                     className='w-full p-3 border border-[#592518] rounded-xl text-sm bg-white'
                   >
                     <option value='email'>Gmail</option>
-                    <option value='sms'>SMS</option>
                   </select>
                 </div>
               </div>

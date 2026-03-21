@@ -486,6 +486,41 @@ export interface ApiDigitalCard {
   };
 }
 
+export interface ApiPublicMedicalRecord {
+  diagnosis: string;
+  treatment: string;
+  recordedAt: string;
+  nextVisitAt: string | null;
+}
+
+export interface ApiPublicPetCard {
+  displayPetId: string;
+  pet: {
+    id: string;
+    name: string;
+    species: string;
+    breed: string | null;
+    gender: string | null;
+    dateOfBirth: string | null;
+    weightKg: number | string | null;
+    coatColor: string | null;
+    bloodType: string | null;
+    neutered: 'yes' | 'no' | 'none' | null;
+    microchipId: string | null;
+    imageUrl: string | null;
+    specialNotes: string | null;
+    lastCheckupAt: string | null;
+  };
+  medical: {
+    latest: ApiPublicMedicalRecord | null;
+    items: ApiPublicMedicalRecord[];
+  };
+  clinic: {
+    name: string;
+    phone: string | null;
+  };
+}
+
 export interface CreateCustomerPayload {
   name: string;
   phone: string;
@@ -629,6 +664,11 @@ export async function regeneratePetDigitalCard(
   const { data } = await apiClient.post<ApiDigitalCard>(`/pets/${petId}/digital-card/regenerate`, {
     note,
   });
+  return data;
+}
+
+export async function getPublicPetCard(petId: string): Promise<ApiPublicPetCard> {
+  const { data } = await apiClient.get<ApiPublicPetCard>(`/pets/public/${petId}`);
   return data;
 }
 

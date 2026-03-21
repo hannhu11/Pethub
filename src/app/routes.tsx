@@ -31,6 +31,7 @@ import {
 } from './components/public-pages';
 import { CustomerAppointmentsPage } from './components/customer-appointments';
 import { CustomerOverviewPage } from './components/customer-overview';
+import { PublicPetCardPage } from './components/public-pet-card';
 import type { RouteAccess } from './types';
 
 function RedirectToCustomerDashboard() {
@@ -139,6 +140,11 @@ export const router = createBrowserRouter([
         ],
       },
     ],
+  },
+  {
+    path: '/c/:petId',
+    Component: PublicPetCardPage,
+    handle: { access: access.public },
   },
   {
     path: '*',

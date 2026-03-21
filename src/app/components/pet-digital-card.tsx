@@ -3,6 +3,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import type { Pet } from './pet-types';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { cn } from './ui/utils';
+import { formatPetDisplayId, getPublicPetCardUrl } from '../lib/pet-id';
 
 type PetDigitalCardProps = {
   pet: Pet;
@@ -20,6 +21,8 @@ export function PetDigitalCard({ pet, className }: PetDigitalCardProps) {
   const neuteredLabel =
     pet.neutered === true ? 'Đã triệt sản' : pet.neutered === false ? 'Chưa triệt sản' : 'Không rõ';
   const specialNotes = pet.specialNotes ? pet.specialNotes.slice(0, 55) : '';
+  const displayPetId = pet.displayPetId ?? formatPetDisplayId(pet.id);
+  const publicCardUrl = getPublicPetCardUrl(pet.id);
 
   const ownerData = [
     { label: 'Họ và tên', value: pet.ownerName },
@@ -61,7 +64,7 @@ export function PetDigitalCard({ pet, className }: PetDigitalCardProps) {
                 </h2>
                 <p className='text-sm text-white/85 mt-1'>{pet.breed}</p>
                 <p className='text-xs text-white/75 mt-0.5'>PET ID</p>
-                <p className='text-sm tracking-[0.22em] font-mono text-white'>{pet.id.replace('PH-', 'PH • ')}</p>
+                <p className='text-sm tracking-[0.22em] font-mono text-white'>{displayPetId}</p>
               </div>
             </div>
           </div>
@@ -69,15 +72,7 @@ export function PetDigitalCard({ pet, className }: PetDigitalCardProps) {
           <div className='w-[150px] flex flex-col items-center justify-between'>
             <div className='w-[124px] h-[124px] bg-white rounded-2xl border border-white/90 p-2'>
               <QRCodeSVG
-                value={JSON.stringify({
-                  petId: pet.id,
-                  petName: pet.name,
-                  ownerName: pet.ownerName,
-                  ownerPhone: pet.ownerPhone,
-                  ownerEmail: pet.ownerEmail,
-                  species: pet.species,
-                  bloodType: pet.bloodType,
-                })}
+                value={publicCardUrl}
                 size={108}
                 level='M'
               />

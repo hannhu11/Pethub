@@ -28,7 +28,7 @@ export class SettingsService {
     emailBooking: true,
     emailReminder: true,
     smsBooking: false,
-    smsReminder: true,
+    smsReminder: false,
     dailyReport: true,
     weeklyReport: false,
   } as const;
@@ -358,8 +358,8 @@ export class SettingsService {
     const merged = {
       emailBooking: dto.emailBooking ?? current?.emailBooking ?? this.defaultNotificationSettings.emailBooking,
       emailReminder: dto.emailReminder ?? current?.emailReminder ?? this.defaultNotificationSettings.emailReminder,
-      smsBooking: dto.smsBooking ?? current?.smsBooking ?? this.defaultNotificationSettings.smsBooking,
-      smsReminder: dto.smsReminder ?? current?.smsReminder ?? this.defaultNotificationSettings.smsReminder,
+      smsBooking: false,
+      smsReminder: false,
       dailyReport: dto.dailyReport ?? current?.dailyReport ?? this.defaultNotificationSettings.dailyReport,
       weeklyReport: dto.weeklyReport ?? current?.weeklyReport ?? this.defaultNotificationSettings.weeklyReport,
     };
@@ -442,8 +442,8 @@ export class SettingsService {
     return {
       emailBooking: settings?.emailBooking ?? this.defaultNotificationSettings.emailBooking,
       emailReminder: settings?.emailReminder ?? this.defaultNotificationSettings.emailReminder,
-      smsBooking: settings?.smsBooking ?? this.defaultNotificationSettings.smsBooking,
-      smsReminder: settings?.smsReminder ?? this.defaultNotificationSettings.smsReminder,
+      smsBooking: false,
+      smsReminder: false,
       dailyReport: settings?.dailyReport ?? this.defaultNotificationSettings.dailyReport,
       weeklyReport: settings?.weeklyReport ?? this.defaultNotificationSettings.weeklyReport,
       updatedAt: settings?.updatedAt?.toISOString() ?? null,

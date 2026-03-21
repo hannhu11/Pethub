@@ -10,6 +10,7 @@ import type { AuthUser } from '../common/interfaces/auth-user.interface';
 import { PetsQueryDto } from './dto/pets-query.dto';
 import { UpsertPetDto } from './dto/upsert-pet.dto';
 import { UpsertMedicalRecordDto } from './dto/upsert-medical-record.dto';
+import { formatPetDisplayId } from './pet-id.util';
 
 @Injectable()
 export class PetsService {
@@ -349,6 +350,93 @@ export class PetsService {
     });
 
     return this.getDigitalCard(currentUser, petId);
+  }
+
+  async getPublicPetProfile(id: string) {
+    const pet = await this.prisma.pet.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        clinicId: true,
+        name: true,
+        species: true,
+        breed: true,
+        gender: true,
+        dateOfBirth: true,
+        weightKg: true,
+        coatColor: true,
+        bloodType: true,
+        neutered: true,
+        microchipId: true,
+        imageUrl: true,
+        specialNotes: true,
+        lastCheckupAt: true,
+        clinic: {
+          select: {
+            name: true,
+            phone: true,
+          },
+        },
+      },
+    });
+
+    if (!pet) {
+      throw new NotFoundException('Pet not found');
+    }
+
+    const [medicalItems, clinicSettings] = await Promise.all([
+      this.prisma.medicalRecord.findMany({
+        where: {
+          clinicId: pet.clinicId,
+          petId: pet.id,
+        },
+        orderBy: { recordedAt: 'desc' },
+        take: 5,
+        select: {
+          diagnosis: true,
+          treatment: true,
+          recordedAt: true,
+          nextVisitAt: true,
+        },
+      }),
+      this.prisma.clinicSettings.findUnique({
+        where: {
+          clinicId: pet.clinicId,
+        },
+        select: {
+          clinicName: true,
+          phone: true,
+        },
+      }),
+    ]);
+
+    return {
+      displayPetId: formatPetDisplayId(pet.id),
+      pet: {
+        id: pet.id,
+        name: pet.name,
+        species: pet.species,
+        breed: pet.breed,
+        gender: pet.gender,
+        dateOfBirth: pet.dateOfBirth,
+        weightKg: pet.weightKg,
+        coatColor: pet.coatColor,
+        bloodType: pet.bloodType,
+        neutered: pet.neutered,
+        microchipId: pet.microchipId,
+        imageUrl: pet.imageUrl,
+        specialNotes: pet.specialNotes,
+        lastCheckupAt: pet.lastCheckupAt,
+      },
+      medical: {
+        latest: medicalItems[0] ?? null,
+        items: medicalItems,
+      },
+      clinic: {
+        name: clinicSettings?.clinicName || pet.clinic.name || 'PetHub',
+        phone: clinicSettings?.phone || pet.clinic.phone || null,
+      },
+    };
   }
 
   private async resolveCustomerId(currentUser: AuthUser, candidateCustomerId?: string) {

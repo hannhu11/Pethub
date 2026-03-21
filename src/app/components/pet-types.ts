@@ -1,5 +1,6 @@
 export interface Pet {
   id: string;
+  displayPetId?: string;
   name: string;
   species: string;
   breed: string;

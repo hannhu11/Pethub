@@ -37,7 +37,7 @@ const serviceShowcase = [
   },
   {
     title: 'Lịch hẹn tự động',
-    desc: 'Đặt lịch nhanh, nhắc nhở tự động qua SMS/Zalo. Không bao giờ bỏ lỡ khách hàng.',
+    desc: 'Đặt lịch nhanh, nhắc nhở tự động qua Zalo/Email. Không bao giờ bỏ lỡ khách hàng.',
     image: bookingImage,
     badge: 'Booking',
     objectPosition: 'center 50%',
