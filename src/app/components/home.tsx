@@ -15,6 +15,7 @@ import posImage from '../../assets/images/services/pos-service.png';
 import qrCardImage from '../../assets/images/services/qr-card-service-cropped.png';
 import reminderImage from '../../assets/images/services/reminder-service.jpg';
 import revenueImage from '../../assets/images/services/revenue-service.jpg';
+import snowballPetImage from '../../assets/images/pets/snowball.jpg';
 import { pricingPlanDefinitions } from '../constants/pricing';
 
 const features = [
@@ -176,15 +177,20 @@ export function HomePage() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#592518]/10 via-transparent to-white/10" />
               </div>
-              <div className="absolute -bottom-4 -left-4 bg-white/96 border border-[#e6cfc5] rounded-2xl p-4 shadow-[0_18px_35px_rgba(89,37,24,0.10)]">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#eaf8ef] flex items-center justify-center">
-                    <Check className="w-5 h-5 text-emerald-600" />
+              <div className="absolute -bottom-4 left-4 rounded-[1.35rem] border border-[#ead9d1] bg-white/92 px-5 py-3 text-[#592518] backdrop-blur-md shadow-[0_18px_35px_rgba(89,37,24,0.12)] md:left-[-1.5rem]">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#d56756]/12">
+                    <HeartHandshake className="h-4.5 w-4.5 text-[#d56756]" />
                   </div>
-                  <div>
-                    <p className="text-sm text-[#592518]" style={{ fontWeight: 600 }}>Lịch hẹn mới!</p>
-                    <p className="text-xs text-[#8b6a61]">Lucky - Khám tổng quát</p>
+                  <div className="text-sm" style={{ fontWeight: 600 }}>Đồng hành cùng PetHub</div>
+                </div>
+              </div>
+              <div className="absolute right-4 top-4 rounded-[1.35rem] border border-[#ead9d1] bg-white/92 px-5 py-3 text-[#592518] backdrop-blur-md shadow-[0_18px_35px_rgba(89,37,24,0.12)] md:right-[-1.5rem] md:top-6">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#d56756]/12">
+                    <BarChart3 className="h-4.5 w-4.5 text-[#d56756]" />
                   </div>
+                  <div className="text-sm" style={{ fontWeight: 600 }}>Tối ưu vận hành</div>
                 </div>
               </div>
             </motion.div>
@@ -255,6 +261,101 @@ export function HomePage() {
             >
               Xem toàn bộ dịch vụ <ArrowRight className="w-4 h-4" />
             </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-[#fcfbf8] py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="overflow-hidden rounded-[2.25rem] border border-[#e6cbc1] bg-[linear-gradient(135deg,#d56756_0%,#c45e4f_55%,#b65346_100%)] shadow-[0_28px_65px_rgba(89,37,24,0.16)]">
+            <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr]">
+              <div className="px-8 py-10 text-white sm:px-10 sm:py-12 lg:px-12 lg:py-14">
+                <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/14 px-4 py-2 text-sm text-white/95 backdrop-blur-sm">
+                  <QrCode className="h-4 w-4" />
+                  Tính năng độc quyền
+                </div>
+                <h2 className="max-w-xl text-3xl leading-tight text-white sm:text-4xl lg:text-5xl" style={{ fontWeight: 800 }}>
+                  Digital Pet Card - Vũ khí bí mật giữ chân khách hàng
+                </h2>
+                <p className="mt-6 max-w-2xl text-base leading-8 text-white/92 lg:text-lg">
+                  Mang đến trải nghiệm chăm sóc thú cưng đẳng cấp 5 sao. Không còn sổ tiêm phòng giấy bọc nilon dễ rách mất.
+                  Mọi thông tin thú cưng nằm gọn trong chiếc smartphone của khách hàng để pet shop của bạn luôn chuyên nghiệp và đáng nhớ.
+                </p>
+
+                <div className="mt-8 flex flex-wrap gap-3">
+                  {[
+                    { icon: QrCode, text: 'Quét mã QR tra cứu hồ sơ y tế tức thì' },
+                    { icon: BellRing, text: 'Nhắc lịch tiêm phòng, tẩy giun tự động' },
+                    { icon: HeartHandshake, text: 'Tích điểm thành viên, nhận ưu đãi dễ dàng' },
+                  ].map((item) => (
+                    <div
+                      key={item.text}
+                      className="inline-flex items-center gap-2 rounded-full border border-white/18 bg-white/14 px-4 py-3 text-sm text-white shadow-[0_12px_28px_rgba(0,0,0,0.08)] backdrop-blur-sm"
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span style={{ fontWeight: 600 }}>{item.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="relative px-8 pb-10 pt-2 sm:px-10 lg:px-12 lg:pb-12 lg:pt-10">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.18),transparent_38%)]" />
+                <div className="relative mx-auto w-full max-w-[25rem]">
+                  <div className="absolute -inset-4 rounded-[2.5rem] border border-white/16 bg-white/10 shadow-[0_24px_50px_rgba(0,0,0,0.06)] backdrop-blur-sm" />
+                  <div className="relative overflow-hidden rounded-[2.75rem] border-[10px] border-[#f6efe9] bg-white shadow-[0_28px_50px_rgba(89,37,24,0.22)]">
+                    <div className="bg-white px-5 pb-4 pt-5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#d56756] text-white shadow-sm">
+                            <QrCode className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className="text-lg text-[#592518]" style={{ fontWeight: 700 }}>Snowball</p>
+                            <p className="text-sm text-[#9a7369]">Mèo Anh lông ngắn</p>
+                          </div>
+                        </div>
+                        <div className="rounded-full border border-[#ead9d1] px-3 py-1 text-xs text-[#d56756]" style={{ fontWeight: 600 }}>
+                          Premium
+                        </div>
+                      </div>
+
+                      <div className="mt-5 overflow-hidden rounded-[2rem] border border-[#f1dfd8] bg-[linear-gradient(180deg,#fff8ef_0%,#f8f2e6_100%)] p-4">
+                        <ImageWithFallback
+                          src={snowballPetImage}
+                          alt="Digital Pet Card preview"
+                          className="h-48 w-full rounded-[1.5rem] object-cover"
+                        />
+                        <div className="mt-4 flex items-center justify-between rounded-[1.5rem] bg-white/90 px-4 py-3 shadow-[0_10px_25px_rgba(89,37,24,0.08)]">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.12em] text-[#9a7369]">Pet ID</p>
+                            <p className="text-sm text-[#592518]" style={{ fontWeight: 700 }}>SNOW-QR-247</p>
+                          </div>
+                          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-[#fff7f3] text-[#d56756] shadow-inner">
+                            <QrCode className="h-12 w-12" />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-5 divide-y divide-[#f0e1db] rounded-[1.25rem] border border-[#f0e1db] bg-[#fffdfa] px-4">
+                        <div className="flex items-center justify-between py-3 text-sm">
+                          <span className="text-[#9a7369]">Tiêm phòng gần nhất</span>
+                          <span className="text-[#592518]" style={{ fontWeight: 700 }}>15/02/2026</span>
+                        </div>
+                        <div className="flex items-center justify-between py-3 text-sm">
+                          <span className="text-[#9a7369]">Tái chủng tiếp theo</span>
+                          <span className="text-[#d56756]" style={{ fontWeight: 700 }}>15/05/2026</span>
+                        </div>
+                        <div className="flex items-center justify-between py-3 text-sm">
+                          <span className="text-[#9a7369]">Điểm thành viên</span>
+                          <span className="text-[#592518]" style={{ fontWeight: 700 }}>1,250 điểm</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
