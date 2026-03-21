@@ -13,6 +13,7 @@ import { PrismaService } from '../database/prisma.service';
 import { CreatePayosLinkDto } from './dto/create-payos-link.dto';
 import { RealtimeService } from '../realtime/realtime.service';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
+import { CustomerTierService } from '../customer-tier/customer-tier.service';
 
 type CreatePayosLinkInput = {
   clinicId: string;
@@ -56,6 +57,7 @@ export class PaymentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly realtimeService: RealtimeService,
+    private readonly customerTierService: CustomerTierService,
   ) {}
 
   private readonly subscriptionPlanConfigs: Record<SubscriptionCheckoutPlan, SubscriptionPlanConfig> = {
@@ -1210,7 +1212,7 @@ export class PaymentsService {
         },
       });
 
-      await tx.customer.update({
+      const updatedCustomer = await tx.customer.update({
         where: { id: invoice.customerId },
         data: {
           totalSpent: { increment: invoice.grandTotal },
@@ -1218,6 +1220,12 @@ export class PaymentsService {
           lastVisitAt: input.paidAt,
         },
       });
+
+      await this.customerTierService.syncCustomerSegmentForTotalSpent(
+        input.clinicId,
+        updatedCustomer,
+        tx,
+      );
 
       await this.createPaymentNotifications(
         tx,

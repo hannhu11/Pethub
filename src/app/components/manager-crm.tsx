@@ -25,21 +25,25 @@ import {
   createPet,
   deleteMedicalRecord,
   getCustomerById,
+  getCustomerSegmentSettings,
   getPetDigitalCard,
   listCustomers,
   listMedicalRecords,
   listPets,
   regeneratePetDigitalCard,
   updateMedicalRecord,
+  updateCustomerSegmentSettings,
   updatePet,
   type ApiDigitalCard,
   type ApiMedicalRecord,
+  type ApiCustomerTierSettings,
 } from '../lib/pethub-api';
 import { mapApiPetToCardView } from '../lib/view-models';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { PetProfileDetailPanel } from './pet-profile-detail-panel';
 import { PetDigitalCard } from './pet-digital-card';
 import { downloadElementAsPng } from './export-utils';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 
 type PetFormState = {
   id: string | null;
@@ -103,6 +107,18 @@ const emptyMedicalForm: MedicalFormState = {
   nextVisitAt: '',
 };
 
+type TierSettingsFormState = {
+  regular: string;
+  loyal: string;
+  vip: string;
+};
+
+const emptyTierSettingsForm: TierSettingsFormState = {
+  regular: '',
+  loyal: '',
+  vip: '',
+};
+
 function segmentLabel(segment: CustomerSegment) {
   if (segment === 'vip') return 'Khách VIP';
   if (segment === 'loyal') return 'Thân thiết';
@@ -115,6 +131,23 @@ function segmentClass(segment: CustomerSegment) {
   if (segment === 'loyal') return 'bg-[#d56756]/10 text-[#d56756] border-[#d56756]/30';
   if (segment === 'regular') return 'bg-[#f4ece4] text-[#8b6a61] border-[#592518]/10';
   return 'bg-emerald-100 text-emerald-700 border-emerald-300';
+}
+
+function normalizeThresholdInput(value: string) {
+  return value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+}
+
+function formatThresholdInput(value: string) {
+  if (!value) return '';
+  return new Intl.NumberFormat('vi-VN').format(Number(value));
+}
+
+function mapTierSettingsToForm(settings: ApiCustomerTierSettings): TierSettingsFormState {
+  return {
+    regular: String(Math.trunc(Number(settings.regularMinSpent))),
+    loyal: String(Math.trunc(Number(settings.loyalMinSpent))),
+    vip: String(Math.trunc(Number(settings.vipMinSpent))),
+  };
 }
 
 function toDateInput(value: string | null | undefined) {
@@ -1254,37 +1287,42 @@ export function ManagerCustomersPage() {
   const [digitalCardError, setDigitalCardError] = useState('');
   const [digitalCardPetName, setDigitalCardPetName] = useState('');
   const [digitalCardPet, setDigitalCardPet] = useState<Pet | null>(null);
+  const [tierSettingsOpen, setTierSettingsOpen] = useState(false);
+  const [tierSettingsLoading, setTierSettingsLoading] = useState(false);
+  const [tierSettingsSaving, setTierSettingsSaving] = useState(false);
+  const [tierSettingsError, setTierSettingsError] = useState('');
+  const [tierSettingsForm, setTierSettingsForm] = useState<TierSettingsFormState>(emptyTierSettingsForm);
+
+  const loadCustomers = async (nextSegmentFilter: 'all' | CustomerSegment) => {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await listCustomers(nextSegmentFilter === 'all' ? undefined : nextSegmentFilter);
+      setCustomers(data);
+      setSelectedId((current) => {
+        if (!current) {
+          return null;
+        }
+        return data.some((item) => item.id === current) ? current : null;
+      });
+    } catch (apiError) {
+      setError(extractApiError(apiError));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadCustomerDetail = async (customerId: string) => {
+    try {
+      const data = await getCustomerById(customerId);
+      setDetail(data);
+    } catch (apiError) {
+      setError(extractApiError(apiError));
+    }
+  };
 
   useEffect(() => {
-    let mounted = true;
-    const run = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const data = await listCustomers(segmentFilter === 'all' ? undefined : segmentFilter);
-        if (mounted) {
-          setCustomers(data);
-          setSelectedId((current) => {
-            if (!current) {
-              return null;
-            }
-            return data.some((item) => item.id === current) ? current : null;
-          });
-        }
-      } catch (apiError) {
-        if (mounted) {
-          setError(extractApiError(apiError));
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-    void run();
-    return () => {
-      mounted = false;
-    };
+    void loadCustomers(segmentFilter);
   }, [segmentFilter]);
 
   useEffect(() => {
@@ -1303,23 +1341,7 @@ export function ManagerCustomersPage() {
     if (!detailOpen) {
       return;
     }
-    let mounted = true;
-    const run = async () => {
-      try {
-        const data = await getCustomerById(selectedId);
-        if (mounted) {
-          setDetail(data);
-        }
-      } catch (apiError) {
-        if (mounted) {
-          setError(extractApiError(apiError));
-        }
-      }
-    };
-    void run();
-    return () => {
-      mounted = false;
-    };
+    void loadCustomerDetail(selectedId);
   }, [detailOpen, selectedId]);
 
   const filtered = useMemo(() => {
@@ -1365,6 +1387,65 @@ export function ManagerCustomersPage() {
     }
   };
 
+  const openTierSettingsModal = async () => {
+    setTierSettingsOpen(true);
+    setTierSettingsLoading(true);
+    setTierSettingsError('');
+    try {
+      const settings = await getCustomerSegmentSettings();
+      setTierSettingsForm(mapTierSettingsToForm(settings));
+    } catch (apiError) {
+      setTierSettingsError(extractApiError(apiError));
+    } finally {
+      setTierSettingsLoading(false);
+    }
+  };
+
+  const updateTierField = (field: keyof TierSettingsFormState, value: string) => {
+    setTierSettingsForm((prev) => ({
+      ...prev,
+      [field]: normalizeThresholdInput(value),
+    }));
+  };
+
+  const saveTierSettings = async () => {
+    const regularMinSpent = Number(tierSettingsForm.regular || 0);
+    const loyalMinSpent = Number(tierSettingsForm.loyal || 0);
+    const vipMinSpent = Number(tierSettingsForm.vip || 0);
+
+    if (regularMinSpent < 1) {
+      setTierSettingsError('Mốc Khách thường phải từ 1đ trở lên.');
+      return;
+    }
+    if (loyalMinSpent <= regularMinSpent) {
+      setTierSettingsError('Mốc Thân thiết phải lớn hơn mốc Khách thường.');
+      return;
+    }
+    if (vipMinSpent <= loyalMinSpent) {
+      setTierSettingsError('Mốc VIP phải lớn hơn mốc Thân thiết.');
+      return;
+    }
+
+    setTierSettingsSaving(true);
+    setTierSettingsError('');
+    try {
+      await updateCustomerSegmentSettings({
+        regularMinSpent,
+        loyalMinSpent,
+        vipMinSpent,
+      });
+      setTierSettingsOpen(false);
+      await loadCustomers(segmentFilter);
+      if (detailOpen && selectedId) {
+        await loadCustomerDetail(selectedId);
+      }
+    } catch (apiError) {
+      setTierSettingsError(extractApiError(apiError));
+    } finally {
+      setTierSettingsSaving(false);
+    }
+  };
+
   return (
     <div className='space-y-6'>
       <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3'>
@@ -1372,9 +1453,20 @@ export function ManagerCustomersPage() {
           <h1 className='text-2xl text-[#592518]' style={{ fontWeight: 700 }}>Quản lý khách hàng</h1>
           <p className='text-sm text-[#8b6a61] mt-1'>CRM 360° — {customers.length} khách hàng</p>
         </div>
-        <div className='relative'>
-          <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8b6a61]' />
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder='Tìm theo tên, SĐT...' className='pl-9 pr-4 py-2.5 border border-[#592518] rounded-xl bg-white text-sm w-64' />
+        <div className='flex flex-col sm:flex-row sm:items-center gap-3'>
+          <button
+            type='button'
+            onClick={() => void openTierSettingsModal()}
+            className='inline-flex items-center justify-center gap-2 rounded-xl border border-[#592518] bg-white px-4 py-2.5 text-sm text-[#592518] hover:bg-[#f7efe7] transition-colors'
+            style={{ fontWeight: 600 }}
+          >
+            <Sparkles className='w-4 h-4 text-[#d56756]' />
+            Thiết lập hạng thành viên
+          </button>
+          <div className='relative'>
+            <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8b6a61]' />
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder='Tìm theo tên, SĐT...' className='pl-9 pr-4 py-2.5 border border-[#592518] rounded-xl bg-white text-sm w-full sm:w-64' />
+          </div>
         </div>
       </div>
 
@@ -1633,6 +1725,92 @@ export function ManagerCustomersPage() {
           </div>
         </div>
       ) : null}
+
+      <Dialog
+        open={tierSettingsOpen}
+        onOpenChange={(open) => {
+          setTierSettingsOpen(open);
+          if (!open) {
+            setTierSettingsError('');
+            setTierSettingsSaving(false);
+          }
+        }}
+      >
+        <DialogContent className='border border-[#592518] bg-[#faf8f5] p-0 sm:max-w-xl'>
+          <div className='rounded-[inherit] border border-white/60 bg-[linear-gradient(180deg,#fffdf9_0%,#faf8f5_100%)] p-6'>
+            <DialogHeader className='space-y-2 text-left'>
+              <DialogTitle className='text-2xl text-[#592518]' style={{ fontWeight: 700 }}>
+                Thiết lập hạng thành viên
+              </DialogTitle>
+              <DialogDescription className='text-sm text-[#8b6a61]'>
+                Cập nhật mốc chi tiêu để hệ thống tự động phân loại khách hàng ngay sau khi lưu.
+              </DialogDescription>
+            </DialogHeader>
+
+            {tierSettingsLoading ? (
+              <div className='py-10 text-sm text-[#8b6a61]'>Đang tải cấu hình hạng thành viên...</div>
+            ) : (
+              <div className='mt-5 space-y-4'>
+                <div className='rounded-2xl border border-[#592518]/15 bg-white px-4 py-3'>
+                  <p className='text-xs uppercase tracking-[0.16em] text-[#8b6a61]'>Khách mới</p>
+                  <div className='mt-2 flex items-center justify-between gap-3'>
+                    <span className='text-sm text-[#8b6a61]'>Mốc cố định</span>
+                    <span className='text-lg text-[#592518]' style={{ fontWeight: 700 }}>0đ</span>
+                  </div>
+                </div>
+
+                {([
+                  ['regular', 'Khách thường', 'Tối thiểu để lên hạng đầu tiên'],
+                  ['loyal', 'Thân thiết', 'Phải lớn hơn mốc Khách thường'],
+                  ['vip', 'Khách VIP', 'Phải lớn hơn mốc Thân thiết'],
+                ] as const).map(([field, label, hint]) => (
+                  <label key={field} className='block'>
+                    <span className='text-sm text-[#592518]' style={{ fontWeight: 600 }}>{label}</span>
+                    <span className='mt-1 block text-xs text-[#8b6a61]'>{hint}</span>
+                    <div className='relative mt-2'>
+                      <input
+                        inputMode='numeric'
+                        autoComplete='off'
+                        value={formatThresholdInput(tierSettingsForm[field])}
+                        onChange={(event) => updateTierField(field, event.target.value)}
+                        placeholder='0'
+                        className='w-full rounded-xl border border-[#592518]/20 bg-white px-4 py-3 pr-12 text-base text-[#592518] outline-none transition-colors focus:border-[#d56756]'
+                      />
+                      <span className='pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm text-[#8b6a61]'>₫</span>
+                    </div>
+                  </label>
+                ))}
+
+                {tierSettingsError ? (
+                  <div className='rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-700'>
+                    {tierSettingsError}
+                  </div>
+                ) : null}
+              </div>
+            )}
+
+            <DialogFooter className='mt-6 flex-col-reverse gap-3 sm:flex-row sm:justify-end'>
+              <button
+                type='button'
+                onClick={() => setTierSettingsOpen(false)}
+                className='rounded-xl border border-[#592518]/20 bg-white px-4 py-2.5 text-sm text-[#592518] hover:bg-[#f4ece4]'
+                style={{ fontWeight: 600 }}
+              >
+                Hủy
+              </button>
+              <button
+                type='button'
+                onClick={() => void saveTierSettings()}
+                disabled={tierSettingsLoading || tierSettingsSaving}
+                className='rounded-xl border border-[#592518] bg-[#d56756] px-4 py-2.5 text-sm text-white disabled:opacity-60'
+                style={{ fontWeight: 600 }}
+              >
+                {tierSettingsSaving ? 'Đang lưu...' : 'Lưu cấu hình'}
+              </button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

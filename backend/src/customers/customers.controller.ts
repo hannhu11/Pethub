@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { CustomersService } from './customers.service';
 import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -7,6 +7,7 @@ import { CustomersQueryDto } from './dto/customers-query.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
 import { CreateCustomerDto } from './dto/create-customer.dto';
+import { UpdateCustomerSegmentSettingsDto } from './dto/update-customer-segment-settings.dto';
 
 @Controller('customers')
 @UseGuards(FirebaseAuthGuard, RolesGuard)
@@ -29,6 +30,27 @@ export class CustomersController {
       return null;
     }
     return this.customersService.create(user, dto);
+  }
+
+  @Get('segment-settings')
+  @Roles('manager')
+  async getSegmentSettings(@CurrentUser() user: AuthUser | null) {
+    if (!user) {
+      return null;
+    }
+    return this.customersService.getSegmentSettings(user);
+  }
+
+  @Put('segment-settings')
+  @Roles('manager')
+  async updateSegmentSettings(
+    @CurrentUser() user: AuthUser | null,
+    @Body() dto: UpdateCustomerSegmentSettingsDto,
+  ) {
+    if (!user) {
+      return null;
+    }
+    return this.customersService.updateSegmentSettings(user, dto);
   }
 
   @Get(':id')
