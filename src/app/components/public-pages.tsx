@@ -1,67 +1,73 @@
-﻿import { Link } from 'react-router';
+import { Link } from 'react-router';
 import { Check, Sparkles, ShieldCheck, HeartHandshake, BookOpenText, Phone, FileText, Shield, LifeBuoy } from 'lucide-react';
 import { BackButton } from './back-button';
+import { pricingPlanDefinitions } from '../constants/pricing';
 
 export function PricingPage() {
+  const pricingCards = pricingPlanDefinitions;
+
   return (
     <div className='py-16 md:py-20'>
-      <div className='max-w-5xl mx-auto px-4 sm:px-6 lg:px-8'>
+      <div className='max-w-6xl mx-auto px-4 sm:px-6 lg:px-8'>
         <div className='text-center mb-12'>
           <h1 className='text-4xl text-[#592518] mb-4' style={{ fontWeight: 700 }}>
             Bảng giá PetHub
           </h1>
           <p className='text-[#8b6a61] max-w-2xl mx-auto'>
-            Mở đầu miễn phí để thử hệ thống. Khi sẵn sàng mở rộng, nâng cấp Premium để dùng CRM, nhắc lịch tự động và Digital Pet Card.
+            Chọn đúng gói cho quy mô pet shop hoặc phòng khám của bạn. Professional phù hợp để vận hành đầy đủ, Enterprise dành cho chuỗi và nhu cầu tùy chỉnh sâu.
           </p>
         </div>
 
-        <div className='grid md:grid-cols-2 gap-6 max-w-4xl mx-auto'>
-          <article className='bg-white border border-[#592518] rounded-2xl p-8'>
-            <h2 className='text-xl text-[#592518] mb-2' style={{ fontWeight: 700 }}>Basic</h2>
-            <p className='text-3xl text-[#592518] mb-6' style={{ fontWeight: 700 }}>
-              0đ <span className='text-sm text-[#8b6a61]' style={{ fontWeight: 400 }}>/ tháng</span>
-            </p>
-            <ul className='space-y-3 text-sm text-[#592518]'>
-              {['Tối đa 50 hồ sơ thú cưng', 'Đặt lịch & quản lý cơ bản', '1 tài khoản quản lý'].map((item) => (
-                <li key={item} className='flex items-center gap-2'>
-                  <Check className='w-4 h-4 text-[#d56756]' />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-            <Link
-              to='/register'
-              className='mt-8 inline-flex w-full justify-center px-5 py-3 rounded-xl border border-[#592518] text-[#592518] hover:-translate-y-0.5 transition-all'
-            >
-              Bắt đầu miễn phí
-            </Link>
-          </article>
+        <div className='grid lg:grid-cols-3 gap-6 max-w-6xl mx-auto'>
+          {pricingCards.map((plan) => {
+            const isHighlight = Boolean(plan.highlight);
+            const ctaTo = plan.contactOnly ? '/contact' : '/register';
 
-          <article className='bg-[#d56756] text-white border border-[#592518] rounded-2xl p-8'>
-            <div className='inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#592518] bg-[#c75b4c] text-xs mb-4'>
-              <Sparkles className='w-3.5 h-3.5' />
-              Gói khuyên dùng
-            </div>
-            <h2 className='text-xl mb-2' style={{ fontWeight: 700 }}>Premium</h2>
-            <p className='text-3xl mb-6' style={{ fontWeight: 700 }}>
-              249.000đ <span className='text-sm opacity-80' style={{ fontWeight: 400 }}>/ tháng</span>
-            </p>
-            <ul className='space-y-3 text-sm'>
-              {['Không giới hạn hồ sơ', 'Digital Pet Card + QR', 'CRM nhắc lịch tự động', 'Phân tích doanh thu và tần suất khách quay lại'].map((item) => (
-                <li key={item} className='flex items-center gap-2'>
-                  <Check className='w-4 h-4' />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-            <Link
-              to='/register'
-              className='mt-8 inline-flex w-full justify-center px-5 py-3 rounded-xl border border-[#592518] bg-white text-[#d56756] hover:-translate-y-0.5 transition-all'
-              style={{ fontWeight: 600 }}
-            >
-              Dùng thử 14 ngày
-            </Link>
-          </article>
+            return (
+              <article
+                key={plan.code}
+                className={`relative rounded-[2rem] border p-8 shadow-[0_18px_38px_rgba(89,37,24,0.08)] ${
+                  isHighlight
+                    ? 'border-[#592518] bg-[#d56756] text-white shadow-[0_24px_48px_rgba(213,103,86,0.24)]'
+                    : 'border-[#ead9d1] bg-white text-[#592518]'
+                }`}
+              >
+                {isHighlight ? (
+                  <div className='absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-2 rounded-full border border-[#592518] bg-[#23466d] px-4 py-1 text-xs text-white'>
+                    <Sparkles className='w-3.5 h-3.5' />
+                    Phổ biến nhất
+                  </div>
+                ) : null}
+                <h2 className='text-3xl mb-2' style={{ fontWeight: 700 }}>{plan.title}</h2>
+                <p className={`text-sm mb-6 ${isHighlight ? 'text-white/85' : 'text-[#8b6a61]'}`}>{plan.tagline}</p>
+                <p className={`mb-6 ${plan.contactOnly ? 'text-[#d56756]' : ''}`} style={{ fontWeight: 700 }}>
+                  <span className='text-5xl'>{plan.priceLabel}</span>
+                  {plan.priceSuffix ? <span className={`ml-2 text-xl ${isHighlight ? 'text-white/85' : 'text-[#8b6a61]'}`}>{plan.priceSuffix}</span> : null}
+                </p>
+                <ul className='space-y-3 text-sm'>
+                  {plan.features.map((item) => (
+                    <li key={item} className='flex items-start gap-3'>
+                      <span className={`mt-0.5 inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full ${isHighlight ? 'bg-white/20' : 'bg-[#f7ebe6]'}`}>
+                        <Check className={`w-3.5 h-3.5 ${isHighlight ? 'text-white' : 'text-[#d56756]'}`} />
+                      </span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  to={ctaTo}
+                  className={`mt-8 inline-flex w-full justify-center rounded-2xl border px-5 py-3 transition-all hover:-translate-y-0.5 ${
+                    isHighlight
+                      ? 'border-[#592518] bg-white text-[#d56756]'
+                      : 'border-[#592518] bg-[#d56756] text-white'
+                  }`}
+                  style={{ fontWeight: 600 }}
+                >
+                  {plan.contactOnly ? 'Liên hệ tư vấn' : plan.code === 'starter' ? 'Đăng ký Starter' : 'Đăng ký Professional'}
+                </Link>
+              </article>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -213,8 +219,8 @@ export function HelpPage() {
       a: 'Có. Trong lịch hẹn sắp tới, chọn Hủy lịch và xác nhận thao tác để tránh hủy nhầm.',
     },
     {
-      q: 'Gói Premium có những tính năng gì?',
-      a: 'Premium mở khóa CRM nhắc lịch tự động, Digital Pet Card và báo cáo vận hành nâng cao.',
+      q: 'Professional khác Starter ở điểm nào?',
+      a: 'Professional mở khóa không giới hạn khách hàng và thú cưng, Digital Pet Card Premium, lịch hẹn nâng cao, tồn kho sản phẩm và tích hợp API.',
     },
   ];
 
@@ -302,4 +308,3 @@ export function PrivacyPage() {
     </LegalPageShell>
   );
 }
-

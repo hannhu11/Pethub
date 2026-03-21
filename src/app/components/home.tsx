@@ -5,12 +5,17 @@ import {
 } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import heroPetShopImage from '../../assets/images/home/dog_hien_thi_o_trang_chu.jpg';
-import groomingImage from '../../assets/images/services/grooming.jpg';
-import spaImage from '../../assets/images/services/spa.jpg';
-import boardingImage from '../../assets/images/services/boarding.jpg';
-import checkupImage from '../../assets/images/services/checkup.jpg';
-import specialistImage from '../../assets/images/services/specialist.jpg';
-import vaccineImage from '../../assets/images/services/vaccine.jpg';
+import bookingImage from '../../assets/images/services/booking-upgrade.jpg';
+import catalogImage from '../../assets/images/services/catalog-upgrade.jpg';
+import chatbotImage from '../../assets/images/services/chatbot-service.png';
+import crmImage from '../../assets/images/services/crm-service.jpg';
+import loyaltyImage from '../../assets/images/services/loyalty-service.png';
+import medicalImage from '../../assets/images/services/medical-service.png';
+import posImage from '../../assets/images/services/pos-service.png';
+import qrCardImage from '../../assets/images/services/qr-card-service.png';
+import reminderImage from '../../assets/images/services/reminder-service.jpg';
+import revenueImage from '../../assets/images/services/revenue-service.jpg';
+import { pricingPlanDefinitions } from '../constants/pricing';
 
 const features = [
   { icon: CalendarCheck, title: 'Đặt lịch thông minh 24/7', desc: 'Khách chủ động chọn khung giờ phù hợp, hệ thống tự tối ưu slot để giảm trùng lịch và quá tải.' },
@@ -25,65 +30,72 @@ const serviceShowcase = [
   {
     title: 'Quản lý khách hàng thông minh',
     desc: 'Lưu trữ thông tin khách hàng và thú cưng chi tiết. Theo dõi lịch sử dịch vụ và tổng chi tiêu.',
-    image: groomingImage,
+    image: crmImage,
     badge: 'CRM',
-    objectPosition: 'center 38%',
+    objectPosition: 'center 50%',
   },
   {
     title: 'Lịch hẹn tự động',
     desc: 'Đặt lịch nhanh, nhắc nhở tự động qua SMS/Zalo. Không bao giờ bỏ lỡ khách hàng.',
-    image: boardingImage,
+    image: bookingImage,
     badge: 'Booking',
-    objectPosition: 'center 48%',
+    objectPosition: 'center 50%',
   },
   {
     title: 'Digital Pet Card',
     desc: 'Thẻ thú cưng điện tử với QR code. Khách hàng quét là thấy ngay lịch sử tiêm phòng, tẩy giun.',
-    image: specialistImage,
+    image: qrCardImage,
     badge: 'QR Card',
-    objectPosition: 'center 34%',
+    objectPosition: 'center 50%',
   },
   {
     title: 'Hồ sơ Y tế chi tiết',
     desc: 'Lưu trữ đầy đủ lịch sử khám bệnh, tiêm phòng, thuốc men. Timeline rõ ràng, dễ theo dõi.',
-    image: checkupImage,
+    image: medicalImage,
     badge: 'Medical',
-    objectPosition: 'center 42%',
+    objectPosition: 'center 50%',
   },
   {
     title: 'POS thanh toán nhanh',
     desc: 'Tính tiền chuyên nghiệp, in hóa đơn ngay. Hỗ trợ nhiều hình thức thanh toán.',
-    image: spaImage,
+    image: posImage,
     badge: 'POS',
-    objectPosition: 'center 40%',
+    objectPosition: 'center 50%',
   },
   {
     title: 'Nhắc nhở thông minh',
     desc: 'Tự động nhắc lịch tái chủng, sinh nhật thú cưng. Tăng tỷ lệ khách quay lại 3x.',
-    image: vaccineImage,
+    image: reminderImage,
     badge: 'Reminder',
-    objectPosition: 'center 36%',
+    objectPosition: 'center 50%',
   },
   {
     title: 'Báo cáo doanh thu',
     desc: 'Thống kê chi tiết doanh thu theo ngày/tháng. Phân tích xu hướng và tăng trưởng.',
-    image: spaImage,
+    image: revenueImage,
     badge: 'Revenue',
-    objectPosition: 'center 58%',
+    objectPosition: 'center 50%',
   },
   {
     title: 'CRM giữ chân khách',
     desc: 'Chăm sóc khách hàng chu đáo. Gửi ưu đãi cá nhân hóa, xây dựng lòng trung thành.',
-    image: groomingImage,
+    image: loyaltyImage,
     badge: 'Loyalty',
-    objectPosition: 'center 54%',
+    objectPosition: 'center 50%',
   },
   {
     title: 'Quản lý dịch vụ',
     desc: 'Danh mục dịch vụ linh hoạt. Cập nhật giá, combo dễ dàng.',
-    image: boardingImage,
+    image: catalogImage,
     badge: 'Catalog',
-    objectPosition: 'center 62%',
+    objectPosition: 'center 50%',
+  },
+  {
+    title: 'Trợ lý ảo AI (Chatbot RAG)',
+    desc: 'Tư vấn khách hàng, phân tích dữ liệu và hỗ trợ quản trị pet shop 24/7 ngay trong hệ thống.',
+    image: chatbotImage,
+    badge: 'AI Chatbot',
+    objectPosition: 'center 40%',
   },
 ];
 
@@ -94,6 +106,8 @@ const testimonials = [
 ];
 
 export function HomePage() {
+  const pricingCards = pricingPlanDefinitions;
+
   return (
     <div className="bg-[#fdfbf8]">
       {/* Hero Section */}
@@ -195,7 +209,7 @@ export function HomePage() {
               Bộ công cụ vận hành được tối ưu cho pet shop, spa thú cưng và phòng khám muốn chăm sóc khách hàng tốt hơn mỗi ngày.
             </p>
           </div>
-          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {serviceShowcase.map((service, i) => (
               <motion.div
                 key={service.title}
@@ -278,46 +292,57 @@ export function HomePage() {
             <h2 className="text-3xl text-[#592518] mb-3" style={{ fontWeight: 700 }}>
               Bảng giá minh bạch
             </h2>
-            <p className="text-[#8b6a61]">Bắt đầu miễn phí, nâng cấp khi sẵn sàng.</p>
+            <p className="text-[#8b6a61]">Chọn đúng gói cho quy mô pet shop hoặc phòng khám của bạn.</p>
           </div>
-          <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-            <div className="bg-white border border-[#ead9d1] rounded-2xl p-8 shadow-[0_14px_28px_rgba(89,37,24,0.06)]">
-              <h3 className="text-lg mb-1" style={{ fontWeight: 600 }}>Cơ bản</h3>
-              <p className="text-3xl text-[#592518] mb-4" style={{ fontWeight: 700 }}>
-                0 <span className="text-sm text-[#8b6a61]" style={{ fontWeight: 400 }}>VND/tháng</span>
-              </p>
-              <div className="space-y-3 mb-6">
-                {['Giới hạn 50 hồ sơ', 'Tạo booking thủ công', 'Lưu lịch sử dịch vụ', '1 tài khoản admin'].map((f) => (
-                  <div key={f} className="flex items-center gap-2 text-sm">
-                    <Check className="w-4 h-4 text-[#d56756]" />
-                    {f}
+          <div className="grid gap-6 lg:grid-cols-3 max-w-6xl mx-auto">
+            {pricingCards.map((plan) => {
+              const isHighlight = Boolean(plan.highlight);
+              const ctaTo = plan.contactOnly ? '/contact' : '/register';
+
+              return (
+                <article
+                  key={plan.code}
+                  className={`relative rounded-[2rem] border p-8 shadow-[0_18px_38px_rgba(89,37,24,0.08)] transition-all ${
+                    isHighlight
+                      ? 'border-[#592518] bg-[#d56756] text-white shadow-[0_24px_48px_rgba(213,103,86,0.24)]'
+                      : 'border-[#ead9d1] bg-white text-[#592518]'
+                  }`}
+                >
+                  {isHighlight ? (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full border border-[#592518] bg-[#23466d] px-4 py-1 text-xs text-white shadow-sm">
+                      Phổ biến nhất
+                    </div>
+                  ) : null}
+                  <h3 className="text-2xl mb-2" style={{ fontWeight: 700 }}>{plan.title}</h3>
+                  <p className={`text-sm mb-6 ${isHighlight ? 'text-white/85' : 'text-[#8b6a61]'}`}>{plan.tagline}</p>
+                  <p className={`mb-6 ${plan.contactOnly ? 'text-[#d56756]' : ''}`} style={{ fontWeight: 700 }}>
+                    <span className="text-5xl">{plan.priceLabel}</span>
+                    {plan.priceSuffix ? <span className={`ml-2 text-xl ${isHighlight ? 'text-white/85' : 'text-[#8b6a61]'}`}>{plan.priceSuffix}</span> : null}
+                  </p>
+                  <div className="space-y-3 mb-8">
+                    {plan.features.map((feature) => (
+                      <div key={feature} className={`flex items-start gap-3 text-sm ${isHighlight ? 'text-white' : 'text-[#592518]'}`}>
+                        <span className={`mt-0.5 inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full ${isHighlight ? 'bg-white/20' : 'bg-[#f7ebe6]'}`}>
+                          <Check className={`w-3.5 h-3.5 ${isHighlight ? 'text-white' : 'text-[#d56756]'}`} />
+                        </span>
+                        <span>{feature}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              <Link to="/register" className="block w-full text-center py-3 rounded-xl border border-[#592518] hover:-translate-y-0.5 transition-all bg-[#fffdf9]">
-                Bắt đầu miễn phí
-              </Link>
-            </div>
-            <div className="bg-[#d56756] text-white border border-[#592518] rounded-2xl p-8 relative shadow-[0_20px_40px_rgba(213,103,86,0.22)]">
-              <div className="absolute -top-3 right-6 px-3 py-1 bg-[#c75b4c] text-white text-xs rounded-full border border-[#592518]">
-                Phổ biến nhất
-              </div>
-              <h3 className="text-lg mb-1" style={{ fontWeight: 600 }}>Premium</h3>
-              <p className="text-3xl mb-4" style={{ fontWeight: 700 }}>
-                249.000 <span className="text-sm opacity-80" style={{ fontWeight: 400 }}>VND/tháng</span>
-              </p>
-              <div className="space-y-3 mb-6">
-                {['Không giới hạn hồ sơ', 'Báo cáo doanh thu chi tiết', 'Đăng nhập Google OAuth', 'Nhắc lịch CRM tự động', 'Digital Pet Card & QR', 'Phân tích khách quay lại'].map((f) => (
-                  <div key={f} className="flex items-center gap-2 text-sm">
-                    <Check className="w-4 h-4" />
-                    {f}
-                  </div>
-                ))}
-              </div>
-              <Link to="/register" className="block w-full text-center py-3 rounded-xl bg-white text-[#d56756] hover:-translate-y-0.5 transition-all border border-[#592518]" style={{ fontWeight: 600 }}>
-                Dùng thử 14 ngày
-              </Link>
-            </div>
+                  <Link
+                    to={ctaTo}
+                    className={`block w-full rounded-2xl border py-3 text-center transition-all hover:-translate-y-0.5 ${
+                      isHighlight
+                        ? 'border-[#592518] bg-white text-[#d56756]'
+                        : 'border-[#592518] bg-[#d56756] text-white'
+                    }`}
+                    style={{ fontWeight: 600 }}
+                  >
+                    {plan.contactOnly ? 'Liên hệ tư vấn' : plan.code === 'starter' ? 'Đăng ký Starter' : 'Đăng ký Professional'}
+                  </Link>
+                </article>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -374,7 +399,7 @@ export function HomePage() {
               className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white text-[#d56756] hover:-translate-y-1 transition-all border border-[#592518]"
               style={{ fontWeight: 600 }}
             >
-              Đăng ký ngay — Miễn phí
+              Đăng ký ngay
               <ArrowRight className="w-5 h-5" />
             </Link>
           </div>

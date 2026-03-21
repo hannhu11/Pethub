@@ -50,20 +50,12 @@ export class SettingsService {
       throw new NotFoundException('User not found');
     }
 
-    const [clinic, clinicProfile, rawSubscription, notificationSettings, petCount] = await Promise.all([
+    const [clinic, rawSubscription, notificationSettings, petCount] = await Promise.all([
       this.prisma.clinicSettings.findFirst({
         where: {
           clinicId: currentUser.clinicId,
         },
         orderBy: { updatedAt: 'desc' },
-      }),
-      this.prisma.clinic.findUnique({
-        where: {
-          id: currentUser.clinicId,
-        },
-        select: {
-          createdAt: true,
-        },
       }),
       this.prisma.subscription.findFirst({
         where: {
@@ -86,12 +78,7 @@ export class SettingsService {
     const now = new Date();
     let subscription = rawSubscription;
 
-    if (
-      subscription &&
-      this.isPremiumSubscription(subscription.planCode, subscription.planName, subscription.isActive) &&
-      subscription.expiresAt &&
-      subscription.expiresAt.getTime() <= now.getTime()
-    ) {
+    if (subscription && this.isPaidSubscription(subscription.planCode, subscription.planName, subscription.isActive) && subscription.expiresAt && subscription.expiresAt.getTime() <= now.getTime()) {
       subscription = await this.prisma.subscription.update({
         where: { id: subscription.id },
         data: {
@@ -105,17 +92,16 @@ export class SettingsService {
       });
     }
 
-    const isPremiumActive = Boolean(
+    const isPaidActive = Boolean(
       subscription &&
-        this.isPremiumSubscription(subscription.planCode, subscription.planName, subscription.isActive),
+        this.isPaidSubscription(subscription.planCode, subscription.planName, subscription.isActive),
     );
-    const startedAt = isPremiumActive
-      ? subscription?.startedAt?.toISOString() ?? null
-      : clinicProfile?.createdAt?.toISOString() ?? null;
-    const expiresAt = isPremiumActive ? subscription?.expiresAt?.toISOString() ?? null : null;
-    const remainingDays = isPremiumActive
+    const startedAt = isPaidActive ? subscription?.startedAt?.toISOString() ?? null : null;
+    const expiresAt = isPaidActive ? subscription?.expiresAt?.toISOString() ?? null : null;
+    const remainingDays = isPaidActive
       ? this.calculateRemainingDays(subscription?.expiresAt ?? null, now)
       : null;
+    const responseSubscription = this.normalizeSubscriptionForResponse(subscription);
 
     return {
       profile: {
@@ -126,7 +112,7 @@ export class SettingsService {
         role: user.role,
       },
       clinic,
-      subscription,
+      subscription: responseSubscription,
       billing: {
         startedAt,
         expiresAt,
@@ -139,17 +125,61 @@ export class SettingsService {
     };
   }
 
-  private isPremiumSubscription(planCode?: string | null, planName?: string | null, isActive?: boolean | null) {
+  private isPaidSubscription(planCode?: string | null, planName?: string | null, isActive?: boolean | null) {
     if (!isActive) {
       return false;
     }
 
-    const hasPremiumCode = planCode?.toLowerCase().includes('premium') ?? false;
-    const hasPremiumName = planName?.toLowerCase().includes('premium') ?? false;
+    const normalized = `${planCode ?? ''} ${planName ?? ''}`.toLowerCase();
     if (!planCode && !planName) {
       return true;
     }
-    return hasPremiumCode || hasPremiumName;
+    return (
+      normalized.includes('starter') ||
+      normalized.includes('professional') ||
+      normalized.includes('premium') ||
+      normalized.includes('enterprise')
+    );
+  }
+
+  private normalizeSubscriptionForResponse<
+    T extends {
+      planCode: string | null;
+      planName: string | null;
+      isActive: boolean;
+      amount: unknown;
+      startedAt: Date | null;
+      expiresAt: Date | null;
+      createdAt: Date;
+      updatedAt: Date;
+    } | null,
+  >(subscription: T): T {
+    if (!subscription) {
+      return subscription;
+    }
+
+    const normalized = `${subscription.planCode ?? ''} ${subscription.planName ?? ''}`.toLowerCase();
+    if (!subscription.isActive || normalized.includes('basic-free') || normalized.includes('basic')) {
+      return {
+        ...subscription,
+        planCode: 'inactive',
+        planName: 'Chưa kích hoạt',
+        amount: 0,
+        isActive: false,
+        startedAt: null,
+        expiresAt: null,
+      };
+    }
+
+    if (normalized.includes('premium')) {
+      return {
+        ...subscription,
+        planCode: 'professional-monthly',
+        planName: 'Professional',
+      };
+    }
+
+    return subscription;
   }
 
   private calculateRemainingDays(expiresAt: Date | null, now: Date): number | null {

@@ -779,10 +779,7 @@ export async function getManagerSettings(): Promise<ApiManagerSettingsResponse> 
 }
 
 export async function createPayosPaymentLink(payload: {
-  amount: number;
-  description: string;
-  orderCode?: string;
-  invoiceId?: string;
+  plan: 'starter' | 'professional';
   returnUrl?: string;
   cancelUrl?: string;
 }): Promise<ApiPayosLinkResponse> {

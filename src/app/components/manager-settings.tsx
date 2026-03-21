@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router';
 import { motion } from 'motion/react';
 import {
   User, Building2, CreditCard, BellRing, Save, Check,
-  Crown, Zap, PawPrint, BarChart3, Mail, Smartphone, LockKeyhole
+  Crown, PawPrint, BarChart3, Mail, Smartphone, LockKeyhole
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import {
@@ -24,6 +24,11 @@ import {
   updatePasswordSettings,
   updateProfileSettings,
 } from '../lib/pethub-api';
+import {
+  pricingPlanDefinitions,
+  subscriptionPlanLabels,
+  normalizeSubscriptionPlan,
+} from '../constants/pricing';
 
 const settingsTabs = [
   { id: 'profile', label: 'Hồ sơ cá nhân', icon: User },
@@ -110,17 +115,14 @@ export function ManagerSettingsPage() {
       address: data.clinic?.address ?? '',
       invoiceNote: data.clinic?.invoiceNote ?? '',
     };
-    const hasPremiumMarker = Boolean(
-      data.subscription?.planCode?.toLowerCase().includes('premium') ||
-        data.subscription?.planName?.toLowerCase().includes('premium'),
-    );
-    const isPremiumPlan = Boolean(
-      data.subscription?.isActive &&
-        (hasPremiumMarker || (!data.subscription?.planCode && !data.subscription?.planName)),
+    const normalizedPlan = normalizeSubscriptionPlan(
+      data.subscription?.planCode,
+      data.subscription?.planName,
+      data.subscription?.isActive,
     );
     const nextSubscription = {
-      plan: isPremiumPlan ? 'premium' : 'basic',
-      amount: Number(data.subscription?.amount ?? getSubscriptionSettings().amount ?? 249000),
+      plan: normalizedPlan,
+      amount: Number(data.subscription?.amount ?? getSubscriptionSettings().amount ?? 0),
       currency: 'VND' as const,
       billingCycle: 'monthly' as const,
       paymentMethod: getSubscriptionSettings().paymentMethod,
@@ -128,11 +130,11 @@ export function ManagerSettingsPage() {
         ? new Date(data.billing.startedAt).toLocaleDateString('vi-VN')
         : undefined,
       expiresAt:
-        isPremiumPlan && data.billing?.expiresAt
+        normalizedPlan !== 'inactive' && data.billing?.expiresAt
           ? new Date(data.billing.expiresAt).toLocaleDateString('vi-VN')
           : undefined,
       remainingDays:
-        isPremiumPlan && typeof data.billing?.remainingDays === 'number'
+        normalizedPlan !== 'inactive' && typeof data.billing?.remainingDays === 'number'
           ? Math.max(0, Math.ceil(data.billing.remainingDays))
           : null,
       petCount: Number(data.usage?.petCount ?? getSubscriptionSettings().petCount ?? 0),
@@ -347,6 +349,15 @@ export function ManagerSettingsPage() {
     }
   };
 
+  const currentPlanLabel = subscriptionPlanLabels[subscription.plan];
+  const currentPlanStatus =
+    subscription.plan === 'inactive'
+      ? 'Chưa kích hoạt'
+      : subscription.plan === 'enterprise'
+        ? 'Enterprise tùy chỉnh'
+        : `${currentPlanLabel} đang hoạt động`;
+  const planCards = pricingPlanDefinitions;
+
   return (
     <div className="space-y-6">
       <div>
@@ -543,23 +554,23 @@ export function ManagerSettingsPage() {
                   <div>
                     <p className="text-xs text-[#8b6a61]">{'Gói hiện tại'}</p>
                     <p className="text-lg text-[#592518] mt-1" style={{ fontWeight: 700 }}>
-                      {subscription.plan === 'premium' ? 'Premium' : 'Basic (Miễn phí)'}
+                      {currentPlanLabel}
                     </p>
                   </div>
                   <div className="px-3 py-1.5 rounded-lg bg-[#f4ece4] border border-[#592518]/20 text-xs" style={{ fontWeight: 500 }}>
-                    {subscription.plan === 'premium' ? 'Premium đang hoạt động' : 'Đang sử dụng'}
+                    {currentPlanStatus}
                   </div>
                 </div>
                 <div className="mt-3 flex items-center gap-4 text-xs text-[#8b6a61] flex-wrap">
-                  <span>
-                    {subscription.plan === 'premium'
-                      ? `Kích hoạt: ${subscription.activatedAt ?? '--/--/----'}`
-                      : `Bắt đầu: ${subscription.activatedAt ?? '--/--/----'}`}
-                  </span>
-                  {subscription.plan === 'premium' ? (
+                  {subscription.activatedAt ? <span>{`Kích hoạt: ${subscription.activatedAt}`}</span> : null}
+                  {subscription.plan !== 'inactive' ? (
                     <>
-                      <span>&bull;</span>
-                      <span>{`Hết hạn: ${subscription.expiresAt ?? '--/--/----'}`}</span>
+                      {subscription.expiresAt ? (
+                        <>
+                          <span>&bull;</span>
+                          <span>{`Hết hạn: ${subscription.expiresAt}`}</span>
+                        </>
+                      ) : null}
                       {typeof subscription.remainingDays === 'number' ? (
                         <>
                           <span>&bull;</span>
@@ -570,86 +581,90 @@ export function ManagerSettingsPage() {
                   ) : null}
                   <span>&bull;</span>
                   <span>
-                    {subscription.plan === 'premium'
-                      ? `Thú cưng: ${subscription.petCount} hồ sơ (không giới hạn)`
-                      : `Thú cưng: ${subscription.petCount}/10${subscription.petCount >= 10 ? ' (đã dùng hết)' : ''}`}
+                    {subscription.plan === 'starter'
+                      ? `Thú cưng: ${subscription.petCount}/200`
+                      : subscription.plan === 'professional' || subscription.plan === 'enterprise'
+                        ? `Thú cưng: ${subscription.petCount} hồ sơ (không giới hạn)`
+                        : `Thú cưng: ${subscription.petCount} hồ sơ hiện có`}
                   </span>
                 </div>
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-5">
-                <div className="bg-white border border-[#592518] rounded-2xl p-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <PawPrint className="w-5 h-5 text-[#8b6a61]" />
-                    <h3 className="text-sm" style={{ fontWeight: 600 }}>Basic</h3>
-                  </div>
-                  <div className="mb-4">
-                    <span className="text-3xl text-[#592518]" style={{ fontWeight: 700 }}>
-                      {'Miễn phí'}
-                    </span>
-                  </div>
-                  <ul className="space-y-2.5 mb-6 text-sm text-[#8b6a61]">
-                    {[
-                      'Tối đa 10 thú cưng',
-                      'Quản lý lịch hẹn cơ bản',
-                      'Hóa đơn & thanh toán',
-                      'Báo cáo doanh thu',
-                    ].map(f => (
-                      <li key={f} className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-[#d56756]" />
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="px-4 py-2.5 rounded-xl border border-[#592518]/30 text-center text-sm text-[#8b6a61]">
-                    {subscription.plan === 'basic' ? 'Gói hiện tại' : 'Gói miễn phí'}
-                  </div>
-                </div>
+              <div className="grid gap-5 xl:grid-cols-3">
+                {planCards.map((plan) => {
+                  const isCurrentPlan = subscription.plan === plan.code;
+                  const isHighlight = Boolean(plan.highlight);
+                  const cardIcon =
+                    plan.code === 'professional' ? Crown : plan.code === 'enterprise' ? Building2 : PawPrint;
 
-                <div className="bg-[#d56756]/5 border-2 border-[#d56756] rounded-2xl p-6 relative">
-                  <div className="absolute -top-3 right-4 px-3 py-1 rounded-full bg-[#d56756] text-white text-[10px]" style={{ fontWeight: 600 }}>
-                    {'PHỔ BIẾN NHẤT'}
-                  </div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <Crown className="w-5 h-5 text-[#c75b4c]" />
-                    <h3 className="text-sm text-[#d56756]" style={{ fontWeight: 600 }}>Premium</h3>
-                  </div>
-                  <div className="mb-1">
-                    <span className="text-3xl text-[#592518]" style={{ fontWeight: 700 }}>
-                      249.000
-                    </span>
-                    <span className="text-sm text-[#8b6a61] ml-1">VND/tháng</span>
-                  </div>
-                  <p className="text-xs text-[#8b6a61] mb-4">{'Thanh toán hàng tháng, hủy bất cứ lúc nào'}</p>
-                  <ul className="space-y-2.5 mb-6 text-sm">
-                    {[
-                      { text: 'Không giới hạn thú cưng', highlight: true },
-                      { text: 'CRM Automations', highlight: true },
-                      { text: 'Digital Pet Card', highlight: true },
-                      { text: 'Smart Reminders', highlight: false },
-                      { text: 'Báo cáo nâng cao', highlight: false },
-                      { text: 'Hỗ trợ ưu tiên 24/7', highlight: false },
-                    ].map(f => (
-                      <li key={f.text} className={`flex items-center gap-2 ${f.highlight ? 'text-[#592518]' : 'text-[#8b6a61]'}`}>
-                        <Zap className={`w-4 h-4 ${f.highlight ? 'text-[#c75b4c]' : 'text-[#d56756]'}`} />
-                        <span style={f.highlight ? { fontWeight: 500 } : {}}>{f.text}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <button
-                    type='button'
-                    onClick={() => navigate('/manager/settings/upgrade-premium')}
-                    disabled={subscription.plan === 'premium'}
-                    className={`w-full py-3 rounded-xl text-sm border border-[#592518] transition-all ${
-                      subscription.plan === 'premium'
-                        ? 'bg-[#f4ece4] text-[#8b6a61] cursor-not-allowed'
-                        : 'bg-[#d56756] text-white hover:-translate-y-1 active:translate-y-0 cursor-pointer'
-                    }`}
-                    style={{ fontWeight: 600 }}
-                  >
-                    {subscription.plan === 'premium' ? 'Gói hiện tại' : 'Nâng cấp lên Premium'}
-                  </button>
-                </div>
+                  return (
+                    <div
+                      key={plan.code}
+                      className={`relative rounded-2xl p-6 ${
+                        isHighlight
+                          ? 'bg-[#d56756]/5 border-2 border-[#d56756]'
+                          : 'bg-white border border-[#592518]'
+                      }`}
+                    >
+                      {isHighlight ? (
+                        <div className="absolute -top-3 right-4 px-3 py-1 rounded-full bg-[#d56756] text-white text-[10px]" style={{ fontWeight: 600 }}>
+                          PHỔ BIẾN NHẤT
+                        </div>
+                      ) : null}
+
+                      <div className="flex items-center gap-2 mb-4">
+                        <cardIcon className={`w-5 h-5 ${isHighlight ? 'text-[#c75b4c]' : 'text-[#8b6a61]'}`} />
+                        <h3 className={`text-sm ${isHighlight ? 'text-[#d56756]' : 'text-[#592518]'}`} style={{ fontWeight: 600 }}>
+                          {plan.title}
+                        </h3>
+                      </div>
+
+                      <p className="text-xs text-[#8b6a61] mb-3">{plan.tagline}</p>
+
+                      <div className="mb-4">
+                        <span className={`text-3xl ${plan.contactOnly ? 'text-[#d56756]' : 'text-[#592518]'}`} style={{ fontWeight: 700 }}>
+                          {plan.priceLabel}
+                        </span>
+                        {plan.priceSuffix ? <span className="text-sm text-[#8b6a61] ml-1">{plan.priceSuffix}</span> : null}
+                      </div>
+
+                      <ul className="space-y-2.5 mb-6 text-sm">
+                        {plan.features.map((feature) => (
+                          <li key={feature} className="flex items-start gap-2 text-[#592518]">
+                            <Check className="w-4 h-4 text-[#d56756] mt-0.5" />
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+
+                      <button
+                        type='button'
+                        onClick={() => {
+                          if (plan.contactOnly) {
+                            window.location.href = 'mailto:support@pethub.vn?subject=Tu%20van%20goi%20Enterprise%20PetHub';
+                            return;
+                          }
+                          navigate(`/manager/settings/upgrade-plan/${plan.code}`);
+                        }}
+                        disabled={isCurrentPlan}
+                        className={`w-full py-3 rounded-xl text-sm border border-[#592518] transition-all ${
+                          isCurrentPlan
+                            ? 'bg-[#f4ece4] text-[#8b6a61] cursor-not-allowed'
+                            : isHighlight
+                              ? 'bg-[#d56756] text-white hover:-translate-y-1 active:translate-y-0 cursor-pointer'
+                              : 'bg-white text-[#592518] hover:-translate-y-1 active:translate-y-0 cursor-pointer'
+                        }`}
+                        style={{ fontWeight: 600 }}
+                      >
+                        {isCurrentPlan
+                          ? 'Gói hiện tại'
+                          : plan.contactOnly
+                            ? 'Liên hệ tư vấn'
+                            : `Chọn gói ${plan.title}`}
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </motion.div>
           )}

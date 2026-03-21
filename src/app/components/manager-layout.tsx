@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useAuthSession } from '../auth-session';
 import { BrandLockup } from './brand-lockup';
+import { normalizeSubscriptionPlan } from '../constants/pricing';
 import {
   getClinicSettings,
   getProfileSettings,
@@ -277,13 +278,10 @@ export function ManagerLayout() {
         if (!mounted) {
           return;
         }
-        const hasPremiumMarker = Boolean(
-          data.subscription?.planCode?.toLowerCase().includes('premium') ||
-            data.subscription?.planName?.toLowerCase().includes('premium'),
-        );
-        const isPremiumPlan = Boolean(
-          data.subscription?.isActive &&
-            (hasPremiumMarker || (!data.subscription?.planCode && !data.subscription?.planName)),
+        const normalizedPlan = normalizeSubscriptionPlan(
+          data.subscription?.planCode,
+          data.subscription?.planName,
+          data.subscription?.isActive,
         );
         hydrateManagerSettings({
           profile: {
@@ -300,8 +298,8 @@ export function ManagerLayout() {
             invoiceNote: data.clinic?.invoiceNote ?? '',
           },
           subscription: {
-            plan: isPremiumPlan ? 'premium' : 'basic',
-            amount: Number(data.subscription?.amount ?? 249000),
+            plan: normalizedPlan,
+            amount: Number(data.subscription?.amount ?? 0),
             currency: 'VND',
             billingCycle: 'monthly',
             paymentMethod: null,

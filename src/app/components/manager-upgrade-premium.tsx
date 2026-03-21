@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -8,7 +8,7 @@ import {
   QrCode,
   ShieldCheck,
 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { QRCodeSVG } from 'qrcode.react';
 import { extractApiError } from '../lib/api-client';
 import {
@@ -24,15 +24,12 @@ import {
   getSubscriptionSettings,
   saveSubscriptionSettings,
 } from './manager-settings-store';
-
-const premiumBenefits = [
-  'Không giới hạn hồ sơ thú cưng và khách hàng',
-  'CRM nâng cao với phân tầng khách hàng tự động',
-  'Smart Reminders đa kênh (Email/SMS)',
-  'Digital Pet Card nâng cao + xuất ảnh chuẩn',
-  'Báo cáo vận hành và doanh thu chi tiết',
-  'Hỗ trợ ưu tiên 24/7',
-];
+import {
+  billablePlanAmounts,
+  isBillableSubscriptionPlan,
+  pricingPlanDefinitions,
+  subscriptionPlanLabels,
+} from '../constants/pricing';
 
 type UpgradePhase = 'idle' | 'waiting' | 'confirmed';
 
@@ -47,43 +44,58 @@ function resolveQrValue(checkout: ApiPayosLinkResponse | null): string | null {
   return checkout.qrCode ?? checkout.checkoutUrl;
 }
 
-export function ManagerUpgradePremiumPage() {
+export function ManagerUpgradePlanPage() {
   const navigate = useNavigate();
+  const { plan: routePlan } = useParams();
   const clinic = getClinicSettings();
   const profile = getProfileSettings();
   const initialSubscription = getSubscriptionSettings();
+  const planCode = isBillableSubscriptionPlan(routePlan) ? routePlan : null;
+  const planDefinition = useMemo(
+    () => pricingPlanDefinitions.find((plan) => plan.code === planCode),
+    [planCode],
+  );
   const [checkout, setCheckout] = useState<ApiPayosLinkResponse | null>(null);
   const [phase, setPhase] = useState<UpgradePhase>(
-    initialSubscription.plan === 'premium' ? 'confirmed' : 'idle',
+    planCode && initialSubscription.plan === planCode ? 'confirmed' : 'idle',
   );
   const [loadingLink, setLoadingLink] = useState(false);
   const [checking, setChecking] = useState(false);
   const [message, setMessage] = useState(
-    initialSubscription.plan === 'premium' ? 'Bạn đang sử dụng gói Premium.' : '',
+    planCode && initialSubscription.plan === planCode
+      ? `Bạn đang sử dụng gói ${subscriptionPlanLabels[planCode]}.`
+      : '',
   );
   const [error, setError] = useState('');
-  const confirmedRef = useRef(initialSubscription.plan === 'premium');
+  const confirmedRef = useRef(planCode ? initialSubscription.plan === planCode : false);
   const redirectTimerRef = useRef<number | null>(null);
   const autoStartedRef = useRef(false);
 
-  const amount = Number(initialSubscription.amount ?? 249000);
+  useEffect(() => {
+    if (planCode) {
+      return;
+    }
+    navigate('/manager/settings?tab=subscription', { replace: true });
+  }, [navigate, planCode]);
+
+  const amount = planCode ? billablePlanAmounts[planCode] : 0;
   const qrValue = useMemo(() => resolveQrValue(checkout), [checkout]);
 
   const confirmPaidAndRedirect = useCallback(
     (snapshot?: ApiPayosTransactionStatusResponse) => {
-      if (confirmedRef.current) {
+      if (!planCode || confirmedRef.current) {
         return;
       }
       confirmedRef.current = true;
       setPhase('confirmed');
       setChecking(false);
       setError('');
-      setMessage('Thanh toán nâng cấp đã được xác nhận. Đang quay lại Gói & thanh toán...');
+      setMessage(`Thanh toán ${subscriptionPlanLabels[planCode]} đã được xác nhận. Đang quay lại Gói & thanh toán...`);
 
       const current = getSubscriptionSettings();
       saveSubscriptionSettings({
         ...current,
-        plan: 'premium',
+        plan: planCode,
         amount: Number(snapshot?.amount ?? checkout?.amount ?? amount),
         currency: 'VND',
         billingCycle: 'monthly',
@@ -98,7 +110,7 @@ export function ManagerUpgradePremiumPage() {
         navigate('/manager/settings?tab=subscription', { replace: true });
       }, 1500);
     },
-    [amount, checkout?.amount, navigate],
+    [amount, checkout?.amount, navigate, planCode],
   );
 
   const syncTransactionStatus = useCallback(
@@ -109,46 +121,45 @@ export function ManagerUpgradePremiumPage() {
       } else if (source === 'realtime') {
         setMessage('Đã nhận tín hiệu realtime, đang chờ ngân hàng xác nhận hoàn tất...');
       } else {
-        setMessage('Đang chờ thanh toán nâng cấp từ ngân hàng...');
+        setMessage(`Đang chờ thanh toán ${planDefinition?.title ?? 'gói đăng ký'} từ ngân hàng...`);
       }
       return snapshot;
     },
-    [confirmPaidAndRedirect],
+    [confirmPaidAndRedirect, planDefinition?.title],
   );
 
   const createCheckout = useCallback(async () => {
-    if (loadingLink || confirmedRef.current) {
+    if (!planCode || loadingLink || confirmedRef.current) {
       return;
     }
 
     setLoadingLink(true);
     setError('');
-    setMessage('Đang tạo phiên thanh toán Premium...');
+    setMessage(`Đang tạo phiên thanh toán ${subscriptionPlanLabels[planCode]}...`);
     try {
       const payment = await createPayosPaymentLink({
-        amount,
-        description: 'Nang cap Premium PETHUB',
-        returnUrl: `${window.location.origin}/manager/settings/upgrade-premium?payment=success`,
-        cancelUrl: `${window.location.origin}/manager/settings/upgrade-premium?payment=cancel`,
+        plan: planCode,
+        returnUrl: `${window.location.origin}/manager/settings/upgrade-plan/${planCode}?payment=success`,
+        cancelUrl: `${window.location.origin}/manager/settings/upgrade-plan/${planCode}?payment=cancel`,
       });
       setCheckout(payment);
       setPhase('waiting');
-      setMessage('Đang chờ thanh toán nâng cấp từ ngân hàng...');
+      setMessage(`Đang chờ thanh toán ${subscriptionPlanLabels[planCode]} từ ngân hàng...`);
     } catch (apiError) {
       setError(extractApiError(apiError));
       setMessage('');
     } finally {
       setLoadingLink(false);
     }
-  }, [amount, loadingLink]);
+  }, [loadingLink, planCode]);
 
   useEffect(() => {
-    if (phase !== 'idle' || initialSubscription.plan === 'premium' || autoStartedRef.current) {
+    if (!planCode || phase !== 'idle' || initialSubscription.plan === planCode || autoStartedRef.current) {
       return;
     }
     autoStartedRef.current = true;
     void createCheckout();
-  }, [createCheckout, initialSubscription.plan, phase]);
+  }, [createCheckout, initialSubscription.plan, phase, planCode]);
 
   useEffect(() => {
     if (phase !== 'waiting' || !checkout?.orderCode || confirmedRef.current) {
@@ -205,15 +216,12 @@ export function ManagerUpgradePremiumPage() {
         return;
       }
 
-      const onSubscriptionUpdated = (event: {
-        type?: string;
-        orderCode?: string;
-      }) => {
+      const onSubscriptionUpdated = (event: { type?: string; orderCode?: string }) => {
         if (!event?.orderCode || event.orderCode !== checkout.orderCode) {
           return;
         }
 
-        setMessage('Nhận tín hiệu realtime: đang xác minh thanh toán nâng cấp...');
+        setMessage('Nhận tín hiệu realtime: đang xác minh thanh toán đăng ký...');
         void syncTransactionStatus(checkout.orderCode, 'realtime').catch(() => undefined);
       };
 
@@ -239,6 +247,10 @@ export function ManagerUpgradePremiumPage() {
     };
   }, []);
 
+  if (!planCode || !planDefinition) {
+    return null;
+  }
+
   return (
     <div className='space-y-6'>
       <div className='flex items-center justify-between gap-3 flex-wrap'>
@@ -255,17 +267,17 @@ export function ManagerUpgradePremiumPage() {
         <section className='bg-white border border-[#592518] rounded-2xl p-6'>
           <div className='inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#d56756]/10 border border-[#d56756]/40 text-[#d56756] text-xs mb-4'>
             <ShieldCheck className='w-3.5 h-3.5' />
-            Premium Plan
+            {planDefinition.title}
           </div>
           <h1 className='text-3xl text-[#592518]' style={{ fontWeight: 700 }}>
-            Nâng cấp lên Premium
+            Nâng cấp lên {planDefinition.title}
           </h1>
           <p className='text-sm text-[#8b6a61] mt-2'>
-            Mở khóa toàn bộ bộ công cụ vận hành theo chuẩn quốc tế cho phòng khám và pet shop.
+            {planDefinition.tagline}
           </p>
 
           <div className='mt-6 space-y-3'>
-            {premiumBenefits.map((item) => (
+            {planDefinition.features.map((item) => (
               <div key={item} className='flex items-start gap-2 text-sm text-[#592518]'>
                 <CheckCircle2 className='w-4 h-4 text-[#d56756] mt-0.5 flex-shrink-0' />
                 <span>{item}</span>
@@ -276,13 +288,13 @@ export function ManagerUpgradePremiumPage() {
 
         <section className='bg-white border border-[#592518] rounded-2xl p-6'>
           <h2 className='text-xl text-[#592518]' style={{ fontWeight: 700 }}>
-            Thanh toán nâng cấp Premium
+            Thanh toán nâng cấp {planDefinition.title}
           </h2>
-          <p className='text-xs text-[#8b6a61] mt-1'>Chu kỳ thanh toán: Hàng tháng • Giá đã gồm VAT</p>
+          <p className='text-xs text-[#8b6a61] mt-1'>Chu kỳ thanh toán: Hàng tháng</p>
 
           <div className='mt-4 p-4 rounded-xl border border-[#592518]/20 bg-[#f6eee7]'>
             <div className='flex items-center justify-between'>
-              <span className='text-sm text-[#8b6a61]'>Gói Premium</span>
+              <span className='text-sm text-[#8b6a61]'>Gói {planDefinition.title}</span>
               <span className='text-lg text-[#592518]' style={{ fontWeight: 700 }}>
                 {formatVnd(amount)}đ
               </span>
@@ -306,7 +318,7 @@ export function ManagerUpgradePremiumPage() {
               {checkout ? (
                 <>
                   {qrValue?.startsWith('http') || qrValue?.startsWith('data:image') ? (
-                    <img src={qrValue} alt='QR thanh toán Premium' className='w-32 h-32 object-contain rounded-lg border border-[#592518]/20 bg-white p-2' />
+                    <img src={qrValue} alt={`QR thanh toán ${planDefinition.title}`} className='w-32 h-32 object-contain rounded-lg border border-[#592518]/20 bg-white p-2' />
                   ) : qrValue ? (
                     <div className='w-32 h-32 rounded-lg border border-[#592518]/20 bg-white p-2 flex items-center justify-center'>
                       <QRCodeSVG value={qrValue} size={112} />
@@ -317,15 +329,9 @@ export function ManagerUpgradePremiumPage() {
                     </div>
                   )}
                   <div className='min-w-[220px] text-xs space-y-1 text-[#592518] font-mono'>
-                    <p>
-                      <span className='text-[#8b6a61]'>Nguồn:</span> Chuyển khoản QR
-                    </p>
-                    <p>
-                      <span className='text-[#8b6a61]'>Mã giao dịch:</span> {checkout.orderCode}
-                    </p>
-                    <p>
-                      <span className='text-[#8b6a61]'>Số tiền:</span> {formatVnd(checkout.amount)} VND
-                    </p>
+                    <p><span className='text-[#8b6a61]'>Nguồn:</span> Chuyển khoản QR</p>
+                    <p><span className='text-[#8b6a61]'>Mã giao dịch:</span> {checkout.orderCode}</p>
+                    <p><span className='text-[#8b6a61]'>Số tiền:</span> {formatVnd(checkout.amount)} VND</p>
                     <a
                       href={checkout.checkoutUrl}
                       target='_blank'
@@ -339,22 +345,16 @@ export function ManagerUpgradePremiumPage() {
                 </>
               ) : (
                 <div className='w-full rounded-lg border border-dashed border-[#592518]/20 bg-white px-3 py-4 text-xs text-[#8b6a61]'>
-                  Hệ thống đang chuẩn bị phiên thanh toán Premium...
+                  Hệ thống đang chuẩn bị phiên thanh toán {planDefinition.title}...
                 </div>
               )}
             </div>
           </div>
 
           <div className='mt-4 p-3 rounded-xl border border-[#592518]/15 bg-white text-xs text-[#8b6a61]'>
-            Hệ thống sẽ kích hoạt Premium ngay sau khi ngân hàng xác nhận thanh toán cho tài khoản quản lý{' '}
-            <span className='text-[#592518]' style={{ fontWeight: 600 }}>
-              {profile.name}
-            </span>{' '}
-            tại{' '}
-            <span className='text-[#592518]' style={{ fontWeight: 600 }}>
-              {clinic.name}
-            </span>
-            .
+            Hệ thống sẽ kích hoạt gói <span className='text-[#592518]' style={{ fontWeight: 600 }}>{planDefinition.title}</span> ngay sau khi ngân hàng xác nhận thanh toán cho tài khoản quản lý{' '}
+            <span className='text-[#592518]' style={{ fontWeight: 600 }}>{profile.name}</span> tại{' '}
+            <span className='text-[#592518]' style={{ fontWeight: 600 }}>{clinic.name}</span>.
           </div>
 
           {message ? (
@@ -414,10 +414,10 @@ export function ManagerUpgradePremiumPage() {
             ) : phase === 'waiting' ? (
               <>
                 <Loader2 className='w-4 h-4 animate-spin' />
-                Đang chờ thanh toán nâng cấp từ ngân hàng...
+                Đang chờ thanh toán từ ngân hàng...
               </>
             ) : (
-              'Tạo lại mã thanh toán'
+              `Tạo lại mã thanh toán ${planDefinition.title}`
             )}
           </button>
         </section>
@@ -425,4 +425,3 @@ export function ManagerUpgradePremiumPage() {
     </div>
   );
 }
-

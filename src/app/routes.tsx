@@ -13,7 +13,7 @@ import { ManagerPetsPage, ManagerCustomersPage } from './components/manager-crm'
 import { ManagerRemindersPage } from './components/manager-reminders';
 import { ManagerReminderTemplatesPage } from './components/manager-reminder-templates';
 import { ManagerSettingsPage } from './components/manager-settings';
-import { ManagerUpgradePremiumPage } from './components/manager-upgrade-premium';
+import { ManagerUpgradePlanPage } from './components/manager-upgrade-premium';
 import { ManagerPOSPage } from './components/manager-pos';
 import { ManagerPosTransactionStatusPage } from './components/manager-pos-transaction';
 import { ManagerInvoicePage } from './components/manager-invoice';
@@ -132,7 +132,8 @@ export const router = createBrowserRouter([
           { path: 'reminders', Component: ManagerRemindersPage, handle: { access: access.manager } },
           { path: 'reminders/templates', Component: ManagerReminderTemplatesPage, handle: { access: access.manager } },
           { path: 'notifications', Component: ManagerNotificationsPage, handle: { access: access.manager } },
-          { path: 'settings/upgrade-premium', Component: ManagerUpgradePremiumPage, handle: { access: access.manager } },
+          { path: 'settings/upgrade-premium', Component: () => <Navigate to='/manager/settings/upgrade-plan/professional' replace />, handle: { access: access.manager } },
+          { path: 'settings/upgrade-plan/:plan', Component: ManagerUpgradePlanPage, handle: { access: access.manager } },
           { path: 'settings', Component: ManagerSettingsPage, handle: { access: access.manager } },
           { path: 'invoice/:invoiceId', Component: ManagerInvoicePage, handle: { access: access.manager } },
         ],
