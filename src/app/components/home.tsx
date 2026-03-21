@@ -7,12 +7,12 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import heroPetShopImage from '../../assets/images/home/dog_hien_thi_o_trang_chu.jpg';
 import bookingImage from '../../assets/images/services/booking-upgrade.jpg';
 import catalogImage from '../../assets/images/services/catalog-upgrade.jpg';
-import chatbotImage from '../../assets/images/services/chatbot-service.png';
+import chatbotImage from '../../assets/images/services/chatbot-service-cropped.png';
 import crmImage from '../../assets/images/services/crm-service.jpg';
 import loyaltyImage from '../../assets/images/services/loyalty-service.png';
 import medicalImage from '../../assets/images/services/medical-service.png';
 import posImage from '../../assets/images/services/pos-service.png';
-import qrCardImage from '../../assets/images/services/qr-card-service.png';
+import qrCardImage from '../../assets/images/services/qr-card-service-cropped.png';
 import reminderImage from '../../assets/images/services/reminder-service.jpg';
 import revenueImage from '../../assets/images/services/revenue-service.jpg';
 import { pricingPlanDefinitions } from '../constants/pricing';
@@ -219,20 +219,30 @@ export function HomePage() {
                 transition={{ delay: i * 0.06 }}
                 className="group overflow-hidden rounded-[1.75rem] border border-[#e8d7cf] bg-white shadow-[0_14px_34px_rgba(89,37,24,0.07)] hover:-translate-y-1 hover:shadow-[0_24px_48px_rgba(89,37,24,0.10)] transition-all"
               >
-                <div className="relative h-60 overflow-hidden">
+                <div className="relative h-72 overflow-hidden sm:h-80">
                   <ImageWithFallback
                     src={service.image}
                     alt={service.title}
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     style={{ objectPosition: service.objectPosition }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#592518]/72 via-[#592518]/22 to-white/5" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#1f0d08]/92 via-[#1f0d08]/60 to-[#1f0d08]/10" />
                   <div className="absolute left-5 top-5 inline-flex items-center rounded-full border border-white/30 bg-white/88 px-3 py-1 text-xs text-[#d56756] backdrop-blur-sm">
                     {service.badge}
                   </div>
                   <div className="absolute inset-x-5 bottom-5">
-                    <h3 className="text-xl text-white mb-2" style={{ fontWeight: 700 }}>{service.title}</h3>
-                    <p className="text-sm text-white/90 leading-6">{service.desc}</p>
+                    <h3
+                      className="mb-2 max-w-[92%] text-[1.45rem] leading-[1.15] text-white drop-shadow-[0_3px_10px_rgba(0,0,0,0.52)] lg:text-[1.6rem]"
+                      style={{ fontWeight: 800 }}
+                    >
+                      {service.title}
+                    </h3>
+                    <p
+                      className="max-w-[95%] text-sm leading-7 text-white/95 drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] lg:text-[0.95rem]"
+                      style={{ fontWeight: 500 }}
+                    >
+                      {service.desc}
+                    </p>
                   </div>
                 </div>
               </motion.div>
