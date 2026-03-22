@@ -7,6 +7,7 @@ import { PosPrefillQueryDto } from './dto/pos-prefill-query.dto';
 import { PosCheckoutDto } from './dto/pos-checkout.dto';
 import { RealtimeService } from '../realtime/realtime.service';
 import { PaymentsService } from '../payments/payments.service';
+import { CustomerTierService } from '../customer-tier/customer-tier.service';
 
 @Injectable()
 export class PosService {
@@ -14,6 +15,7 @@ export class PosService {
     private readonly prisma: PrismaService,
     private readonly realtimeService: RealtimeService,
     private readonly paymentsService: PaymentsService,
+    private readonly customerTierService: CustomerTierService,
   ) {}
 
   async getPrefill(currentUser: AuthUser, query: PosPrefillQueryDto) {
@@ -220,7 +222,7 @@ export class PosService {
       }
 
       if (instantPayment) {
-        await tx.customer.update({
+        const updatedCustomer = await tx.customer.update({
           where: { id: customer.id },
           data: {
             totalSpent: { increment: grandTotal },
@@ -228,6 +230,12 @@ export class PosService {
             lastVisitAt: now,
           },
         });
+
+        await this.customerTierService.syncCustomerSegmentForTotalSpent(
+          currentUser.clinicId,
+          updatedCustomer,
+          tx,
+        );
       }
 
       for (const item of preparedItems) {

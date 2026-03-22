@@ -85,6 +85,7 @@ model Clinic {
   reminderTemplates ReminderTemplate[]
   clinicSettings    ClinicSettings[]
   notificationSettings NotificationSettings?
+  customerTierSettings CustomerTierSettings?
   subscriptions     Subscription[]
   paymentTxns       PaymentTransaction[]
   medicalRecords    MedicalRecord[]
@@ -148,6 +149,18 @@ model NotificationSettings {
   updatedAt     DateTime @updatedAt
 
   clinic        Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+}
+
+model CustomerTierSettings {
+  id              String   @id @default(cuid())
+  clinicId        String   @unique
+  regularMinSpent Decimal  @default(1) @db.Decimal(14, 2)
+  loyalMinSpent   Decimal  @default(3000000) @db.Decimal(14, 2)
+  vipMinSpent     Decimal  @default(10000000) @db.Decimal(14, 2)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  clinic          Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
 }
 
 model Customer {

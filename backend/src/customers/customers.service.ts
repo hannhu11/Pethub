@@ -1,16 +1,18 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { CustomerSegment } from '@prisma/client';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CustomersQueryDto } from './dto/customers-query.dto';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
 import { PaymentsService } from '../payments/payments.service';
+import { CustomerTierService } from '../customer-tier/customer-tier.service';
+import { UpdateCustomerSegmentSettingsDto } from './dto/update-customer-segment-settings.dto';
 
 @Injectable()
 export class CustomersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly paymentsService: PaymentsService,
+    private readonly customerTierService: CustomerTierService,
   ) {}
 
   async create(currentUser: AuthUser, dto: CreateCustomerDto) {
@@ -60,10 +62,6 @@ export class CustomersService {
   }
 
   async list(currentUser: AuthUser, query: CustomersQueryDto) {
-    if (currentUser.role === 'manager') {
-      await this.paymentsService.syncPendingPayosTransactions(currentUser.clinicId, 16);
-    }
-
     const customers = await this.prisma.customer.findMany({
       where: {
         clinicId: currentUser.clinicId,
@@ -79,31 +77,10 @@ export class CustomersService {
       take: 500,
     });
 
-    const normalized = await Promise.all(
-      customers.map(async (customer) => {
-        const computedSegment = this.computeSegment(Number(customer.totalSpent));
-        if (computedSegment !== customer.segment) {
-          await this.prisma.customer.update({
-            where: { id: customer.id },
-            data: { segment: computedSegment },
-          });
-        }
-
-        return {
-          ...customer,
-          segment: computedSegment,
-        };
-      }),
-    );
-
-    return normalized.sort((a, b) => this.segmentRank(a.segment) - this.segmentRank(b.segment));
+    return customers;
   }
 
   async getById(currentUser: AuthUser, id: string) {
-    if (currentUser.role === 'manager') {
-      await this.paymentsService.syncPendingPayosTransactions(currentUser.clinicId, 12);
-    }
-
     const customer = await this.prisma.customer.findFirst({
       where: {
         id,
@@ -123,32 +100,63 @@ export class CustomersService {
       throw new NotFoundException('Customer not found');
     }
 
-    return {
-      ...customer,
-      segment: this.computeSegment(Number(customer.totalSpent)),
-    };
+    return customer;
   }
 
-  private computeSegment(totalSpent: number): CustomerSegment {
-    if (totalSpent >= 10_000_000) {
-      return CustomerSegment.vip;
-    }
-    if (totalSpent >= 3_000_000) {
-      return CustomerSegment.loyal;
-    }
-    if (totalSpent >= 1) {
-      return CustomerSegment.regular;
-    }
-    return CustomerSegment.new;
+  async getSegmentSettings(currentUser: AuthUser) {
+    return this.customerTierService.getSettings(currentUser.clinicId);
   }
 
-  private segmentRank(segment: CustomerSegment): number {
-    const rank: Record<CustomerSegment, number> = {
-      vip: 0,
-      loyal: 1,
-      regular: 2,
-      new: 3,
-    };
-    return rank[segment];
+  async updateSegmentSettings(currentUser: AuthUser, dto: UpdateCustomerSegmentSettingsDto) {
+    if (dto.loyalMinSpent <= dto.regularMinSpent) {
+      throw new BadRequestException('Mốc Thân thiết phải lớn hơn mốc Khách thường.');
+    }
+    if (dto.vipMinSpent <= dto.loyalMinSpent) {
+      throw new BadRequestException('Mốc VIP phải lớn hơn mốc Thân thiết.');
+    }
+
+    await this.paymentsService.syncPendingPayosTransactions(currentUser.clinicId, 16);
+
+    return this.prisma.$transaction(async (tx) => {
+      const before = await this.customerTierService.getSettings(currentUser.clinicId, tx);
+      const updated = await (tx as any).customerTierSettings.upsert({
+        where: { clinicId: currentUser.clinicId },
+        create: {
+          clinicId: currentUser.clinicId,
+          regularMinSpent: dto.regularMinSpent,
+          loyalMinSpent: dto.loyalMinSpent,
+          vipMinSpent: dto.vipMinSpent,
+        },
+        update: {
+          regularMinSpent: dto.regularMinSpent,
+          loyalMinSpent: dto.loyalMinSpent,
+          vipMinSpent: dto.vipMinSpent,
+        },
+      });
+
+      const nextSettings = {
+        newMinSpent: 0,
+        regularMinSpent: Number(updated.regularMinSpent),
+        loyalMinSpent: Number(updated.loyalMinSpent),
+        vipMinSpent: Number(updated.vipMinSpent),
+        updatedAt: updated.updatedAt.toISOString(),
+      };
+
+      await this.customerTierService.bulkReclassifyCustomers(currentUser.clinicId, tx, nextSettings);
+
+      await tx.auditLog.create({
+        data: {
+          clinicId: currentUser.clinicId,
+          actorId: currentUser.userId,
+          action: 'customers.segment-settings.update',
+          entityType: 'customer_tier_settings',
+          entityId: updated.id,
+          before,
+          after: nextSettings,
+        },
+      });
+
+      return nextSettings;
+    });
   }
 }

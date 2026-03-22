@@ -521,6 +521,14 @@ export interface ApiPublicPetCard {
   };
 }
 
+export interface ApiCustomerTierSettings {
+  newMinSpent: number;
+  regularMinSpent: number;
+  loyalMinSpent: number;
+  vipMinSpent: number;
+  updatedAt: string | null;
+}
+
 export interface CreateCustomerPayload {
   name: string;
   phone: string;
@@ -607,6 +615,20 @@ export async function createCustomer(payload: CreateCustomerPayload): Promise<Ap
 
 export async function getCustomerById(id: string): Promise<ApiCustomer> {
   const { data } = await apiClient.get<ApiCustomer>(`/customers/${id}`);
+  return data;
+}
+
+export async function getCustomerSegmentSettings(): Promise<ApiCustomerTierSettings> {
+  const { data } = await apiClient.get<ApiCustomerTierSettings>('/customers/segment-settings');
+  return data;
+}
+
+export async function updateCustomerSegmentSettings(payload: {
+  regularMinSpent: number;
+  loyalMinSpent: number;
+  vipMinSpent: number;
+}): Promise<ApiCustomerTierSettings> {
+  const { data } = await apiClient.put<ApiCustomerTierSettings>('/customers/segment-settings', payload);
   return data;
 }
 
