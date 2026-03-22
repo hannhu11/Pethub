@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import {
   BadgeCheck,
+  BrainCircuit,
   CalendarDays,
   ChevronDown,
   Download,
@@ -45,6 +46,16 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { PetProfileDetailPanel } from './pet-profile-detail-panel';
 import { PetDigitalCard } from './pet-digital-card';
 import { downloadElementAsPng } from './export-utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 
 type PetFormState = {
@@ -90,6 +101,10 @@ const emptyPetForm: PetFormState = {
 type DetailTab = 'info' | 'medical' | 'card';
 type OwnerMode = 'existing' | 'new';
 type MedicalFormMode = 'create' | 'edit';
+type PendingDetailAction =
+  | { type: 'select'; petId: string }
+  | { type: 'close' }
+  | null;
 
 type MedicalFormState = {
   date: string;
@@ -370,6 +385,7 @@ export function ManagerPetsPage() {
   const [medicalFormMode, setMedicalFormMode] = useState<MedicalFormMode>('create');
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   const [medicalForm, setMedicalForm] = useState<MedicalFormState>(emptyMedicalForm);
+  const [pendingDetailAction, setPendingDetailAction] = useState<PendingDetailAction>(null);
   const [medicalSaving, setMedicalSaving] = useState(false);
   const [medicalAiLoading, setMedicalAiLoading] = useState(false);
   const [digitalCard, setDigitalCard] = useState<ApiDigitalCard | null>(null);
@@ -473,6 +489,7 @@ export function ManagerPetsPage() {
   const selectedUiPet = selectedPet ? mapApiPetToUiPet(selectedPet) : null;
   const selectedCardPet = digitalCard ? mapDigitalCardToUiPet(digitalCard) : selectedUiPet;
   const medicalEditorActive = detailTab === 'medical' && medicalFormOpen;
+  const hasUnsavedMedicalEditor = medicalFormOpen;
 
   useEffect(() => {
     if (!medicalFormOpen) {
@@ -695,14 +712,66 @@ export function ManagerPetsPage() {
     setMedicalFormOpen(true);
   };
 
-  const closeMedicalForm = () => {
-    if (medicalSaving || medicalAiLoading) {
-      return;
-    }
+  const resetMedicalEditor = () => {
     setMedicalFormOpen(false);
     setMedicalForm(emptyMedicalForm);
     setEditingRecordId(null);
     setMedicalFormMode('create');
+  };
+
+  const closeMedicalForm = () => {
+    if (medicalSaving || medicalAiLoading) {
+      return;
+    }
+    resetMedicalEditor();
+  };
+
+  const requestPetSelection = (nextPetId: string) => {
+    if (nextPetId === selectedPetId) {
+      setDetailTab('info');
+      return;
+    }
+    if (medicalSaving || medicalAiLoading) {
+      setError('Đang xử lý bệnh án. Vui lòng chờ hoàn tất trước khi chuyển thú cưng.');
+      return;
+    }
+    if (hasUnsavedMedicalEditor) {
+      setPendingDetailAction({ type: 'select', petId: nextPetId });
+      return;
+    }
+
+    setSelectedPetId(nextPetId);
+    setDetailTab('info');
+  };
+
+  const requestDetailClose = () => {
+    if (medicalSaving || medicalAiLoading) {
+      setError('Đang xử lý bệnh án. Vui lòng chờ hoàn tất trước khi đóng chi tiết thú cưng.');
+      return;
+    }
+    if (hasUnsavedMedicalEditor) {
+      setPendingDetailAction({ type: 'close' });
+      return;
+    }
+
+    setSelectedPetId(null);
+    setDetailTab('info');
+  };
+
+  const confirmPendingDetailAction = () => {
+    if (!pendingDetailAction) {
+      return;
+    }
+
+    const action = pendingDetailAction;
+    resetMedicalEditor();
+    setPendingDetailAction(null);
+    if (action.type === 'select') {
+      setSelectedPetId(action.petId);
+    } else {
+      setSelectedPetId(null);
+    }
+    setDetailTab('info');
   };
 
   const generateMedicalDraft = async () => {
@@ -917,15 +986,11 @@ export function ManagerPetsPage() {
                   key={pet.id}
                   role='button'
                   tabIndex={0}
-                  onClick={() => {
-                    setSelectedPetId(pet.id);
-                    setDetailTab('info');
-                  }}
+                  onClick={() => requestPetSelection(pet.id)}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault();
-                      setSelectedPetId(pet.id);
-                      setDetailTab('info');
+                      requestPetSelection(pet.id);
                     }
                   }}
                   className={`text-left bg-white border rounded-2xl p-4 transition-all duration-200 cursor-pointer ${
@@ -997,7 +1062,7 @@ export function ManagerPetsPage() {
                   </button>
                   <button
                     type='button'
-                    onClick={() => setSelectedPetId(null)}
+                    onClick={requestDetailClose}
                     className='inline-flex items-center justify-center w-9 h-9 rounded-xl border border-[#592518]/20 text-sm hover:bg-[#f4ece4]'
                     aria-label='Đóng chi tiết thú cưng'
                   >
@@ -1097,7 +1162,7 @@ export function ManagerPetsPage() {
                                   className='inline-flex items-center gap-1.5 rounded-xl border border-[#592518]/20 bg-white px-3 py-2 text-sm text-[#592518] hover:bg-[#fdf1ea] disabled:opacity-60'
                                   style={{ fontWeight: 600 }}
                                 >
-                                  <Sparkles className='w-4 h-4 text-[#d56756]' />
+                                  <BrainCircuit className='w-4 h-4 text-[#d56756]' />
                                   {medicalAiLoading ? 'AI đang soạn...' : 'AI Viết bệnh án'}
                                 </button>
                               </div>
@@ -1306,6 +1371,29 @@ export function ManagerPetsPage() {
           </div>
         ) : null}
       </div>
+
+      <AlertDialog open={pendingDetailAction !== null} onOpenChange={(open) => !open && setPendingDetailAction(null)}>
+        <AlertDialogContent className='border border-[#592518]/20 bg-[#faf8f5] text-[#592518]'>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bỏ nháp bệnh án chưa lưu?</AlertDialogTitle>
+            <AlertDialogDescription className='text-[#8b6a61]'>
+              Bạn đang thêm hoặc chỉnh sửa bệnh án. Nếu tiếp tục, toàn bộ nội dung chưa lưu sẽ bị hủy trước khi chuyển thú
+              cưng hoặc đóng khung chi tiết.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className='border border-[#592518]/20 bg-white text-[#592518] hover:bg-[#f4ece4]'>
+              Hủy
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmPendingDetailAction}
+              className='border border-[#592518] bg-[#d56756] text-white hover:bg-[#c85c4d]'
+            >
+              Bỏ nháp và tiếp tục
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {drawerOpen ? (
         <div className='fixed inset-0 z-50 bg-black/30 flex justify-end' onClick={() => !saving && setDrawerOpen(false)}>
