@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import {
+  BadgeCheck,
   CalendarDays,
   ChevronDown,
   Download,
@@ -1460,7 +1461,7 @@ export function ManagerCustomersPage() {
             className='inline-flex items-center justify-center gap-2 rounded-xl border border-[#592518] bg-white px-4 py-2.5 text-sm text-[#592518] hover:bg-[#f7efe7] transition-colors'
             style={{ fontWeight: 600 }}
           >
-            <Sparkles className='w-4 h-4 text-[#d56756]' />
+            <BadgeCheck className='w-4 h-4 text-[#d56756]' />
             Thiết lập hạng thành viên
           </button>
           <div className='relative'>
