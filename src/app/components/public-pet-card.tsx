@@ -50,6 +50,7 @@ function formatNeuteredLabel(value: ApiPublicPetCard['pet']['neutered']) {
 }
 
 function mapMedicalRecordDisplay(record: ApiPublicMedicalRecord) {
+  const symptoms = record.symptoms?.trim() ?? '';
   const diagnosis = record.diagnosis?.trim() ?? '';
   const treatment = record.treatment?.trim() ?? '';
   const diagnosisLower = diagnosis.toLowerCase();
@@ -74,6 +75,7 @@ function mapMedicalRecordDisplay(record: ApiPublicMedicalRecord) {
   if (isServiceLog) {
     return {
       title: 'Dịch vụ gần đây',
+      symptoms: '',
       primary: serviceName || diagnosis,
       secondary: treatment,
     };
@@ -81,6 +83,7 @@ function mapMedicalRecordDisplay(record: ApiPublicMedicalRecord) {
 
   return {
     title: 'Hồ sơ y tế',
+    symptoms,
     primary: diagnosis || 'Chưa cập nhật',
     secondary: treatment || 'Chưa cập nhật',
   };
@@ -306,6 +309,11 @@ export function PublicPetCardPage() {
                           <p className='text-[11px] uppercase tracking-[0.18em] text-[#8b6a61]'>{view.title}</p>
                           <p className='text-xs text-[#8b6a61]'>{formatDateLabel(record.recordedAt)}</p>
                         </div>
+                        {view.symptoms ? (
+                          <p className='mt-2 text-sm leading-6 text-[#6f544a]'>
+                            <span className='text-[#8b6a61]'>Triệu chứng:</span> {view.symptoms}
+                          </p>
+                        ) : null}
                         <p className='mt-2 text-sm text-[#592518]' style={{ fontWeight: 600 }}>
                           {view.primary}
                         </p>

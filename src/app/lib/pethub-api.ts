@@ -459,6 +459,7 @@ export interface ApiMedicalRecord {
   id: string;
   appointmentId: string | null;
   doctorName: string | null;
+  symptoms: string | null;
   diagnosis: string;
   treatment: string;
   notes: string | null;
@@ -507,6 +508,7 @@ export interface ApiDigitalCard {
 }
 
 export interface ApiPublicMedicalRecord {
+  symptoms: string | null;
   diagnosis: string;
   treatment: string;
   recordedAt: string;
@@ -558,6 +560,7 @@ export interface CreateCustomerPayload {
 export interface UpsertMedicalRecordPayload {
   appointmentId?: string;
   doctorName?: string;
+  symptoms?: string;
   diagnosis: string;
   treatment: string;
   notes?: string;

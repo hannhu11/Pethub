@@ -1,10 +1,11 @@
 import { Link } from 'react-router';
 import { motion } from 'motion/react';
 import {
-  PawPrint, QrCode, BarChart3, ArrowRight, Star, Check, CalendarCheck, HeartHandshake, BellRing, CreditCard, ClipboardPlus, Shield,
+  PawPrint, QrCode, BarChart3, ArrowRight, Star, Check, CalendarCheck, HeartHandshake, BellRing, CreditCard, ClipboardPlus, Shield, BrainCircuit,
 } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import heroPetShopImage from '../../assets/images/home/dog_hien_thi_o_trang_chu.jpg';
+import clinicalAiImage from '../../assets/images/services/ai-trong-y-te.webp';
 import bookingImage from '../../assets/images/services/booking-upgrade.jpg';
 import catalogImage from '../../assets/images/services/catalog-upgrade.jpg';
 import chatbotImage from '../../assets/images/services/chatbot-service-cropped.png';
@@ -104,6 +105,29 @@ const testimonials = [
   { name: 'Chị Lan', role: 'Chủ cửa hàng Soul Pet', text: 'PetHub giúp tôi quản lý hơn 200 khách hàng mỗi tháng mà không cần sổ sách. Nhân viên mới cũng dùng được ngay!', rating: 5 },
   { name: 'Anh Minh', role: 'Bác sĩ thú y', text: 'Tính năng Digital Pet Card và nhắc lịch tự động giúp phòng khám chuyên nghiệp hơn rất nhiều.', rating: 5 },
   { name: 'Chị Hương', role: 'Quản lý phòng khám', text: 'Báo cáo doanh thu chi tiết giúp tôi nắm bắt tình hình kinh doanh mọi lúc.', rating: 5 },
+];
+
+const clinicalAiHighlights = [
+  {
+    icon: BrainCircuit,
+    title: 'Phân tích triệu chứng sâu',
+    desc: 'Chỉ cần nhập vài triệu chứng lâm sàng, AI hỗ trợ suy luận và soạn nháp bệnh án có cấu trúc rõ ràng.',
+  },
+  {
+    icon: ClipboardPlus,
+    title: 'Tự động tạo bệnh án',
+    desc: 'Sinh sẵn Chẩn đoán, Điều trị và Ghi chú để bác sĩ kiểm tra, chỉnh sửa và lưu nhanh hơn.',
+  },
+  {
+    icon: CalendarCheck,
+    title: 'Tiết kiệm thời gian cho đội ngũ',
+    desc: 'Giảm mạnh thời gian nhập liệu thủ công, đặc biệt ở các ca khám lặp lại hoặc cần ghi chép dài.',
+  },
+  {
+    icon: Shield,
+    title: 'Minh bạch khi chăm sóc và tái khám',
+    desc: 'Triệu chứng và phác đồ được lưu mạch lạc, giúp khách hàng hiểu rõ hơn và hỗ trợ bác sĩ ở lần khám tiếp theo.',
+  },
 ];
 
 export function HomePage() {
@@ -261,6 +285,109 @@ export function HomePage() {
             >
               Xem toàn bộ dịch vụ <ArrowRight className="w-4 h-4" />
             </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-[#fcfbf8] py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="overflow-hidden rounded-[2.25rem] border border-[#ead9d1] bg-[linear-gradient(180deg,#fffdfa_0%,#faf6f1_100%)] shadow-[0_24px_55px_rgba(89,37,24,0.10)]">
+            <div className="grid gap-10 lg:grid-cols-[1.02fr_0.98fr] lg:items-center">
+              <motion.div
+                initial={{ opacity: 0, y: 22 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.45 }}
+                className="px-8 py-10 sm:px-10 sm:py-12 lg:px-12 lg:py-14"
+              >
+                <div className="inline-flex items-center gap-2 rounded-full border border-[#d56756]/20 bg-white px-4 py-2 text-sm text-[#d56756] shadow-[0_12px_30px_rgba(213,103,86,0.10)]">
+                  <BrainCircuit className="h-4 w-4" />
+                  Clinical AI Assistant
+                </div>
+                <h2 className="mt-5 max-w-3xl text-3xl leading-tight text-[#592518] sm:text-4xl lg:text-[2.7rem]" style={{ fontWeight: 800 }}>
+                  AI chẩn đoán lâm sàng: viết bệnh án chuẩn y khoa chỉ từ vài triệu chứng
+                </h2>
+                <p className="mt-5 max-w-2xl text-base leading-8 text-[#7f594f] lg:text-lg">
+                  PetHub nhúng trợ lý AI vào quy trình khám chữa bệnh, giúp bác sĩ và nhân viên nhập triệu chứng thô rồi tự động tạo ra chẩn đoán, hướng điều trị và ghi chú rõ ràng, chuyên nghiệp.
+                </p>
+                <p className="mt-4 max-w-2xl text-sm leading-7 text-[#8b6a61] lg:text-base">
+                  Thay vì mất thời gian gõ tay từng dòng bệnh án, đội ngũ của bạn có thể tập trung vào chuyên môn và trải nghiệm chăm sóc. Hồ sơ y tế trở nên minh bạch hơn cho khách hàng, đồng thời giúp bác sĩ dễ theo dõi khi tái khám.
+                </p>
+
+                <div className="mt-8 grid gap-4 sm:grid-cols-2">
+                  {clinicalAiHighlights.map((item, index) => (
+                    <motion.div
+                      key={item.title}
+                      initial={{ opacity: 0, y: 18 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: index * 0.07 }}
+                      className="rounded-[1.5rem] border border-[#ead9d1] bg-white p-5 shadow-[0_14px_32px_rgba(89,37,24,0.06)]"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#d56756]/10 text-[#d56756]">
+                          <item.icon className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-base text-[#592518]" style={{ fontWeight: 700 }}>
+                            {item.title}
+                          </h3>
+                          <p className="mt-2 text-sm leading-7 text-[#8b6a61]">
+                            {item.desc}
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+
+                <div className="mt-8 flex flex-col items-start gap-4">
+                  <Link
+                    to="/login"
+                    className="inline-flex items-center gap-2 rounded-2xl border border-[#592518] bg-[#d56756] px-6 py-3 text-white shadow-[0_18px_38px_rgba(213,103,86,0.18)] transition-all hover:-translate-y-1"
+                  >
+                    Xem cách PetHub vận hành
+                    <ArrowRight className="h-5 w-5" />
+                  </Link>
+                  <p className="text-sm text-[#8b6a61]">
+                    Phù hợp cho pet shop, spa thú cưng và phòng khám muốn nâng chuẩn hồ sơ y tế.
+                  </p>
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 22 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.45, delay: 0.08 }}
+                className="relative px-8 pb-10 sm:px-10 lg:px-12 lg:pb-12"
+              >
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(213,103,86,0.12),transparent_42%)]" />
+                <div className="relative overflow-hidden rounded-[2.25rem] border border-[#ead9d1] bg-white p-3 shadow-[0_24px_46px_rgba(89,37,24,0.12)]">
+                  <div className="relative overflow-hidden rounded-[1.75rem]">
+                    <ImageWithFallback
+                      src={clinicalAiImage}
+                      alt="AI hỗ trợ bác sĩ thú y viết bệnh án"
+                      className="h-[360px] w-full object-cover sm:h-[420px]"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#2b110b]/80 via-[#2b110b]/18 to-transparent" />
+                    <div className="absolute bottom-5 left-5 right-5 rounded-[1.35rem] border border-white/18 bg-white/14 px-4 py-4 text-white backdrop-blur-md shadow-[0_16px_32px_rgba(0,0,0,0.12)]">
+                      <div className="flex items-start gap-3">
+                        <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/18">
+                          <BrainCircuit className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="text-sm uppercase tracking-[0.18em] text-white/78">Clinical AI</p>
+                          <p className="mt-1 text-base leading-7 text-white/96" style={{ fontWeight: 600 }}>
+                            AI hỗ trợ bác sĩ chuyển triệu chứng thành bệnh án chuẩn y khoa, rõ ràng và dễ tái khám.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
           </div>
         </div>
       </section>

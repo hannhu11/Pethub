@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import {
   BadgeCheck,
+  BrainCircuit,
   CalendarDays,
   ChevronDown,
   Download,
@@ -45,6 +46,16 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { PetProfileDetailPanel } from './pet-profile-detail-panel';
 import { PetDigitalCard } from './pet-digital-card';
 import { downloadElementAsPng } from './export-utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 
 type PetFormState = {
@@ -90,10 +101,15 @@ const emptyPetForm: PetFormState = {
 type DetailTab = 'info' | 'medical' | 'card';
 type OwnerMode = 'existing' | 'new';
 type MedicalFormMode = 'create' | 'edit';
+type PendingDetailAction =
+  | { type: 'select'; petId: string }
+  | { type: 'close' }
+  | null;
 
 type MedicalFormState = {
   date: string;
   doctorName: string;
+  symptoms: string;
   diagnosis: string;
   treatment: string;
   notes: string;
@@ -103,6 +119,7 @@ type MedicalFormState = {
 const emptyMedicalForm: MedicalFormState = {
   date: '',
   doctorName: '',
+  symptoms: '',
   diagnosis: '',
   treatment: '',
   notes: '',
@@ -247,7 +264,17 @@ function formatRecordDate(value: string) {
   return parsed.toISOString().slice(0, 10);
 }
 
+function syncTextareaHeight(element: HTMLTextAreaElement | null) {
+  if (!element) {
+    return;
+  }
+
+  element.style.height = '0px';
+  element.style.height = `${element.scrollHeight}px`;
+}
+
 function mapMedicalRecordDisplay(record: ApiMedicalRecord) {
+  const symptoms = record.symptoms?.trim() ?? '';
   const diagnosis = record.diagnosis?.trim() ?? '';
   const treatment = record.treatment?.trim() ?? '';
   const diagnosisLower = diagnosis.toLowerCase();
@@ -271,6 +298,7 @@ function mapMedicalRecordDisplay(record: ApiMedicalRecord) {
 
   if (isServiceLog) {
     return {
+      symptoms: '',
       primaryLabel: 'Dịch vụ sử dụng',
       primaryValue: serviceName || diagnosis,
       secondaryLabel: 'Chi tiết thực hiện',
@@ -279,6 +307,7 @@ function mapMedicalRecordDisplay(record: ApiMedicalRecord) {
   }
 
   return {
+    symptoms,
     primaryLabel: 'Chẩn đoán',
     primaryValue: diagnosis,
     secondaryLabel: 'Điều trị',
@@ -356,13 +385,17 @@ export function ManagerPetsPage() {
   const [medicalFormMode, setMedicalFormMode] = useState<MedicalFormMode>('create');
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   const [medicalForm, setMedicalForm] = useState<MedicalFormState>(emptyMedicalForm);
-  const [clinicalSymptomsInput, setClinicalSymptomsInput] = useState('');
+  const [pendingDetailAction, setPendingDetailAction] = useState<PendingDetailAction>(null);
   const [medicalSaving, setMedicalSaving] = useState(false);
   const [medicalAiLoading, setMedicalAiLoading] = useState(false);
   const [digitalCard, setDigitalCard] = useState<ApiDigitalCard | null>(null);
   const [digitalCardLoading, setDigitalCardLoading] = useState(false);
   const [digitalCardSyncing, setDigitalCardSyncing] = useState(false);
   const cardCaptureRef = useRef<HTMLDivElement | null>(null);
+  const symptomsTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const diagnosisTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const treatmentTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const notesTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const loadInFlightRef = useRef(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -455,6 +488,27 @@ export function ManagerPetsPage() {
   );
   const selectedUiPet = selectedPet ? mapApiPetToUiPet(selectedPet) : null;
   const selectedCardPet = digitalCard ? mapDigitalCardToUiPet(digitalCard) : selectedUiPet;
+  const medicalEditorActive = detailTab === 'medical' && medicalFormOpen;
+  const hasUnsavedMedicalEditor = medicalFormOpen;
+
+  useEffect(() => {
+    if (!medicalFormOpen) {
+      return;
+    }
+
+    [
+      symptomsTextareaRef.current,
+      diagnosisTextareaRef.current,
+      treatmentTextareaRef.current,
+      notesTextareaRef.current,
+    ].forEach(syncTextareaHeight);
+  }, [
+    medicalFormOpen,
+    medicalForm.symptoms,
+    medicalForm.diagnosis,
+    medicalForm.treatment,
+    medicalForm.notes,
+  ]);
 
   useEffect(() => {
     if (detailTab !== 'medical' || !selectedPetId) {
@@ -636,7 +690,6 @@ export function ManagerPetsPage() {
   const openCreateMedicalForm = () => {
     setMedicalFormMode('create');
     setEditingRecordId(null);
-    setClinicalSymptomsInput('');
     setMedicalForm({
       ...emptyMedicalForm,
       date: toDateInput(new Date().toISOString()),
@@ -647,10 +700,10 @@ export function ManagerPetsPage() {
   const openEditMedicalForm = (record: ApiMedicalRecord) => {
     setMedicalFormMode('edit');
     setEditingRecordId(record.id);
-    setClinicalSymptomsInput('');
     setMedicalForm({
       date: toDateInput(record.recordedAt),
       doctorName: record.doctorName ?? '',
+      symptoms: record.symptoms ?? '',
       diagnosis: record.diagnosis,
       treatment: record.treatment,
       notes: record.notes ?? '',
@@ -659,19 +712,70 @@ export function ManagerPetsPage() {
     setMedicalFormOpen(true);
   };
 
-  const closeMedicalForm = () => {
-    if (medicalSaving || medicalAiLoading) {
-      return;
-    }
+  const resetMedicalEditor = () => {
     setMedicalFormOpen(false);
-    setClinicalSymptomsInput('');
     setMedicalForm(emptyMedicalForm);
     setEditingRecordId(null);
     setMedicalFormMode('create');
   };
 
+  const closeMedicalForm = () => {
+    if (medicalSaving || medicalAiLoading) {
+      return;
+    }
+    resetMedicalEditor();
+  };
+
+  const requestPetSelection = (nextPetId: string) => {
+    if (nextPetId === selectedPetId) {
+      setDetailTab('info');
+      return;
+    }
+    if (medicalSaving || medicalAiLoading) {
+      setError('Đang xử lý bệnh án. Vui lòng chờ hoàn tất trước khi chuyển thú cưng.');
+      return;
+    }
+    if (hasUnsavedMedicalEditor) {
+      setPendingDetailAction({ type: 'select', petId: nextPetId });
+      return;
+    }
+
+    setSelectedPetId(nextPetId);
+    setDetailTab('info');
+  };
+
+  const requestDetailClose = () => {
+    if (medicalSaving || medicalAiLoading) {
+      setError('Đang xử lý bệnh án. Vui lòng chờ hoàn tất trước khi đóng chi tiết thú cưng.');
+      return;
+    }
+    if (hasUnsavedMedicalEditor) {
+      setPendingDetailAction({ type: 'close' });
+      return;
+    }
+
+    setSelectedPetId(null);
+    setDetailTab('info');
+  };
+
+  const confirmPendingDetailAction = () => {
+    if (!pendingDetailAction) {
+      return;
+    }
+
+    const action = pendingDetailAction;
+    resetMedicalEditor();
+    setPendingDetailAction(null);
+    if (action.type === 'select') {
+      setSelectedPetId(action.petId);
+    } else {
+      setSelectedPetId(null);
+    }
+    setDetailTab('info');
+  };
+
   const generateMedicalDraft = async () => {
-    if (!clinicalSymptomsInput.trim()) {
+    if (!medicalForm.symptoms.trim()) {
       setError('Vui lòng nhập mô tả triệu chứng ở ô Triệu chứng để AI hỗ trợ.');
       return;
     }
@@ -681,7 +785,7 @@ export function ManagerPetsPage() {
     setMessage('');
     try {
       const result = await generateClinicalNotes({
-        rawNotes: clinicalSymptomsInput.trim(),
+        rawNotes: medicalForm.symptoms.trim(),
         petContext: selectedPet
           ? {
               name: selectedPet.name,
@@ -723,6 +827,7 @@ export function ManagerPetsPage() {
     try {
       const payload = {
         doctorName: medicalForm.doctorName.trim() || undefined,
+        symptoms: medicalForm.symptoms.trim() || undefined,
         diagnosis: medicalForm.diagnosis.trim(),
         treatment: medicalForm.treatment.trim(),
         notes: medicalForm.notes.trim() || undefined,
@@ -862,7 +967,15 @@ export function ManagerPetsPage() {
       {error ? <div className='rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-700'>{error}</div> : null}
       {message ? <div className='rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-700'>{message}</div> : null}
 
-      <div className={`grid gap-5 ${selectedPet ? 'lg:grid-cols-[1fr_1.1fr]' : 'lg:grid-cols-1'}`}>
+      <div
+        className={`grid gap-5 ${
+          selectedPet
+            ? medicalEditorActive
+              ? 'lg:grid-cols-[0.88fr_1.42fr]'
+              : 'lg:grid-cols-[1fr_1.1fr]'
+            : 'lg:grid-cols-1'
+        }`}
+      >
         <div>
           <div className='grid md:grid-cols-2 gap-4'>
             {filteredPets.map((pet) => {
@@ -873,15 +986,11 @@ export function ManagerPetsPage() {
                   key={pet.id}
                   role='button'
                   tabIndex={0}
-                  onClick={() => {
-                    setSelectedPetId(pet.id);
-                    setDetailTab('info');
-                  }}
+                  onClick={() => requestPetSelection(pet.id)}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault();
-                      setSelectedPetId(pet.id);
-                      setDetailTab('info');
+                      requestPetSelection(pet.id);
                     }
                   }}
                   className={`text-left bg-white border rounded-2xl p-4 transition-all duration-200 cursor-pointer ${
@@ -953,7 +1062,7 @@ export function ManagerPetsPage() {
                   </button>
                   <button
                     type='button'
-                    onClick={() => setSelectedPetId(null)}
+                    onClick={requestDetailClose}
                     className='inline-flex items-center justify-center w-9 h-9 rounded-xl border border-[#592518]/20 text-sm hover:bg-[#f4ece4]'
                     aria-label='Đóng chi tiết thú cưng'
                   >
@@ -982,144 +1091,151 @@ export function ManagerPetsPage() {
                 ))}
               </div>
 
-              <div className='p-4 md:p-5 space-y-3 max-h-[70vh] overflow-auto'>
+              <div
+                className={`p-4 md:p-5 ${
+                  medicalEditorActive ? 'space-y-4 overflow-visible' : 'space-y-3 max-h-[70vh] overflow-auto'
+                }`}
+              >
                 {detailTab === 'info' ? <PetProfileDetailPanel pet={selectedUiPet} className='pb-1' /> : null}
 
                 {detailTab === 'medical' ? (
-                  <div className='space-y-3'>
-                    <div className='flex items-center justify-between gap-2'>
-                      <div>
-                        <p className='text-sm text-[#592518]' style={{ fontWeight: 700 }}>
-                          Luồng bệnh án
-                        </p>
-                        <p className='text-xs text-[#8b6a61]'>Tạo/cập nhật bệnh án rồi đồng bộ Digital Card.</p>
-                      </div>
-                      <button
-                        onClick={openCreateMedicalForm}
-                        className='inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#d56756] text-white border border-[#592518] text-sm'
-                      >
-                        <Plus className='w-4 h-4' />
-                        Thêm bệnh án
-                      </button>
-                    </div>
-
-                    {medicalLoading ? <p className='text-sm text-[#8b6a61]'>Đang tải bệnh án...</p> : null}
-                    {!medicalLoading && medicalRecords.length === 0 ? (
-                      <div className='rounded-xl border border-[#592518]/15 bg-[#faf8f5] p-4 text-sm text-[#8b6a61]'>
-                        Chưa có bệnh án nào.
-                      </div>
-                    ) : null}
-                    {medicalRecords.map((record) => {
-                      const view = mapMedicalRecordDisplay(record);
-                      return (
-                        <article key={record.id} className='rounded-xl border border-[#592518]/15 bg-[#faf8f5] p-3'>
-                          <div className='flex items-center justify-between gap-2'>
-                            <div className='flex items-center gap-2 text-sm text-[#592518]'>
-                              <CalendarDays className='w-4 h-4 text-[#d56756]' />
-                              <span style={{ fontWeight: 700 }}>{formatRecordDate(record.recordedAt)}</span>
-                              <span className='text-[#8b6a61]'>- {record.doctorName || 'BS. Chưa cập nhật'}</span>
-                            </div>
-                            <div className='flex items-center gap-1'>
-                              <button
-                                onClick={() => openEditMedicalForm(record)}
-                                className='p-1.5 rounded-lg border border-[#592518]/20 hover:bg-white'
-                              >
-                                <Edit3 className='w-4 h-4' />
-                              </button>
-                              <button
-                                onClick={() => void removeMedical(record.id)}
-                                className='p-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50'
-                              >
-                                <Trash2 className='w-4 h-4' />
-                              </button>
-                            </div>
-                          </div>
-                          <p className='text-sm mt-2'>{view.primaryLabel}: {view.primaryValue}</p>
-                          <p className='text-sm mt-1'>{view.secondaryLabel}: {view.secondaryValue}</p>
-                          <p className='text-sm mt-1'>Ghi chú: {record.notes || 'Không có ghi chú'}</p>
-                          {record.nextVisitAt ? (
-                            <p className='text-sm mt-1 text-[#b25f2f]'>Tái khám: {formatRecordDate(record.nextVisitAt)}</p>
-                          ) : null}
-                        </article>
-                      );
-                    })}
-
+                  <div className='space-y-4'>
                     {medicalFormOpen ? (
-                      <div className='rounded-2xl border border-[#592518] bg-white p-4 space-y-3'>
-                        <p className='text-base text-[#592518]' style={{ fontWeight: 700 }}>
-                          {medicalFormMode === 'create' ? 'Tạo bệnh án mới' : 'Cập nhật bệnh án'}
-                        </p>
-                        <div className='grid md:grid-cols-2 gap-3'>
-                          <input
-                            type='date'
-                            value={medicalForm.date}
-                            onChange={(event) => setMedicalForm((prev) => ({ ...prev, date: event.target.value }))}
-                            className='p-3 border border-[#592518]/30 rounded-xl text-sm'
-                          />
-                          <input
-                            value={medicalForm.doctorName}
-                            onChange={(event) => setMedicalForm((prev) => ({ ...prev, doctorName: event.target.value }))}
-                            placeholder='Bác sĩ phụ trách'
-                            className='p-3 border border-[#592518]/30 rounded-xl text-sm'
-                          />
-                        </div>
-                        <div className='space-y-2'>
-                          <p className='text-sm text-[#592518]' style={{ fontWeight: 600 }}>
-                            Triệu chứng / ghi chú lâm sàng (dành cho AI)
-                          </p>
-                          <textarea
-                            rows={2}
-                            value={clinicalSymptomsInput}
-                            onChange={(event) => setClinicalSymptomsInput(event.target.value)}
-                            placeholder='Ví dụ: bỏ ăn 2 ngày, nôn, sốt 39.5 độ, niêm mạc nhợt...'
-                            className='w-full p-3 border border-[#592518]/30 rounded-xl text-sm resize-none'
-                          />
-                        </div>
-                        <div className='flex flex-col gap-2 rounded-xl border border-dashed border-[#d56756]/30 bg-[#fff8f4] p-3'>
-                          <div className='flex flex-wrap items-center justify-between gap-2'>
-                            <p className='text-xs text-[#8b6a61]'>
-                              AI chỉ hỗ trợ soạn nháp, cần kiểm tra trước khi lưu.
+                      <section className='rounded-2xl border border-[#592518]/20 bg-white p-4 md:p-5 shadow-[0_18px_42px_rgba(45,42,38,0.08)]'>
+                        <div className='flex flex-wrap items-start justify-between gap-3'>
+                          <div>
+                            <p className='text-base text-[#592518]' style={{ fontWeight: 700 }}>
+                              {medicalFormMode === 'create' ? 'Tạo bệnh án mới' : 'Cập nhật bệnh án'}
                             </p>
-                            <button
-                              type='button'
-                              onClick={() => void generateMedicalDraft()}
-                              disabled={medicalAiLoading || medicalSaving}
-                              className='inline-flex items-center gap-1.5 rounded-xl border border-[#592518]/20 bg-white px-3 py-2 text-sm text-[#592518] hover:bg-[#fdf1ea] disabled:opacity-60'
-                              style={{ fontWeight: 600 }}
-                            >
-                              <Sparkles className='w-4 h-4 text-[#d56756]' />
-                              {medicalAiLoading ? 'AI đang soạn...' : 'AI Viết bệnh án'}
-                            </button>
+                            <p className='mt-1 text-sm text-[#8b6a61]'>
+                              Lưu triệu chứng để khách hàng dễ theo dõi và bác sĩ tái khám có đủ bối cảnh lâm sàng.
+                            </p>
+                          </div>
+                          <div className='rounded-full border border-[#592518]/15 bg-[#faf8f5] px-3 py-1.5 text-xs text-[#8b6a61]'>
+                            Editor tập trung
                           </div>
                         </div>
-                        <textarea
-                          rows={2}
-                          value={medicalForm.diagnosis}
-                          onChange={(event) => setMedicalForm((prev) => ({ ...prev, diagnosis: event.target.value }))}
-                          placeholder='Chẩn đoán'
-                          className='w-full p-3 border border-[#592518]/30 rounded-xl text-sm resize-none'
-                        />
-                        <textarea
-                          rows={2}
-                          value={medicalForm.treatment}
-                          onChange={(event) => setMedicalForm((prev) => ({ ...prev, treatment: event.target.value }))}
-                          placeholder='Điều trị'
-                          className='w-full p-3 border border-[#592518]/30 rounded-xl text-sm resize-none'
-                        />
-                        <textarea
-                          rows={2}
-                          value={medicalForm.notes}
-                          onChange={(event) => setMedicalForm((prev) => ({ ...prev, notes: event.target.value }))}
-                          placeholder='Ghi chú'
-                          className='w-full p-3 border border-[#592518]/30 rounded-xl text-sm resize-none'
-                        />
-                        <input
-                          type='date'
-                          value={medicalForm.nextVisitAt}
-                          onChange={(event) => setMedicalForm((prev) => ({ ...prev, nextVisitAt: event.target.value }))}
-                          className='p-3 border border-[#592518]/30 rounded-xl text-sm'
-                        />
-                        <div className='flex items-center gap-2'>
+
+                        <div className='mt-4 grid gap-4 xl:grid-cols-[0.92fr_1.08fr]'>
+                          <div className='space-y-3'>
+                            <div className='grid md:grid-cols-2 gap-3'>
+                              <input
+                                type='date'
+                                value={medicalForm.date}
+                                onChange={(event) => setMedicalForm((prev) => ({ ...prev, date: event.target.value }))}
+                                className='p-3 border border-[#592518]/30 rounded-xl text-sm'
+                              />
+                              <input
+                                value={medicalForm.doctorName}
+                                onChange={(event) => setMedicalForm((prev) => ({ ...prev, doctorName: event.target.value }))}
+                                placeholder='Bác sĩ phụ trách'
+                                className='p-3 border border-[#592518]/30 rounded-xl text-sm'
+                              />
+                            </div>
+
+                            <div className='space-y-2'>
+                              <p className='text-sm text-[#592518]' style={{ fontWeight: 600 }}>
+                                Triệu chứng / ghi chú lâm sàng
+                              </p>
+                              <textarea
+                                ref={symptomsTextareaRef}
+                                rows={4}
+                                value={medicalForm.symptoms}
+                                onChange={(event) => {
+                                  syncTextareaHeight(event.target);
+                                  setMedicalForm((prev) => ({ ...prev, symptoms: event.target.value }));
+                                }}
+                                placeholder='Ví dụ: bỏ ăn 2 ngày, nôn, sốt 39.5 độ, niêm mạc nhợt...'
+                                className='w-full min-h-[132px] overflow-hidden rounded-2xl border border-[#592518]/30 p-3 text-sm leading-7 resize-none'
+                              />
+                            </div>
+
+                            <div className='flex flex-col gap-2 rounded-2xl border border-dashed border-[#d56756]/30 bg-[#fff8f4] p-3'>
+                              <div className='flex flex-wrap items-center justify-between gap-2'>
+                                <p className='text-xs text-[#8b6a61]'>
+                                  AI chỉ hỗ trợ soạn nháp, cần kiểm tra trước khi lưu.
+                                </p>
+                                <button
+                                  type='button'
+                                  onClick={() => void generateMedicalDraft()}
+                                  disabled={medicalAiLoading || medicalSaving}
+                                  className='inline-flex items-center gap-1.5 rounded-xl border border-[#592518]/20 bg-white px-3 py-2 text-sm text-[#592518] hover:bg-[#fdf1ea] disabled:opacity-60'
+                                  style={{ fontWeight: 600 }}
+                                >
+                                  <BrainCircuit className='w-4 h-4 text-[#d56756]' />
+                                  {medicalAiLoading ? 'AI đang soạn...' : 'AI Viết bệnh án'}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className='space-y-3'>
+                            <div className='space-y-2'>
+                              <p className='text-sm text-[#592518]' style={{ fontWeight: 600 }}>
+                                Chẩn đoán
+                              </p>
+                              <textarea
+                                ref={diagnosisTextareaRef}
+                                rows={4}
+                                value={medicalForm.diagnosis}
+                                onChange={(event) => {
+                                  syncTextareaHeight(event.target);
+                                  setMedicalForm((prev) => ({ ...prev, diagnosis: event.target.value }));
+                                }}
+                                placeholder='Chẩn đoán'
+                                className='w-full min-h-[132px] overflow-hidden rounded-2xl border border-[#592518]/30 p-3 text-sm leading-7 resize-none'
+                              />
+                            </div>
+
+                            <div className='space-y-2'>
+                              <p className='text-sm text-[#592518]' style={{ fontWeight: 600 }}>
+                                Điều trị
+                              </p>
+                              <textarea
+                                ref={treatmentTextareaRef}
+                                rows={5}
+                                value={medicalForm.treatment}
+                                onChange={(event) => {
+                                  syncTextareaHeight(event.target);
+                                  setMedicalForm((prev) => ({ ...prev, treatment: event.target.value }));
+                                }}
+                                placeholder='Điều trị'
+                                className='w-full min-h-[156px] overflow-hidden rounded-2xl border border-[#592518]/30 p-3 text-sm leading-7 resize-none'
+                              />
+                            </div>
+
+                            <div className='space-y-2'>
+                              <p className='text-sm text-[#592518]' style={{ fontWeight: 600 }}>
+                                Ghi chú
+                              </p>
+                              <textarea
+                                ref={notesTextareaRef}
+                                rows={5}
+                                value={medicalForm.notes}
+                                onChange={(event) => {
+                                  syncTextareaHeight(event.target);
+                                  setMedicalForm((prev) => ({ ...prev, notes: event.target.value }));
+                                }}
+                                placeholder='Ghi chú'
+                                className='w-full min-h-[156px] overflow-hidden rounded-2xl border border-[#592518]/30 p-3 text-sm leading-7 resize-none'
+                              />
+                            </div>
+
+                            <div className='space-y-2'>
+                              <p className='text-sm text-[#592518]' style={{ fontWeight: 600 }}>
+                                Ngày tái khám
+                              </p>
+                              <input
+                                type='date'
+                                value={medicalForm.nextVisitAt}
+                                onChange={(event) => setMedicalForm((prev) => ({ ...prev, nextVisitAt: event.target.value }))}
+                                className='p-3 border border-[#592518]/30 rounded-xl text-sm'
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className='mt-5 flex items-center gap-2'>
                           <button
                             onClick={() => void saveMedical()}
                             disabled={medicalSaving || medicalAiLoading}
@@ -1135,8 +1251,76 @@ export function ManagerPetsPage() {
                             Hủy
                           </button>
                         </div>
-                      </div>
-                    ) : null}
+                      </section>
+                    ) : (
+                      <>
+                        <div className='flex items-center justify-between gap-2'>
+                          <div>
+                            <p className='text-sm text-[#592518]' style={{ fontWeight: 700 }}>
+                              Luồng bệnh án
+                            </p>
+                            <p className='text-xs text-[#8b6a61]'>Tạo/cập nhật bệnh án rồi đồng bộ Digital Card.</p>
+                          </div>
+                          <button
+                            onClick={openCreateMedicalForm}
+                            className='inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#d56756] text-white border border-[#592518] text-sm'
+                          >
+                            <Plus className='w-4 h-4' />
+                            Thêm bệnh án
+                          </button>
+                        </div>
+
+                        {medicalLoading ? <p className='text-sm text-[#8b6a61]'>Đang tải bệnh án...</p> : null}
+                        {!medicalLoading && medicalRecords.length === 0 ? (
+                          <div className='rounded-xl border border-[#592518]/15 bg-[#faf8f5] p-4 text-sm text-[#8b6a61]'>
+                            Chưa có bệnh án nào.
+                          </div>
+                        ) : null}
+                        {medicalRecords.map((record) => {
+                          const view = mapMedicalRecordDisplay(record);
+                          return (
+                            <article key={record.id} className='rounded-xl border border-[#592518]/15 bg-[#faf8f5] p-4'>
+                              <div className='flex items-center justify-between gap-2'>
+                                <div className='flex items-center gap-2 text-sm text-[#592518]'>
+                                  <CalendarDays className='w-4 h-4 text-[#d56756]' />
+                                  <span style={{ fontWeight: 700 }}>{formatRecordDate(record.recordedAt)}</span>
+                                  <span className='text-[#8b6a61]'>- {record.doctorName || 'BS. Chưa cập nhật'}</span>
+                                </div>
+                                <div className='flex items-center gap-1'>
+                                  <button
+                                    onClick={() => openEditMedicalForm(record)}
+                                    className='p-1.5 rounded-lg border border-[#592518]/20 hover:bg-white'
+                                  >
+                                    <Edit3 className='w-4 h-4' />
+                                  </button>
+                                  <button
+                                    onClick={() => void removeMedical(record.id)}
+                                    className='p-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50'
+                                  >
+                                    <Trash2 className='w-4 h-4' />
+                                  </button>
+                                </div>
+                              </div>
+                              {view.symptoms ? (
+                                <p className='mt-3 text-sm leading-7 text-[#592518]'>
+                                  <span style={{ fontWeight: 600 }}>Triệu chứng:</span> {view.symptoms}
+                                </p>
+                              ) : null}
+                              <p className='text-sm mt-2 leading-7'>
+                                <span style={{ fontWeight: 600 }}>{view.primaryLabel}:</span> {view.primaryValue}
+                              </p>
+                              <p className='text-sm mt-1 leading-7'>
+                                <span style={{ fontWeight: 600 }}>{view.secondaryLabel}:</span> {view.secondaryValue}
+                              </p>
+                              <p className='text-sm mt-1 leading-7'>Ghi chú: {record.notes || 'Không có ghi chú'}</p>
+                              {record.nextVisitAt ? (
+                                <p className='text-sm mt-1 text-[#b25f2f]'>Tái khám: {formatRecordDate(record.nextVisitAt)}</p>
+                              ) : null}
+                            </article>
+                          );
+                        })}
+                      </>
+                    )}
                   </div>
                 ) : null}
 
@@ -1187,6 +1371,29 @@ export function ManagerPetsPage() {
           </div>
         ) : null}
       </div>
+
+      <AlertDialog open={pendingDetailAction !== null} onOpenChange={(open) => !open && setPendingDetailAction(null)}>
+        <AlertDialogContent className='border border-[#592518]/20 bg-[#faf8f5] text-[#592518]'>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bỏ nháp bệnh án chưa lưu?</AlertDialogTitle>
+            <AlertDialogDescription className='text-[#8b6a61]'>
+              Bạn đang thêm hoặc chỉnh sửa bệnh án. Nếu tiếp tục, toàn bộ nội dung chưa lưu sẽ bị hủy trước khi chuyển thú
+              cưng hoặc đóng khung chi tiết.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className='border border-[#592518]/20 bg-white text-[#592518] hover:bg-[#f4ece4]'>
+              Hủy
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmPendingDetailAction}
+              className='border border-[#592518] bg-[#d56756] text-white hover:bg-[#c85c4d]'
+            >
+              Bỏ nháp và tiếp tục
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {drawerOpen ? (
         <div className='fixed inset-0 z-50 bg-black/30 flex justify-end' onClick={() => !saving && setDrawerOpen(false)}>
