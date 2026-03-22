@@ -175,6 +175,7 @@ export class PetsService {
         customerId: pet.customerId,
         appointmentId: dto.appointmentId,
         doctorName: dto.doctorName,
+        symptoms: dto.symptoms?.trim() || null,
         diagnosis: dto.diagnosis,
         treatment: dto.treatment,
         notes: dto.notes,
@@ -222,6 +223,7 @@ export class PetsService {
       data: {
         appointmentId: dto.appointmentId,
         doctorName: dto.doctorName,
+        symptoms: dto.symptoms?.trim() || null,
         diagnosis: dto.diagnosis,
         treatment: dto.treatment,
         notes: dto.notes,
@@ -393,6 +395,7 @@ export class PetsService {
         orderBy: { recordedAt: 'desc' },
         take: 5,
         select: {
+          symptoms: true,
           diagnosis: true,
           treatment: true,
           recordedAt: true,

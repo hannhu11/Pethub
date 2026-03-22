@@ -9,6 +9,10 @@ export class UpsertMedicalRecordDto {
   @IsString()
   doctorName?: string;
 
+  @IsOptional()
+  @IsString()
+  symptoms?: string;
+
   @IsString()
   @MinLength(2)
   diagnosis!: string;

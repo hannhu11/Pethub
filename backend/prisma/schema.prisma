@@ -453,6 +453,7 @@ model MedicalRecord {
   customerId    String
   appointmentId String?   @unique
   doctorName    String?
+  symptoms      String?
   diagnosis     String
   treatment     String
   notes         String?

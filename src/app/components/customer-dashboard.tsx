@@ -29,6 +29,7 @@ function formatDateLabel(value: string | Date | null | undefined) {
 }
 
 function mapMedicalRecordDisplay(record: ApiMedicalRecord) {
+  const symptoms = record.symptoms?.trim() ?? '';
   const diagnosis = record.diagnosis?.trim() ?? '';
   const treatment = record.treatment?.trim() ?? '';
   const diagnosisLower = diagnosis.toLowerCase();
@@ -52,6 +53,7 @@ function mapMedicalRecordDisplay(record: ApiMedicalRecord) {
 
   if (isServiceLog) {
     return {
+      symptoms: '',
       primaryLabel: 'Dịch vụ sử dụng',
       primaryValue: serviceName || diagnosis,
       secondaryLabel: 'Chi tiết thực hiện',
@@ -60,6 +62,7 @@ function mapMedicalRecordDisplay(record: ApiMedicalRecord) {
   }
 
   return {
+    symptoms,
     primaryLabel: 'Chẩn đoán',
     primaryValue: diagnosis,
     secondaryLabel: 'Điều trị',
@@ -418,6 +421,9 @@ export function PetListPage() {
                     return (
                       <div key={record.id} className='rounded-xl border border-[#592518]/15 p-2 text-xs'>
                         <p className='text-[#8b6a61]'>{formatDateLabel(record.recordedAt)}</p>
+                        {view.symptoms ? (
+                          <p><span className='text-[#8b6a61]'>Triệu chứng:</span> {view.symptoms}</p>
+                        ) : null}
                         <p><span className='text-[#8b6a61]'>{view.primaryLabel}:</span> {view.primaryValue}</p>
                         <p><span className='text-[#8b6a61]'>{view.secondaryLabel}:</span> {view.secondaryValue}</p>
                       </div>
