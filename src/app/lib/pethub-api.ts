@@ -64,6 +64,26 @@ export interface AiChatResponse {
   scope: 'customer' | 'manager';
 }
 
+export interface ApiClinicalNotesRequest {
+  rawNotes: string;
+  petContext?: {
+    name?: string;
+    species?: string;
+    breed?: string;
+    gender?: string;
+    dateOfBirth?: string;
+    weightKg?: number;
+  };
+}
+
+export interface ApiClinicalNotesResponse {
+  diagnosis: string;
+  treatment: string;
+  notes: string;
+  provider: 'gemini';
+  model: string;
+}
+
 export interface ApiProduct {
   id: string;
   sku: string;
@@ -552,6 +572,15 @@ export async function syncFirebaseUser(payload: SyncFirebasePayload): Promise<Au
 
 export async function chatWithAi(payload: AiChatRequestPayload): Promise<AiChatResponse> {
   const { data } = await apiClient.post<AiChatResponse>('/ai/chat', payload, {
+    timeout: 65_000,
+  });
+  return data;
+}
+
+export async function generateClinicalNotes(
+  payload: ApiClinicalNotesRequest,
+): Promise<ApiClinicalNotesResponse> {
+  const { data } = await apiClient.post<ApiClinicalNotesResponse>('/ai/clinical-notes', payload, {
     timeout: 65_000,
   });
   return data;
