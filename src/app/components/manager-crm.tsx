@@ -356,6 +356,7 @@ export function ManagerPetsPage() {
   const [medicalFormMode, setMedicalFormMode] = useState<MedicalFormMode>('create');
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   const [medicalForm, setMedicalForm] = useState<MedicalFormState>(emptyMedicalForm);
+  const [clinicalSymptomsInput, setClinicalSymptomsInput] = useState('');
   const [medicalSaving, setMedicalSaving] = useState(false);
   const [medicalAiLoading, setMedicalAiLoading] = useState(false);
   const [digitalCard, setDigitalCard] = useState<ApiDigitalCard | null>(null);
@@ -635,6 +636,7 @@ export function ManagerPetsPage() {
   const openCreateMedicalForm = () => {
     setMedicalFormMode('create');
     setEditingRecordId(null);
+    setClinicalSymptomsInput('');
     setMedicalForm({
       ...emptyMedicalForm,
       date: toDateInput(new Date().toISOString()),
@@ -645,6 +647,7 @@ export function ManagerPetsPage() {
   const openEditMedicalForm = (record: ApiMedicalRecord) => {
     setMedicalFormMode('edit');
     setEditingRecordId(record.id);
+    setClinicalSymptomsInput('');
     setMedicalForm({
       date: toDateInput(record.recordedAt),
       doctorName: record.doctorName ?? '',
@@ -661,14 +664,15 @@ export function ManagerPetsPage() {
       return;
     }
     setMedicalFormOpen(false);
+    setClinicalSymptomsInput('');
     setMedicalForm(emptyMedicalForm);
     setEditingRecordId(null);
     setMedicalFormMode('create');
   };
 
   const generateMedicalDraft = async () => {
-    if (!medicalForm.diagnosis.trim()) {
-      setError('Vui lòng nhập mô tả triệu chứng ở ô Chẩn đoán để AI hỗ trợ.');
+    if (!clinicalSymptomsInput.trim()) {
+      setError('Vui lòng nhập mô tả triệu chứng ở ô Triệu chứng để AI hỗ trợ.');
       return;
     }
 
@@ -677,7 +681,7 @@ export function ManagerPetsPage() {
     setMessage('');
     try {
       const result = await generateClinicalNotes({
-        rawNotes: medicalForm.diagnosis.trim(),
+        rawNotes: clinicalSymptomsInput.trim(),
         petContext: selectedPet
           ? {
               name: selectedPet.name,
@@ -1059,13 +1063,18 @@ export function ManagerPetsPage() {
                             className='p-3 border border-[#592518]/30 rounded-xl text-sm'
                           />
                         </div>
-                        <textarea
-                          rows={2}
-                          value={medicalForm.diagnosis}
-                          onChange={(event) => setMedicalForm((prev) => ({ ...prev, diagnosis: event.target.value }))}
-                          placeholder='Chẩn đoán'
-                          className='w-full p-3 border border-[#592518]/30 rounded-xl text-sm resize-none'
-                        />
+                        <div className='space-y-2'>
+                          <p className='text-sm text-[#592518]' style={{ fontWeight: 600 }}>
+                            Triệu chứng / ghi chú lâm sàng (dành cho AI)
+                          </p>
+                          <textarea
+                            rows={2}
+                            value={clinicalSymptomsInput}
+                            onChange={(event) => setClinicalSymptomsInput(event.target.value)}
+                            placeholder='Ví dụ: bỏ ăn 2 ngày, nôn, sốt 39.5 độ, niêm mạc nhợt...'
+                            className='w-full p-3 border border-[#592518]/30 rounded-xl text-sm resize-none'
+                          />
+                        </div>
                         <div className='flex flex-col gap-2 rounded-xl border border-dashed border-[#d56756]/30 bg-[#fff8f4] p-3'>
                           <div className='flex flex-wrap items-center justify-between gap-2'>
                             <p className='text-xs text-[#8b6a61]'>
@@ -1083,6 +1092,13 @@ export function ManagerPetsPage() {
                             </button>
                           </div>
                         </div>
+                        <textarea
+                          rows={2}
+                          value={medicalForm.diagnosis}
+                          onChange={(event) => setMedicalForm((prev) => ({ ...prev, diagnosis: event.target.value }))}
+                          placeholder='Chẩn đoán'
+                          className='w-full p-3 border border-[#592518]/30 rounded-xl text-sm resize-none'
+                        />
                         <textarea
                           rows={2}
                           value={medicalForm.treatment}
