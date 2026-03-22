@@ -22,6 +22,7 @@ import { extractApiError } from '../lib/api-client';
 import { formatCurrency, getStatusColor, getStatusLabel, toDateLabel, toTimeLabel } from '../lib/format';
 import {
   createCustomer,
+  generateClinicalNotes,
   createMedicalRecord,
   createPet,
   deleteMedicalRecord,
@@ -356,6 +357,7 @@ export function ManagerPetsPage() {
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   const [medicalForm, setMedicalForm] = useState<MedicalFormState>(emptyMedicalForm);
   const [medicalSaving, setMedicalSaving] = useState(false);
+  const [medicalAiLoading, setMedicalAiLoading] = useState(false);
   const [digitalCard, setDigitalCard] = useState<ApiDigitalCard | null>(null);
   const [digitalCardLoading, setDigitalCardLoading] = useState(false);
   const [digitalCardSyncing, setDigitalCardSyncing] = useState(false);
@@ -655,13 +657,51 @@ export function ManagerPetsPage() {
   };
 
   const closeMedicalForm = () => {
-    if (medicalSaving) {
+    if (medicalSaving || medicalAiLoading) {
       return;
     }
     setMedicalFormOpen(false);
     setMedicalForm(emptyMedicalForm);
     setEditingRecordId(null);
     setMedicalFormMode('create');
+  };
+
+  const generateMedicalDraft = async () => {
+    if (!medicalForm.diagnosis.trim()) {
+      setError('Vui lòng nhập mô tả triệu chứng ở ô Chẩn đoán để AI hỗ trợ.');
+      return;
+    }
+
+    setMedicalAiLoading(true);
+    setError('');
+    setMessage('');
+    try {
+      const result = await generateClinicalNotes({
+        rawNotes: medicalForm.diagnosis.trim(),
+        petContext: selectedPet
+          ? {
+              name: selectedPet.name,
+              species: selectedPet.species,
+              breed: selectedPet.breed ?? undefined,
+              gender: selectedPet.gender ?? undefined,
+              dateOfBirth: selectedPet.dateOfBirth ?? undefined,
+              weightKg: selectedPet.weightKg ? Number(selectedPet.weightKg) : undefined,
+            }
+          : undefined,
+      });
+
+      setMedicalForm((prev) => ({
+        ...prev,
+        diagnosis: result.diagnosis,
+        treatment: result.treatment,
+        notes: result.notes,
+      }));
+      setMessage('AI đã soạn nháp bệnh án. Vui lòng kiểm tra lại trước khi lưu.');
+    } catch (apiError) {
+      setError(extractApiError(apiError));
+    } finally {
+      setMedicalAiLoading(false);
+    }
   };
 
   const saveMedical = async () => {
@@ -1026,6 +1066,23 @@ export function ManagerPetsPage() {
                           placeholder='Chẩn đoán'
                           className='w-full p-3 border border-[#592518]/30 rounded-xl text-sm resize-none'
                         />
+                        <div className='flex flex-col gap-2 rounded-xl border border-dashed border-[#d56756]/30 bg-[#fff8f4] p-3'>
+                          <div className='flex flex-wrap items-center justify-between gap-2'>
+                            <p className='text-xs text-[#8b6a61]'>
+                              AI chỉ hỗ trợ soạn nháp, cần kiểm tra trước khi lưu.
+                            </p>
+                            <button
+                              type='button'
+                              onClick={() => void generateMedicalDraft()}
+                              disabled={medicalAiLoading || medicalSaving}
+                              className='inline-flex items-center gap-1.5 rounded-xl border border-[#592518]/20 bg-white px-3 py-2 text-sm text-[#592518] hover:bg-[#fdf1ea] disabled:opacity-60'
+                              style={{ fontWeight: 600 }}
+                            >
+                              <Sparkles className='w-4 h-4 text-[#d56756]' />
+                              {medicalAiLoading ? 'AI đang soạn...' : 'AI Viết bệnh án'}
+                            </button>
+                          </div>
+                        </div>
                         <textarea
                           rows={2}
                           value={medicalForm.treatment}
@@ -1049,13 +1106,14 @@ export function ManagerPetsPage() {
                         <div className='flex items-center gap-2'>
                           <button
                             onClick={() => void saveMedical()}
-                            disabled={medicalSaving}
+                            disabled={medicalSaving || medicalAiLoading}
                             className='px-4 py-2 rounded-xl bg-[#d56756] text-white border border-[#592518] text-sm disabled:opacity-60'
                           >
                             {medicalSaving ? 'Đang lưu...' : medicalFormMode === 'create' ? 'Lưu bệnh án' : 'Lưu chỉnh sửa'}
                           </button>
                           <button
                             onClick={closeMedicalForm}
+                            disabled={medicalAiLoading}
                             className='px-4 py-2 rounded-xl border border-[#592518]/25 text-sm'
                           >
                             Hủy

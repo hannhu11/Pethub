@@ -1,10 +1,21 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadGatewayException,
+  BadRequestException,
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppointmentStatus, PaymentStatus, ReminderStatus, Role } from '@prisma/client';
 import axios from 'axios';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
 import { PrismaService } from '../database/prisma.service';
 import { ChatRequestDto, type ChatHistoryItemDto } from './dto/chat-request.dto';
+import {
+  ClinicalNotesPetContextDto,
+  ClinicalNotesRequestDto,
+} from './dto/clinical-notes.dto';
 import { GenerateReminderDto } from './dto/generate-reminder.dto';
 
 type ChatScope = 'customer' | 'manager';
@@ -14,6 +25,14 @@ type ChatResponse = {
   provider: 'gemini' | 'fallback-template';
   model: string;
   scope: ChatScope;
+};
+
+type ClinicalNotesResponse = {
+  diagnosis: string;
+  treatment: string;
+  notes: string;
+  provider: 'gemini';
+  model: string;
 };
 
 type GeminiHistoryMessage = {
@@ -102,6 +121,77 @@ export class AiService {
     return {
       text: this.sanitize(text),
       provider: 'gemini',
+    };
+  }
+
+  async generateClinicalNotes(
+    dto: ClinicalNotesRequestDto,
+    currentUser: AuthUser | null,
+  ): Promise<ClinicalNotesResponse> {
+    if (!currentUser) {
+      throw new UnauthorizedException(
+        'Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại để dùng AI bệnh án.',
+      );
+    }
+
+    const model = DEFAULT_CHAT_MODEL;
+    const requestId = this.createRequestId('clinical');
+    const keys = this.getClinicalGeminiKeySequence();
+    if (keys.length === 0) {
+      throw new ServiceUnavailableException(
+        'AI bệnh án chưa được cấu hình khóa API trên máy chủ.',
+      );
+    }
+
+    const rawNotes = this.normalizeChatText(dto.rawNotes, 1200);
+    if (!rawNotes) {
+      throw new BadRequestException('Vui lòng nhập mô tả triệu chứng để AI hỗ trợ.');
+    }
+
+    this.logger.log(
+      JSON.stringify({
+        event: 'ai_clinical_request',
+        requestId,
+        clinicId: currentUser.clinicId,
+        actorId: currentUser.userId,
+        model,
+        rawNotesSize: rawNotes.length,
+        hasPetContext: Boolean(dto.petContext),
+      }),
+    );
+
+    let text: string | undefined;
+    try {
+      text = await this.callGeminiClinicalNotes({
+        model,
+        keys,
+        systemPrompt: this.buildClinicalSystemPrompt(),
+        userPrompt: this.buildClinicalUserPrompt(rawNotes, dto.petContext),
+        requestId,
+      });
+    } catch (error) {
+      this.logger.error(
+        JSON.stringify({
+          event: 'ai_clinical_provider_error',
+          requestId,
+          clinicId: currentUser.clinicId,
+          actorId: currentUser.userId,
+          reason: this.describeGeminiError(error),
+        }),
+      );
+      throw new ServiceUnavailableException(
+        'AI bệnh án tạm thời không khả dụng. Vui lòng thử lại sau ít phút.',
+      );
+    }
+
+    if (!text) {
+      throw new BadGatewayException('AI không trả về định dạng bệnh án hợp lệ.');
+    }
+
+    return {
+      ...this.parseClinicalNotesJson(text),
+      provider: 'gemini',
+      model,
     };
   }
 
@@ -275,6 +365,46 @@ export class AiService {
     throw lastError ?? new Error('gemini_failover_exhausted');
   }
 
+  private async callGeminiClinicalNotes(params: {
+    model: string;
+    keys: string[];
+    systemPrompt: string;
+    userPrompt: string;
+    requestId: string;
+  }): Promise<string | undefined> {
+    let lastError: unknown;
+
+    for (let index = 0; index < params.keys.length; index += 1) {
+      const key = params.keys[index];
+
+      try {
+        return await this.callGeminiClinicalNotesOnce({
+          model: params.model,
+          key,
+          systemPrompt: params.systemPrompt,
+          userPrompt: params.userPrompt,
+        });
+      } catch (error) {
+        lastError = error;
+        if (!this.shouldFailoverGeminiChat(error) || index === params.keys.length - 1) {
+          throw error;
+        }
+
+        this.logger.warn(
+          JSON.stringify({
+            event: 'ai_clinical_key_failover',
+            requestId: params.requestId,
+            failedKeyIndex: index,
+            nextKeyIndex: index + 1,
+            reason: this.describeGeminiError(error),
+          }),
+        );
+      }
+    }
+
+    throw lastError ?? new Error('clinical_gemini_failover_exhausted');
+  }
+
   private async callGeminiChatOnce(params: {
     model: string;
     key: string;
@@ -298,6 +428,37 @@ export class AiService {
         generationConfig: {
           temperature: 0.2,
           topP: 0.9,
+        },
+      },
+      { timeout: CHAT_PROVIDER_ATTEMPT_TIMEOUT_MS },
+    );
+
+    return this.extractGeminiText(response.data);
+  }
+
+  private async callGeminiClinicalNotesOnce(params: {
+    model: string;
+    key: string;
+    systemPrompt: string;
+    userPrompt: string;
+  }): Promise<string | undefined> {
+    const response = await axios.post(
+      this.buildGeminiUrl(params.model, params.key),
+      {
+        systemInstruction: {
+          parts: [{ text: params.systemPrompt }],
+        },
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: params.userPrompt }],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.15,
+          topP: 0.85,
+          maxOutputTokens: 900,
+          responseMimeType: 'application/json',
         },
       },
       { timeout: CHAT_PROVIDER_ATTEMPT_TIMEOUT_MS },
@@ -406,6 +567,17 @@ export class AiService {
     );
   }
 
+  private getClinicalGeminiKeySequence(): string[] {
+    return Array.from(
+      new Set(
+        (this.configService.get<string>('GEMINI_CLINICAL_API_KEY_POOL') ?? '')
+          .split(',')
+          .map((item) => item.trim())
+          .filter((item) => item.length > 0),
+      ),
+    );
+  }
+
   private getGeminiKeySequence(): string[] {
     const primary = this.configService.get<string>('GEMINI_API_KEY')?.trim() ?? '';
     const pool = (this.configService.get<string>('GEMINI_API_KEY_POOL') ?? '')
@@ -470,6 +642,44 @@ export class AiService {
 
   private buildGeminiUrl(model: string, key: string): string {
     return `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${key}`;
+  }
+
+  private buildClinicalSystemPrompt(): string {
+    return [
+      'You are an expert Chief Veterinarian.',
+      'Convert the provided raw notes into a professional Vietnamese veterinary medical record draft.',
+      'You MUST respond with ONLY a valid JSON object with EXACTLY three string keys: "diagnosis", "treatment", and "notes".',
+      'Do NOT include markdown code blocks.',
+      'Do NOT include any conversational text, labels, greetings, or explanations.',
+      'Use concise, professional Vietnamese medical terminology with proper diacritics.',
+      'State findings as sơ bộ or preliminary when the data is limited.',
+      'Keep diagnosis focused on clinical assessment, treatment on practical next steps, and notes on cautions/follow-up instructions.',
+    ].join('\n');
+  }
+
+  private buildClinicalUserPrompt(
+    rawNotes: string,
+    petContext?: ClinicalNotesPetContextDto,
+  ): string {
+    const context = {
+      petContext: {
+        name: this.sanitizePromptText(petContext?.name, 80) || null,
+        species: this.sanitizePromptText(petContext?.species, 40) || null,
+        breed: this.sanitizePromptText(petContext?.breed, 60) || null,
+        gender: this.sanitizePromptText(petContext?.gender, 30) || null,
+        dateOfBirth: this.sanitizePromptText(petContext?.dateOfBirth, 30) || null,
+        weightKg:
+          typeof petContext?.weightKg === 'number' && Number.isFinite(petContext.weightKg)
+            ? Number(petContext.weightKg.toFixed(2))
+            : null,
+      },
+      rawNotes,
+    };
+
+    return [
+      'Dữ liệu đầu vào cho bệnh án thú y:',
+      JSON.stringify(context, null, 2),
+    ].join('\n');
   }
 
   private buildSystemPrompt(context: string): string {
@@ -1356,10 +1566,50 @@ export class AiService {
     };
   }
 
-  private createRequestId(): string {
+  private createRequestId(prefix = 'chat'): string {
     const now = Date.now().toString(36);
     const random = Math.random().toString(36).slice(2, 8);
-    return `chat_${now}_${random}`;
+    return `${prefix}_${now}_${random}`;
+  }
+
+  private parseClinicalNotesJson(text: string): Pick<
+    ClinicalNotesResponse,
+    'diagnosis' | 'treatment' | 'notes'
+  > {
+    let parsed: unknown;
+
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      throw new BadGatewayException('AI không trả về định dạng bệnh án hợp lệ.');
+    }
+
+    const record = this.asRecord(parsed);
+    if (!record) {
+      throw new BadGatewayException('AI không trả về định dạng bệnh án hợp lệ.');
+    }
+
+    const diagnosis = this.readClinicalOutputField(record.diagnosis);
+    const treatment = this.readClinicalOutputField(record.treatment);
+    const notes = this.readClinicalOutputField(record.notes);
+
+    if (!diagnosis || !treatment || !notes) {
+      throw new BadGatewayException('AI không trả về định dạng bệnh án hợp lệ.');
+    }
+
+    return {
+      diagnosis,
+      treatment,
+      notes,
+    };
+  }
+
+  private readClinicalOutputField(value: unknown): string {
+    if (typeof value !== 'string') {
+      return '';
+    }
+
+    return this.normalizeChatText(value, 1800);
   }
 
   private classifyMedicalRecordEntry(
