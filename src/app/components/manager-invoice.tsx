@@ -1,5 +1,5 @@
-﻿import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router';
 import { ArrowLeft, Download, Printer } from 'lucide-react';
 import { extractApiError } from '../lib/api-client';
 import { downloadElementAsPdf } from './export-utils';
@@ -15,6 +15,48 @@ const paymentMethodLabel: Record<string, string> = {
   momo: 'MoMo',
   zalopay: 'ZaloPay',
 };
+
+const thermalPrintCss = `
+  @media print {
+    @page {
+      size: 58mm 3276mm;
+      margin: 0;
+    }
+
+    html,
+    body {
+      width: 58mm !important;
+      max-width: 58mm !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      background: #ffffff !important;
+    }
+
+    body * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    #invoice-printable-area {
+      width: 58mm !important;
+      max-width: 58mm !important;
+      margin: 0 auto !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      padding: 2.5mm 3mm !important;
+    }
+  }
+`;
+
+const standardPrintCss = `
+  @media print {
+    body * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+  }
+`;
 
 function formatCurrency(value: number | string) {
   const normalized = Number(value ?? 0);
@@ -40,12 +82,15 @@ function formatDateTime(value: string) {
 export function ManagerInvoicePage() {
   const { invoiceId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const invoiceRef = useRef<HTMLDivElement>(null);
   const [payload, setPayload] = useState<InvoiceDetailsResponse | null>(null);
   const [fallbackPet, setFallbackPet] = useState<ApiPet | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState('');
+
+  const isThermalReceipt = location.pathname.includes('/manager/pos/receipt/');
 
   useEffect(() => {
     let mounted = true;
@@ -136,6 +181,14 @@ export function ManagerInvoicePage() {
     }
   };
 
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+    navigate(isThermalReceipt ? '/manager/pos' : '/manager/revenue-ledger');
+  };
+
   if (loading) {
     return <div className='text-sm text-[#8b6a61]'>Đang tải hóa đơn...</div>;
   }
@@ -145,11 +198,11 @@ export function ManagerInvoicePage() {
       <div className='space-y-4'>
         <button
           type='button'
-          onClick={() => navigate('/manager/pos')}
+          onClick={handleBack}
           className='inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-[#592518] bg-white hover:-translate-y-0.5 transition-all text-sm'
         >
           <ArrowLeft className='w-4 h-4' />
-          Quay lại POS
+          Quay lại
         </button>
         <div className='bg-white border border-[#592518] rounded-2xl p-8 text-center'>
           <h1 className='text-2xl text-[#592518]' style={{ fontWeight: 700 }}>
@@ -161,16 +214,134 @@ export function ManagerInvoicePage() {
     );
   }
 
+  const clinicName = clinic?.clinicName || 'PetHub Clinic';
+  const clinicAddress = clinic?.address || 'Địa chỉ chưa cập nhật';
+  const clinicPhone = clinic?.phone || 'N/A';
+  const paymentMethod = paymentMethodLabel[invoice.paymentMethod] || invoice.paymentMethod;
+  const thermalGuide = 'XP-58: Scale 100%, Margins None, Headers and footers Off, Paper 58(48) x 3276 mm.';
+
+  if (isThermalReceipt) {
+    return (
+      <div className='space-y-4 print:space-y-0'>
+        <style>{thermalPrintCss}</style>
+
+        <div className='flex flex-wrap items-center justify-between gap-3 print:hidden'>
+          <button
+            type='button'
+            onClick={handleBack}
+            className='inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-[#592518] bg-white hover:-translate-y-0.5 transition-all text-sm'
+          >
+            <ArrowLeft className='w-4 h-4' />
+            Quay lại
+          </button>
+          <button
+            type='button'
+            onClick={() => window.print()}
+            className='inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[#592518] bg-[#d56756] text-white hover:-translate-y-0.5 transition-all text-sm'
+          >
+            <Printer className='w-4 h-4' />
+            In hóa đơn nhiệt 58mm
+          </button>
+        </div>
+
+        <div className='print:hidden rounded-2xl border border-[#592518]/15 bg-[#faf8f5] p-4 text-xs text-[#8b6a61]'>
+          {thermalGuide}
+        </div>
+
+        <div
+          id='invoice-printable-area'
+          ref={invoiceRef}
+          className='mx-auto w-[58mm] max-w-[58mm] bg-white border border-[#592518]/15 rounded-xl px-[3.2mm] py-[3mm] text-[11px] leading-[1.55] text-black shadow-[0_10px_24px_rgba(17,24,39,0.08)] print:rounded-none print:border-0 print:shadow-none print:px-[3mm] print:py-[2.5mm]'
+        >
+          <div className='border-b border-dashed border-black pb-2 text-center'>
+            <BrandLockup className='justify-center' imageClassName='h-7' />
+            <p className='mt-1 text-[11px]' style={{ fontWeight: 700 }}>{clinicName}</p>
+            <p className='text-[10px] leading-4 text-black/80 break-words'>{clinicAddress}</p>
+            <p className='text-[10px] text-black/80'>Hotline: {clinicPhone}</p>
+          </div>
+
+          <div className='py-2 text-center border-b border-dashed border-black'>
+            <p className='text-[12px] tracking-[0.12em]' style={{ fontWeight: 800 }}>HÓA ĐƠN</p>
+            <p className='text-[10px] text-black/75 mt-1'>Mã: {invoice.invoiceNo}</p>
+            <p className='text-[10px] text-black/75'>Ngày: {formatDateTime(invoice.issuedAt)}</p>
+            <p className='text-[10px] text-black/75'>Người lập: {invoice.manager?.name || 'Chưa cập nhật'}</p>
+          </div>
+
+          <div className='space-y-1 py-2 border-b border-dashed border-black'>
+            <div>
+              <p className='text-[10px] uppercase tracking-[0.12em] text-black/60'>Khách hàng</p>
+              <p style={{ fontWeight: 700 }}>{invoice.customer.name}</p>
+              <p className='text-[10px] text-black/80'>{invoice.customer.phone}</p>
+            </div>
+            <div className='pt-1'>
+              <p className='text-[10px] uppercase tracking-[0.12em] text-black/60'>Thú cưng</p>
+              <p style={{ fontWeight: 700 }}>{resolvedPet?.name || '—'}</p>
+              <p className='text-[10px] text-black/80'>
+                {resolvedPet ? `${resolvedPet.species} • ${resolvedPet.breed || 'Chưa rõ'}` : 'Không có thông tin thú cưng'}
+              </p>
+            </div>
+            <div className='pt-1 text-[10px] text-black/80'>
+              Thanh toán: {paymentMethod}
+            </div>
+          </div>
+
+          <div className='py-2 border-b border-dashed border-black space-y-2'>
+            {invoice.items.map((item) => (
+              <div key={item.id} className='space-y-0.5'>
+                <div className='flex items-start justify-between gap-2'>
+                  <div className='min-w-0'>
+                    <p className='break-words' style={{ fontWeight: 700 }}>{item.name}</p>
+                    <p className='text-[10px] uppercase tracking-[0.08em] text-black/55'>
+                      {item.itemType === 'service' ? 'Dịch vụ' : 'Sản phẩm'}
+                    </p>
+                  </div>
+                  <p className='shrink-0 text-right' style={{ fontWeight: 700 }}>
+                    {formatCurrency(item.total)}
+                  </p>
+                </div>
+                <div className='flex items-center justify-between gap-2 text-[10px] text-black/75'>
+                  <span>{item.qty} x {formatCurrency(item.unitPrice)}</span>
+                  <span>SL: {item.qty}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className='space-y-1 py-2 border-b border-dashed border-black'>
+            <div className='flex items-center justify-between text-[10px]'>
+              <span className='text-black/75'>Tạm tính</span>
+              <span>{formatCurrency(invoice.subtotal)}</span>
+            </div>
+            <div className='flex items-center justify-between text-[10px]'>
+              <span className='text-black/75'>VAT ({Number(invoice.taxPercent)}%)</span>
+              <span>{formatCurrency(invoice.taxAmount)}</span>
+            </div>
+            <div className='flex items-center justify-between pt-1 text-[12px]'>
+              <span style={{ fontWeight: 800 }}>TỔNG CỘNG</span>
+              <span style={{ fontWeight: 800 }}>{formatCurrency(invoice.grandTotal)}</span>
+            </div>
+          </div>
+
+          <div className='pt-2 text-center text-[10px] leading-4 text-black/80'>
+            {clinic?.invoiceNote || 'Cảm ơn quý khách đã sử dụng dịch vụ tại PetHub!'}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className='space-y-4 print:space-y-0'>
+      <style>{standardPrintCss}</style>
+
       <div className='flex flex-wrap items-center justify-between gap-3 print:hidden'>
         <button
           type='button'
-          onClick={() => navigate('/manager/pos')}
+          onClick={handleBack}
           className='inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-[#592518] bg-white hover:-translate-y-0.5 transition-all text-sm'
         >
           <ArrowLeft className='w-4 h-4' />
-          Quay lại POS
+          Quay lại
         </button>
         <div className='flex items-center gap-2'>
           <button
@@ -201,9 +372,9 @@ export function ManagerInvoicePage() {
         <div className='flex items-start justify-between gap-4 border-b border-[#592518]/20 pb-4'>
           <div>
             <BrandLockup imageClassName='h-10 md:h-11' />
-            <p className='text-sm text-[#8b6a61] mt-1'>{clinic?.clinicName || 'PetHub Clinic'}</p>
-            <p className='text-sm text-[#8b6a61]'>{clinic?.address || 'Địa chỉ chưa cập nhật'}</p>
-            <p className='text-sm text-[#8b6a61]'>Hotline: {clinic?.phone || 'N/A'}</p>
+            <p className='text-sm text-[#8b6a61] mt-1'>{clinicName}</p>
+            <p className='text-sm text-[#8b6a61]'>{clinicAddress}</p>
+            <p className='text-sm text-[#8b6a61]'>Hotline: {clinicPhone}</p>
           </div>
           <div className='text-right'>
             <p className='text-lg text-[#592518]' style={{ fontWeight: 700 }}>
@@ -232,9 +403,7 @@ export function ManagerInvoicePage() {
                 ? `${resolvedPet.species} • ${resolvedPet.breed || 'Chưa rõ'}`
                 : 'Không có thông tin thú cưng'}
             </p>
-            <p className='text-sm text-[#8b6a61]'>
-              Thanh toán: {paymentMethodLabel[invoice.paymentMethod] || invoice.paymentMethod}
-            </p>
+            <p className='text-sm text-[#8b6a61]'>Thanh toán: {paymentMethod}</p>
           </div>
         </div>
 
@@ -287,4 +456,3 @@ export function ManagerInvoicePage() {
     </div>
   );
 }
-
