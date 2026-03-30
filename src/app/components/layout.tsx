@@ -99,7 +99,7 @@ export function PublicLayout() {
   const navLinks = [
     { to: '/', label: 'Trang chủ', icon: Home },
     { to: '/pricing', label: 'Bảng giá', icon: BadgeDollarSign },
-    { to: '/about', label: 'About Us', icon: Info },
+    { to: '/about', label: 'Về chúng tôi', icon: Info },
     ...(session.isAuthenticated ? [] : [{ to: '/login', label: 'Đăng nhập', icon: LogIn }]),
   ];
 
