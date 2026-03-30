@@ -4,7 +4,7 @@ import {
   PawPrint, QrCode, BarChart3, ArrowRight, Star, Check, CalendarCheck, HeartHandshake, BellRing, CreditCard, ClipboardPlus, Shield, BrainCircuit,
 } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import heroPetShopImage from '../../assets/images/home/dog_hien_thi_o_trang_chu.jpg';
+import { HomeScrollHero } from './home-scroll-hero';
 import clinicalAiImage from '../../assets/images/services/ai-trong-y-te.webp';
 import bookingImage from '../../assets/images/services/booking-upgrade.jpg';
 import catalogImage from '../../assets/images/services/catalog-upgrade.jpg';
@@ -135,101 +135,12 @@ export function HomePage() {
 
   return (
     <div className="bg-[#fdfbf8]">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(213,103,86,0.10),_transparent_34%),linear-gradient(180deg,_#fffdfa_0%,_#fdfbf8_100%)] py-16 md:py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6 }}
-            >
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#d56756] text-[#d56756] text-sm mb-6 bg-white/80 backdrop-blur-sm">
-                <PawPrint className="w-4 h-4" />
-                Nền tảng vận hành hiện đại cho pet clinic & pet store
-              </div>
-              <h1 className="text-4xl md:text-5xl mb-6 text-[#592518]" style={{ fontWeight: 700, lineHeight: 1.2 }}>
-                Tăng trưởng phòng khám thú y
-                <span className="text-[#d56756]"> chuyên nghiệp</span> &
-                <span className="text-[#c75b4c]"> bền vững</span>
-              </h1>
-              <p className="text-lg text-[#7f594f] mb-8 max-w-lg">
-                PetHub giúp bạn chuẩn hóa vận hành từ đặt lịch, chăm sóc khách hàng đến quản lý hồ sơ thú cưng.
-                Mọi quy trình quan trọng được gom về một nền tảng duy nhất để tăng hiệu suất và giữ chân khách hàng.
-              </p>
-              <div className="flex flex-wrap gap-4">
-                <Link
-                  to="/login"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#d56756] text-white hover:-translate-y-1 transition-all border border-[#592518] shadow-[0_18px_40px_rgba(213,103,86,0.18)]"
-                >
-                  Khám phá nền tảng
-                  <ArrowRight className="w-5 h-5" />
-                </Link>
-                <Link
-                  to="/register"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white/95 text-[#592518] hover:-translate-y-1 transition-all border border-[#592518]/80 shadow-[0_16px_30px_rgba(89,37,24,0.08)]"
-                >
-                  Nhận tư vấn miễn phí
-                </Link>
-              </div>
+      <HomeScrollHero />
 
-              <div className="flex gap-8 mt-10">
-                {[
-                  { num: '12M+', label: 'Thú cưng VN' },
-                  { num: '3,100+', label: 'Cửa hàng' },
-                  { num: '95M$', label: 'Quy mô TT' },
-                ].map((s) => (
-                  <div key={s.label}>
-                    <p className="text-2xl text-[#d56756]" style={{ fontWeight: 700 }}>{s.num}</p>
-                    <p className="text-xs text-[#8b6a61]">{s.label}</p>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="relative"
-            >
-              <div className="relative rounded-[2rem] overflow-hidden border border-[#d9b8aa] bg-white shadow-[0_28px_70px_rgba(89,37,24,0.12)] aspect-[4/3]">
-                <ImageWithFallback
-                  src={heroPetShopImage}
-                  alt="PetHub home hero dog"
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#592518]/10 via-transparent to-white/10" />
-              </div>
-              <div className="absolute -bottom-4 left-4 rounded-[1.35rem] border border-[#ead9d1] bg-white/92 px-5 py-3 text-[#592518] backdrop-blur-md shadow-[0_18px_35px_rgba(89,37,24,0.12)] md:left-[-1.5rem]">
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#d56756]/12">
-                    <HeartHandshake className="h-4.5 w-4.5 text-[#d56756]" />
-                  </div>
-                  <div className="text-sm" style={{ fontWeight: 600 }}>Đồng hành cùng PetHub</div>
-                </div>
-              </div>
-              <div className="absolute right-4 top-4 rounded-[1.35rem] border border-[#ead9d1] bg-white/92 px-5 py-3 text-[#592518] backdrop-blur-md shadow-[0_18px_35px_rgba(89,37,24,0.12)] md:right-[-1.5rem] md:top-6">
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#d56756]/12">
-                    <BarChart3 className="h-4.5 w-4.5 text-[#d56756]" />
-                  </div>
-                  <div className="text-sm" style={{ fontWeight: 600 }}>Tối ưu vận hành</div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      <div className="relative h-12 bg-[#fcfbf8]">
-        <svg viewBox="0 0 1440 48" className="absolute w-full" preserveAspectRatio="none">
-          <path d="M0,24 C360,48 720,0 1080,24 C1260,36 1380,12 1440,24 L1440,48 L0,48 Z" fill="#faf6f1" />
-        </svg>
-      </div>
+      <div className="relative -mt-10 h-20 bg-[linear-gradient(180deg,rgba(250,248,245,0)_0%,rgba(250,247,242,0.82)_55%,#faf6f1_100%)]" />
 
       {/* Services Preview */}
-      <section id="services-section" className="bg-[#faf6f1] py-18">
+      <section id="services-section" className="bg-[#faf6f1] pb-18 pt-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl text-[#592518] mb-3" style={{ fontWeight: 700 }}>
@@ -532,7 +443,7 @@ export function HomePage() {
             </h2>
             <p className="text-[#8b6a61]">Chọn đúng gói cho quy mô pet shop hoặc phòng khám của bạn.</p>
           </div>
-          <div className="grid gap-6 lg:grid-cols-3 max-w-6xl mx-auto">
+          <div className="grid gap-6 md:grid-cols-2 max-w-5xl mx-auto">
             {pricingCards.map((plan) => {
               const isHighlight = Boolean(plan.highlight);
               const ctaTo = plan.contactOnly ? '/contact' : '/register';
@@ -576,7 +487,7 @@ export function HomePage() {
                     }`}
                     style={{ fontWeight: 600 }}
                   >
-                    {plan.contactOnly ? 'Liên hệ tư vấn' : plan.code === 'starter' ? 'Đăng ký Starter' : 'Đăng ký Professional'}
+                    {plan.contactOnly ? 'Liên hệ tư vấn' : plan.ctaLabel}
                   </Link>
                 </article>
               );
