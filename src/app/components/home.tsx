@@ -200,6 +200,8 @@ export function HomePage() {
                   src={heroPetShopImage}
                   alt="PetHub home hero dog"
                   className="h-full w-full object-cover"
+                  decoding="async"
+                  fetchPriority="high"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#592518]/10 via-transparent to-white/10" />
               </div>
@@ -253,6 +255,8 @@ export function HomePage() {
                     alt={service.title}
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     style={{ objectPosition: service.objectPosition }}
+                    loading="lazy"
+                    decoding="async"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#1f0d08]/92 via-[#1f0d08]/60 to-[#1f0d08]/10" />
                   <div className="absolute left-5 top-5 inline-flex items-center rounded-full border border-white/30 bg-white/88 px-3 py-1 text-xs text-[#d56756] backdrop-blur-sm">
@@ -367,6 +371,8 @@ export function HomePage() {
                       src={clinicalAiImage}
                       alt="Trợ lý hồ sơ y tế cho pet shop và phòng khám thú y"
                       className="h-[360px] w-full object-cover sm:h-[420px]"
+                      loading="lazy"
+                      decoding="async"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#2b110b]/80 via-[#2b110b]/18 to-transparent" />
                     <div className="absolute bottom-5 left-5 right-5 rounded-[1.35rem] border border-white/18 bg-white/14 px-4 py-4 text-white backdrop-blur-md shadow-[0_16px_32px_rgba(0,0,0,0.12)]">
@@ -450,6 +456,8 @@ export function HomePage() {
                           src={snowballPetImage}
                           alt="Digital Pet Card preview"
                           className="h-48 w-full rounded-[1.5rem] object-cover"
+                          loading="lazy"
+                          decoding="async"
                         />
                         <div className="mt-4 flex items-center justify-between rounded-[1.5rem] bg-white/90 px-4 py-3 shadow-[0_10px_25px_rgba(89,37,24,0.08)]">
                           <div>

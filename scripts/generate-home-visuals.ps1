@@ -26,14 +26,10 @@ Assert-Command -Name "ffmpeg"
 
 $assetRoot = Join-Path $RepoRoot "public\assets\home-video"
 $frameRoot = Join-Path $assetRoot "interactive-scroll-frames"
+$scrollSource = Join-Path $VideoRoot "Border_collie_in_202603302100 (1).mp4"
 
-$sectionASource = Join-Path $VideoRoot "Border_collie_in_202603302102.mp4"
-$sectionBSource = Join-Path $VideoRoot "Border_collie_in_202603302100 (1).mp4"
-
-foreach ($sourcePath in @($sectionASource, $sectionBSource)) {
-  if (-not (Test-Path $sourcePath)) {
-    throw "Missing source video: $sourcePath"
-  }
+if (-not (Test-Path $scrollSource)) {
+  throw "Missing source video: $scrollSource"
 }
 
 if (Test-Path $assetRoot) {
@@ -43,66 +39,15 @@ if (Test-Path $assetRoot) {
 New-Item -ItemType Directory -Force -Path $assetRoot | Out-Null
 New-Item -ItemType Directory -Force -Path $frameRoot | Out-Null
 
-$filmDesktopPath = Join-Path $assetRoot "cinematic-film-desktop.mp4"
-$filmMobilePath = Join-Path $assetRoot "cinematic-film-mobile.mp4"
-$filmPosterPath = Join-Path $assetRoot "cinematic-film-poster.webp"
-
-$scrollMobilePath = Join-Path $assetRoot "interactive-scroll-mobile.mp4"
 $scrollPosterPath = Join-Path $assetRoot "interactive-scroll-poster.webp"
 $scrollManifestPath = Join-Path $assetRoot "interactive-scroll-manifest.json"
 $scrollIntermediatePath = Join-Path $assetRoot "interactive-scroll-intermediate.mp4"
 
-$cinematicFilterBase = "crop=3520:1980:0:0,eq=brightness=0.035:saturation=1.04:contrast=1.03"
 $scrollFilterBase = "crop=3520:1980:0:0,eq=brightness=0.045:saturation=1.05:contrast=1.04"
 
 Invoke-Ffmpeg -Arguments @(
-  "-i", $sectionASource,
-  "-vf", "$cinematicFilterBase,scale=2560:1440:flags=lanczos",
-  "-an",
-  "-c:v", "libx264",
-  "-preset", "slow",
-  "-crf", "18",
-  "-pix_fmt", "yuv420p",
-  $filmDesktopPath
-)
-
-Invoke-Ffmpeg -Arguments @(
-  "-i", $sectionASource,
-  "-vf", "$cinematicFilterBase,scale=1280:720:flags=lanczos",
-  "-an",
-  "-c:v", "libx264",
-  "-preset", "medium",
-  "-crf", "21",
-  "-pix_fmt", "yuv420p",
-  $filmMobilePath
-)
-
-Invoke-Ffmpeg -Arguments @(
-  "-ss", "3.9",
-  "-i", $sectionASource,
-  "-frames:v", "1",
-  "-vf", "$cinematicFilterBase,scale=1600:900:flags=lanczos",
-  "-c:v", "libwebp",
-  "-compression_level", "6",
-  "-quality", "82",
-  "-update", "1",
-  $filmPosterPath
-)
-
-Invoke-Ffmpeg -Arguments @(
-  "-i", $sectionBSource,
-  "-vf", "$scrollFilterBase,scale=1280:720:flags=lanczos",
-  "-an",
-  "-c:v", "libx264",
-  "-preset", "medium",
-  "-crf", "21",
-  "-pix_fmt", "yuv420p",
-  $scrollMobilePath
-)
-
-Invoke-Ffmpeg -Arguments @(
   "-ss", "4.0",
-  "-i", $sectionBSource,
+  "-i", $scrollSource,
   "-frames:v", "1",
   "-vf", "$scrollFilterBase,scale=1600:900:flags=lanczos",
   "-c:v", "libwebp",
@@ -113,7 +58,7 @@ Invoke-Ffmpeg -Arguments @(
 )
 
 Invoke-Ffmpeg -Arguments @(
-  "-i", $sectionBSource,
+  "-i", $scrollSource,
   "-vf", "$scrollFilterBase,scale=1920:1080:flags=lanczos,minterpolate=fps=48:mi_mode=mci:mc_mode=aobmc:vsbmc=1",
   "-an",
   "-c:v", "libx264",
@@ -147,7 +92,6 @@ if (Test-Path $scrollIntermediatePath) {
 }
 
 Write-Host "Generated homepage visuals:"
-Write-Host "  Section A desktop: $filmDesktopPath"
-Write-Host "  Section A mobile:  $filmMobilePath"
-Write-Host "  Section B mobile:  $scrollMobilePath"
-Write-Host "  Section B frames:  $frameCount files in $frameRoot"
+Write-Host "  Poster: $scrollPosterPath"
+Write-Host "  Frames: $frameCount files in $frameRoot"
+Write-Host "  Manifest: $scrollManifestPath"
