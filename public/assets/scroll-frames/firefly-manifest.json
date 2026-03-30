@@ -1,0 +1,11 @@
+{
+  "desktop": {
+    "dir": "/assets/scroll-frames/firefly-desktop",
+    "count": 121
+  },
+  "mobile": {
+    "dir": "/assets/scroll-frames/firefly-mobile",
+    "count": 91
+  },
+  "poster": "/assets/scroll-frames/firefly-poster.webp"
+}
