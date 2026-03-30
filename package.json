@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "generate:home-visuals": "powershell -ExecutionPolicy Bypass -File scripts/generate-home-visuals.ps1"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

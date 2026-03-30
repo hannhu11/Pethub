@@ -1,24 +1,66 @@
-import { Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 
 const DESKTOP_BREAKPOINT = 1024;
+const INITIAL_FRAME_PRELOAD = 12;
+const FRAME_LOOKBACK = 2;
+const FRAME_LOOKAHEAD = 8;
+const PROGRESS_EASING = 0.12;
+const PROGRESS_SETTLE_THRESHOLD = 0.0006;
 
-const CINEMATIC_VIDEO = {
-  desktop: '/assets/home-video/homepage-cinematic-desktop.mp4',
-  mobile: '/assets/home-video/homepage-cinematic-mobile.mp4',
-  poster: '/assets/home-video/homepage-cinematic-poster.webp',
+const INTERACTIVE_SCROLL = {
+  framesDir: '/assets/home-video/interactive-scroll-frames',
+  manifest: '/assets/home-video/interactive-scroll-manifest.json',
+  poster: '/assets/home-video/interactive-scroll-poster.webp',
 };
 
-export function HomeScrollHero() {
-  const sectionRef = useRef<HTMLElement | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+const DEFAULT_SCROLL_MANIFEST = {
+  frameCount: 381,
+  fps: 48,
+  padLength: 3,
+};
 
-  const [isDesktop, setIsDesktop] = useState(false);
+type ViewportMode = 'unknown' | 'desktop' | 'mobile';
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function buildFramePath(index: number, padLength: number) {
+  return `${INTERACTIVE_SCROLL.framesDir}/frame-${String(index + 1).padStart(padLength, '0')}.webp`;
+}
+
+function drawCoverImage(
+  ctx: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  viewportWidth: number,
+  viewportHeight: number,
+) {
+  const imageRatio = image.width / image.height;
+  const viewportRatio = viewportWidth / viewportHeight;
+
+  let drawWidth = viewportWidth;
+  let drawHeight = viewportHeight;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  if (imageRatio > viewportRatio) {
+    drawHeight = viewportHeight;
+    drawWidth = drawHeight * imageRatio;
+    offsetX = (viewportWidth - drawWidth) / 2;
+  } else {
+    drawWidth = viewportWidth;
+    drawHeight = drawWidth / imageRatio;
+    offsetY = (viewportHeight - drawHeight) / 2;
+  }
+
+  ctx.clearRect(0, 0, viewportWidth, viewportHeight);
+  ctx.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
+}
+
+function useHomepageMotionSettings() {
+  const [viewportMode, setViewportMode] = useState<ViewportMode>('unknown');
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-  const [isReady, setIsReady] = useState(false);
-
-  const videoSource = isDesktop ? CINEMATIC_VIDEO.desktop : CINEMATIC_VIDEO.mobile;
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -27,12 +69,11 @@ export function HomeScrollHero() {
     const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 
     const syncViewport = () => {
-      setIsDesktop(desktopQuery.matches);
+      setViewportMode(desktopQuery.matches ? 'desktop' : 'mobile');
       setPrefersReducedMotion(reducedMotionQuery.matches);
     };
 
     syncViewport();
-
     desktopQuery.addEventListener('change', syncViewport);
     reducedMotionQuery.addEventListener('change', syncViewport);
 
@@ -42,115 +83,300 @@ export function HomeScrollHero() {
     };
   }, []);
 
+  return {
+    isDesktop: viewportMode === 'desktop',
+    viewportReady: viewportMode !== 'unknown',
+    prefersReducedMotion,
+  };
+}
+
+function HomeInteractiveScrollPoster() {
+  return (
+    <section className="relative isolate h-[100svh] overflow-hidden bg-[#faf8f5]">
+      <ImageWithFallback
+        src={INTERACTIVE_SCROLL.poster}
+        alt="PetHub interactive scroll poster"
+        className="absolute inset-0 h-full w-full object-cover brightness-[1.08] saturate-[1.05] contrast-[1.04]"
+      />
+    </section>
+  );
+}
+
+function HomeInteractiveScrollDesktop() {
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const imagesRef = useRef<Map<number, HTMLImageElement>>(new Map());
+  const loadingRef = useRef<Set<number>>(new Set());
+  const rafRef = useRef<number | null>(null);
+  const targetProgressRef = useRef(0);
+  const displayProgressRef = useRef(0);
+  const isNearViewportRef = useRef(false);
+  const hasPrimedFramesRef = useRef(false);
+  const hasDrawnFrameRef = useRef(false);
+  const canvasReadyRef = useRef(false);
+
+  const [scrollManifest, setScrollManifest] = useState(DEFAULT_SCROLL_MANIFEST);
+  const [isCanvasReady, setIsCanvasReady] = useState(false);
+
   useEffect(() => {
-    setIsReady(false);
-  }, [videoSource, prefersReducedMotion]);
+    let cancelled = false;
+
+    const loadManifest = async () => {
+      try {
+        const response = await fetch(INTERACTIVE_SCROLL.manifest);
+        if (!response.ok) return;
+
+        const manifest = await response.json();
+        if (cancelled) return;
+
+        const nextManifest = {
+          frameCount: typeof manifest.frameCount === 'number' ? manifest.frameCount : DEFAULT_SCROLL_MANIFEST.frameCount,
+          fps: typeof manifest.fps === 'number' ? manifest.fps : DEFAULT_SCROLL_MANIFEST.fps,
+          padLength: typeof manifest.padLength === 'number' ? manifest.padLength : DEFAULT_SCROLL_MANIFEST.padLength,
+        };
+
+        setScrollManifest((current) => (
+          current.frameCount === nextManifest.frameCount
+          && current.fps === nextManifest.fps
+          && current.padLength === nextManifest.padLength
+            ? current
+            : nextManifest
+        ));
+      } catch {
+        // Keep the baked manifest when the network request fails.
+      }
+    };
+
+    loadManifest();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const section = sectionRef.current;
-    const video = videoRef.current;
+    const canvas = canvasRef.current;
 
-    if (!section || !video || prefersReducedMotion) return undefined;
+    if (!section || !canvas) return undefined;
 
-    let shouldResume = false;
+    imagesRef.current = new Map();
+    loadingRef.current = new Set();
+    hasPrimedFramesRef.current = false;
+    hasDrawnFrameRef.current = false;
+    canvasReadyRef.current = false;
+    targetProgressRef.current = 0;
+    displayProgressRef.current = 0;
+    setIsCanvasReady(false);
 
-    const attemptPlay = () => {
-      const playAttempt = video.play();
-      if (playAttempt && typeof playAttempt.catch === 'function') {
-        playAttempt.catch(() => undefined);
+    const getContext = () => canvas.getContext('2d');
+
+    const loadFrame = (index: number) => {
+      if (index < 0 || index >= scrollManifest.frameCount) return;
+      if (imagesRef.current.has(index) || loadingRef.current.has(index)) return;
+
+      loadingRef.current.add(index);
+
+      const image = new Image();
+      image.decoding = 'async';
+      image.src = buildFramePath(index, scrollManifest.padLength);
+
+      image.onload = () => {
+        loadingRef.current.delete(index);
+        imagesRef.current.set(index, image);
+
+        if (isNearViewportRef.current) {
+          ensureAnimationFrame();
+        }
+      };
+
+      image.onerror = () => {
+        loadingRef.current.delete(index);
+      };
+    };
+
+    const primeInitialFrames = () => {
+      if (hasPrimedFramesRef.current) return;
+      hasPrimedFramesRef.current = true;
+
+      const initialFrameCount = Math.min(INITIAL_FRAME_PRELOAD, scrollManifest.frameCount);
+      for (let index = 0; index < initialFrameCount; index += 1) {
+        loadFrame(index);
       }
     };
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        shouldResume = entry.isIntersecting;
+    const preloadWindow = (centerIndex: number) => {
+      const start = Math.max(centerIndex - FRAME_LOOKBACK, 0);
+      const end = Math.min(centerIndex + FRAME_LOOKAHEAD, scrollManifest.frameCount - 1);
 
-        if (entry.isIntersecting && document.visibilityState === 'visible') {
-          attemptPlay();
-        } else {
-          video.pause();
-        }
-      },
-      { threshold: 0.35 },
-    );
+      for (let index = start; index <= end; index += 1) {
+        loadFrame(index);
+      }
+    };
 
-    const handleVisibility = () => {
-      if (document.visibilityState === 'hidden') {
-        video.pause();
+    const findClosestFrame = (preferredIndex: number) => {
+      const directHit = imagesRef.current.get(preferredIndex);
+      if (directHit) return directHit;
+
+      for (let offset = 1; offset < scrollManifest.frameCount; offset += 1) {
+        const backward = imagesRef.current.get(preferredIndex - offset);
+        if (backward) return backward;
+
+        const forward = imagesRef.current.get(preferredIndex + offset);
+        if (forward) return forward;
+      }
+
+      return undefined;
+    };
+
+    const drawCurrentFrame = (progress: number) => {
+      const ctx = getContext();
+      if (!ctx) return;
+
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const frameIndex = Math.round(progress * (scrollManifest.frameCount - 1));
+      const image = findClosestFrame(frameIndex);
+
+      preloadWindow(frameIndex);
+
+      if (!image) {
+        loadFrame(frameIndex);
         return;
       }
 
-      if (shouldResume) {
-        attemptPlay();
+      drawCoverImage(ctx, image, viewportWidth, viewportHeight);
+      hasDrawnFrameRef.current = true;
+
+      if (!canvasReadyRef.current) {
+        canvasReadyRef.current = true;
+        setIsCanvasReady(true);
       }
     };
 
-    video.playbackRate = 0.96;
-    observer.observe(section);
-    document.addEventListener('visibilitychange', handleVisibility);
+    const resizeCanvas = () => {
+      const ctx = getContext();
+      if (!ctx) return;
+
+      const devicePixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      canvas.width = Math.round(viewportWidth * devicePixelRatio);
+      canvas.height = Math.round(viewportHeight * devicePixelRatio);
+      canvas.style.width = `${viewportWidth}px`;
+      canvas.style.height = `${viewportHeight}px`;
+      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+
+      drawCurrentFrame(displayProgressRef.current);
+    };
+
+    const updateTargetProgress = () => {
+      if (!isNearViewportRef.current) return;
+
+      const rect = section.getBoundingClientRect();
+      const scrollSpan = Math.max(section.offsetHeight - window.innerHeight, 1);
+      const currentOffset = clamp(-rect.top, 0, scrollSpan);
+      targetProgressRef.current = currentOffset / scrollSpan;
+      ensureAnimationFrame();
+    };
+
+    const tick = () => {
+      rafRef.current = null;
+
+      const nextProgress = displayProgressRef.current
+        + (targetProgressRef.current - displayProgressRef.current) * PROGRESS_EASING;
+
+      displayProgressRef.current = Math.abs(targetProgressRef.current - nextProgress) < PROGRESS_SETTLE_THRESHOLD
+        ? targetProgressRef.current
+        : nextProgress;
+
+      drawCurrentFrame(displayProgressRef.current);
+
+      if (isNearViewportRef.current || Math.abs(targetProgressRef.current - displayProgressRef.current) > PROGRESS_SETTLE_THRESHOLD) {
+        ensureAnimationFrame();
+      }
+    };
+
+    function ensureAnimationFrame() {
+      if (rafRef.current !== null) return;
+      rafRef.current = window.requestAnimationFrame(tick);
+    }
+
+    resizeCanvas();
+
+    const intersectionObserver = new IntersectionObserver(
+      ([entry]) => {
+        isNearViewportRef.current = entry.isIntersecting;
+
+        if (entry.isIntersecting) {
+          primeInitialFrames();
+          updateTargetProgress();
+          ensureAnimationFrame();
+        }
+      },
+      { rootMargin: '60% 0px' },
+    );
+
+    intersectionObserver.observe(section);
+    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('scroll', updateTargetProgress, { passive: true });
 
     return () => {
-      observer.disconnect();
-      document.removeEventListener('visibilitychange', handleVisibility);
-      video.pause();
+      intersectionObserver.disconnect();
+      window.removeEventListener('resize', resizeCanvas);
+      window.removeEventListener('scroll', updateTargetProgress);
+
+      if (rafRef.current !== null) {
+        window.cancelAnimationFrame(rafRef.current);
+      }
     };
-  }, [prefersReducedMotion, videoSource]);
+  }, [scrollManifest]);
 
   return (
-    <section className="bg-[#faf8f5] py-6 md:py-10">
-      <div className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8">
-        <div
-          ref={sectionRef}
-          className="relative overflow-hidden rounded-[2.5rem] border border-[#e7d4cc] bg-[#fdf9f5] shadow-[0_28px_80px_rgba(89,37,24,0.10)]"
-        >
-          <div className="relative h-[60vh] min-h-[28rem] sm:h-[68vh] lg:h-[88vh] lg:min-h-[44rem]">
-            <ImageWithFallback
-              src={CINEMATIC_VIDEO.poster}
-              alt="PetHub cinematic homepage poster"
-              className="absolute inset-0 h-full w-full object-cover object-[72%_center]"
-            />
+    <section ref={sectionRef} className="relative h-[300svh] bg-[#faf8f5]">
+      <div className="sticky top-0 h-[100svh] overflow-hidden">
+        <ImageWithFallback
+          src={INTERACTIVE_SCROLL.poster}
+          alt="PetHub scroll poster"
+          className="absolute inset-0 h-full w-full object-cover brightness-[1.08] saturate-[1.05] contrast-[1.04]"
+        />
 
-            {!prefersReducedMotion ? (
-              <video
-                key={videoSource}
-                ref={videoRef}
-                autoPlay
-                loop
-                muted
-                playsInline
-                preload="metadata"
-                poster={CINEMATIC_VIDEO.poster}
-                className={`absolute inset-0 h-full w-full object-cover object-[72%_center] brightness-[1.03] saturate-[1.06] transition-opacity duration-700 ${
-                  isReady ? 'opacity-100' : 'opacity-0'
-                }`}
-                onCanPlay={() => setIsReady(true)}
-              >
-                <source src={videoSource} type="video/mp4" />
-              </video>
-            ) : null}
-
-            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(250,248,245,0.96)_0%,rgba(250,248,245,0.82)_28%,rgba(250,248,245,0.36)_56%,rgba(250,248,245,0.06)_100%)]" />
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#fffdfa]/72 to-transparent" />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#faf6f1] via-[#faf7f3]/72 to-transparent" />
-
-            <div className="absolute inset-y-0 left-0 flex items-center">
-              <div className="max-w-[34rem] px-6 py-8 sm:px-10 lg:px-14">
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/82 px-4 py-2 text-sm text-[#d56756] shadow-[0_16px_36px_rgba(89,37,24,0.08)] backdrop-blur-md">
-                  <Sparkles className="h-4 w-4" />
-                  PetHub Cinematic Story
-                </div>
-                <h2 className="mt-5 text-[clamp(2.5rem,5vw,5.4rem)] leading-[0.94] text-[#592518]" style={{ fontWeight: 800 }}>
-                  Không gian chăm sóc thú cưng hiện đại, sáng và giàu chiều sâu
-                </h2>
-                <p className="mt-5 max-w-[29rem] text-base leading-8 text-[#7a5248] sm:text-lg">
-                  Video 4K tự chạy giúp trải nghiệm mượt ngay cả khi người dùng dừng cuộn.
-                  Chúng tôi giữ bố cục rộng, ánh sáng ấm và chiều sâu vừa đủ để phần mở đầu của PetHub nhìn cao cấp hơn mà không còn cảm giác giật hay bị ép phải scroll liên tục.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <canvas
+          ref={canvasRef}
+          className={`absolute inset-0 h-full w-full brightness-[1.08] saturate-[1.05] contrast-[1.04] transition-opacity duration-500 ${
+            isCanvasReady ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
       </div>
     </section>
+  );
+}
+
+function HomeInteractiveScrollSection({
+  isDesktop,
+  viewportReady,
+  prefersReducedMotion,
+}: {
+  isDesktop: boolean;
+  viewportReady: boolean;
+  prefersReducedMotion: boolean;
+}) {
+  if (!viewportReady || !isDesktop || prefersReducedMotion) {
+    return <HomeInteractiveScrollPoster />;
+  }
+
+  return <HomeInteractiveScrollDesktop />;
+}
+
+export function HomeScrollHero() {
+  const { isDesktop, viewportReady, prefersReducedMotion } = useHomepageMotionSettings();
+
+  return (
+    <HomeInteractiveScrollSection
+      isDesktop={isDesktop}
+      viewportReady={viewportReady}
+      prefersReducedMotion={prefersReducedMotion}
+    />
   );
 }
